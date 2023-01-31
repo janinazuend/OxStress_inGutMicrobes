@@ -1,0 +1,304 @@
+---
+title: "H2O2 and O2 correlations"
+output: html_document
+date: '2022-12-15'
+---
+
+
+```{r setup, echo =FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative stress", cho = TRUE, warning = FALSE, message = FALSE)
+
+# Install Packages:
+# install.packages("rlang")
+# install.packages("tidyr")
+# install.packages("ggbreak")
+
+
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+# install.packages("devtools")
+# devtools::install_github("slowkow/ggrepel")
+library(ggrepel)
+library(ggbreak)
+library(openxlsx)
+```
+
+```{r}
+h2o2 = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.csv", sep=",", header=T, check.names =F)
+names(h2o2)[2]<-"bacteria"
+o2 = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2.csv", sep=",", header=T, check.names =F)
+
+
+median_h2o2 <- aggregate(h2o2$value_H2O2, list(h2o2$condition_H2O2, h2o2$bacteria), FUN=median)
+names(median_h2o2)[1]<-"assay"
+names(median_h2o2)[2]<-"bacteria"
+names(median_h2o2)[3]<-"value_h2o2"
+
+
+
+median_o2 <- aggregate(o2$value_O2, list(o2$condition_O2, o2$bacteria), FUN=median)
+names(median_o2)[1]<-"assay"
+names(median_o2)[2]<-"bacteria"
+names(median_o2)[3]<-"value_o2"
+
+
+joined<- join(median_h2o2, median_o2, by=c("bacteria", "assay"))
+
+```
+```{r}
+library(ggpmisc)
+
+joined$assay<-factor(joined$assay, levels=c("MIC", "MBC"))
+
+
+ggplot(joined, aes(x=value_h2o2, y=value_o2))+
+  geom_point(aes(colour=assay))+
+  scale_colour_manual(values=c("goldenrod2","cyan4"))+
+  geom_text_repel(aes(label=bacteria), size=4)+
+  facet_grid(cols=vars(assay))+
+  scale_y_log10()+
+  scale_x_log10()+
+  stat_poly_line()+
+  theme(axis.text.y= element_text(size = 15 ), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20),
+        strip.text = element_text(size=20)
+        )+
+  xlab(expression(H[2]*O[2]*~ concentration~(mu*M)))+
+  ylab("Oxigenation scale")+
+  guides(colour=guide_legend(title="Assay"))+
+  ggtitle(expression(Tolerance~to~O[2]*vs.~H[2]*O[2]))
+  
+  
+ggsave(filename = "O2_H2O2.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+       width = 50,
+       height = 26,
+       units = c("cm"))
+
+```
+
+##Generate a df with names & phyla
+
+
+```{r}
+#########################################
+#Assign phyla to species name
+########################################
+
+bacteria_pyla<-joined
+bacteria_pyla$phyla<-0
+
+###
+bacteroidetes<-grep("Bac", joined$bacteria)
+bacteria_pyla[bacteroidetes, c(5)] ="Bacteroidetes"
+
+pre<-grep("Pre", joined$bacteria)
+bacteria_pyla[pre,5]="Bacteroidetes"
+
+parabac<-grep("Parabac", joined$bacteria)
+
+bacteria_pyla[parabac,5]="Bacteroidetes"
+
+blaut<-grep("Blaut", joined$bacteria)
+bacteria_pyla[blaut,5]="Firmicutes"
+
+rumi<-grep("Rumi", joined$bacteria)
+bacteria_pyla[rumi,5]="Firmicutes"
+
+rose<-grep("Rose", joined$bacteria)
+bacteria_pyla[rose,5]="Firmicutes"
+
+clo<-grep("Clo", joined$bacteria)
+bacteria_pyla[clo,5]="Firmicutes"
+
+Faec<-grep("Faecalibacterium", joined$bacteria)
+
+bacteria_pyla[Faec,5]="Firmicutes"
+
+flavi<-grep("Flavi", joined$bacteria)
+
+
+
+bacteria_pyla[flavi,5]="Firmicutes"
+
+copr<-grep("Copro", joined$bacteria)
+bacteria_pyla[copr,5]="Firmicutes"
+
+eu<-grep("Eu", joined$bacteria)
+bacteria_pyla[eu,5]="Firmicutes"
+
+flavi<-grep("Flavo", joined$bacteria)
+bacteria_pyla[flavi,5]="Firmicutes"
+
+lacto<-grep("Lactobacillus", joined$bacteria)
+bacteria_pyla[lacto,5]="Firmicutes"
+
+subdo<-grep("Sub", joined$bacteria)
+bacteria_pyla[subdo,5]="Firmicutes"
+
+bif<-grep("Bif", joined$bacteria)
+bacteria_pyla[bif,5]="Actinbacteria"
+
+colin<-grep("Collin", joined$bacteria)
+bacteria_pyla[colin,5]="Actinobacteria"
+
+akk<-grep("Akk", joined$bacteria)
+bacteria_pyla[akk,5]="Verrucumicrobia"
+
+anaero<-grep("Anaero", joined$bacteria)
+bacteria_pyla[anaero,5]="Firmicutes"
+
+anaro<-grep("Anaro", joined$bacteria)
+bacteria_pyla[anaro,5]="Firmicutes"
+
+marvin<-grep("Marvin", joined$bacteria)
+bacteria_pyla[marvin,5]="Firmicutes"
+
+phasc<-grep("Phasco", joined$bacteria)
+bacteria_pyla[phasc,5]="Firmicutes"
+
+entero<-grep("Entero", joined$bacteria)
+bacteria_pyla[entero,5]="Firmicutes"
+
+esch<-grep("Esch", joined$bacteria)
+bacteria_pyla[esch,5]="Proteobacteria"
+#########################
+
+bacteria_pyla
+
+```
+
+```{r}
+#########################################
+#Assign phyla to species name
+########################################
+
+
+bacteria_pyla$class<-0
+
+###
+bacteroidetes<-grep("Bac", joined$bacteria)
+bacteria_pyla[bacteroidetes, c(6)] ="Bacteroidia"
+
+pre<-grep("Prevo", joined$bacteria)
+bacteria_pyla[pre,6]="Bacteroidia"
+
+parabac<-grep("Parabac", joined$bacteria)
+
+bacteria_pyla[parabac,6]="Bacteroidia"
+
+blaut<-grep("Blaut", joined$bacteria)
+bacteria_pyla[blaut,6]="Clostridia"
+
+rumi<-grep("Rumi", joined$bacteria)
+bacteria_pyla[rumi,6]="Clostridia"
+
+rose<-grep("Rose", joined$bacteria)
+bacteria_pyla[rose,6]="Clostridia"
+
+clo<-grep("Clo", joined$bacteria)
+bacteria_pyla[clo,6]="Clostridia"
+
+Faec<-grep("Faecalibacterium", joined$bacteria)
+
+bacteria_pyla[Faec,6]="Clostridia"
+
+flavi<-grep("Flavi", joined$bacteria)
+
+
+
+bacteria_pyla[flavi,6]="Clostridia"
+
+copr<-grep("Copro", joined$bacteria)
+bacteria_pyla[copr,6]="Clostridia"
+
+eu<-grep("Eu", joined$bacteria)
+bacteria_pyla[eu,6]="Clostridia"
+
+flavi<-grep("Flavo", joined$bacteria)
+bacteria_pyla[flavi,6]="Clostridia"
+
+lacto<-grep("Lactobacillus", joined$bacteria)
+bacteria_pyla[lacto,6]="Bacilli"
+
+subdo<-grep("Sub", joined$bacteria)
+bacteria_pyla[subdo,6]="Clostridia"
+
+bif<-grep("Bif", joined$bacteria)
+bacteria_pyla[bif,6]="Actinomycetia"
+
+colin<-grep("Collin", joined$bacteria)
+bacteria_pyla[colin,6]="Coriobacteriia"
+
+akk<-grep("Akk", joined$bacteria)
+bacteria_pyla[akk,6]="Verrucomicrobiae"
+
+anaero<-grep("Anaero", joined$bacteria)
+bacteria_pyla[anaero,6]="Clostridia"
+
+anaro<-grep("Anaro", joined$bacteria)
+bacteria_pyla[anaro,6]="Clostridia"
+
+marvin<-grep("Marvin", joined$bacteria)
+bacteria_pyla[marvin,6]="Clostridia"
+
+phasc<-grep("Phasco", joined$bacteria)
+bacteria_pyla[phasc,6]="Negativicutes"
+
+entero<-grep("Entero", joined$bacteria)
+bacteria_pyla[entero,6]="Bacilli"
+
+esch<-grep("Esch", joined$bacteria)
+bacteria_pyla[esch,6]="Gammaproteobacteria"
+#########################
+
+bacteria_pyla
+
+```
+
+```{r}
+library(ggpmisc)
+
+bacteria_pyla$assay<-factor(bacteria_pyla$assay, levels=c("MIC", "MBC"))
+
+
+ggplot(bacteria_pyla, aes(x=value_h2o2, y=value_o2))+
+  stat_ellipse(aes(group=class, fill=class, colour=class), geom="polygon", alpha=0.2, show.legend = F)+
+  stat_poly_line(aes(group=assay))+
+  stat_poly_eq(aes(group=assay, label=c(..rr.label..)), size=5)+
+  geom_point(aes(colour=class), alpha=0.6)+
+  # scale_colour_manual(values=c("goldenrod2","cyan6"))+
+  geom_text_repel(aes(label=bacteria, colour=class),lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
+  facet_grid(cols=vars(assay))+
+  scale_y_log10()+
+  scale_x_log10()+
+  theme(axis.text.y= element_text(size = 16 ), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20),
+        strip.text = element_text(size=20)
+        )+
+  xlab(expression(H[2]*O[2]*~ concentration~(mu*M)))+
+  ylab("Oxygenation scale")+
+  guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
+  ggtitle(expression(Tolerance~to~O[2]*~vs.~H[2]*O[2]))
+ 
+  
+ggsave(filename = "O2_H2O2.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+       width =43,
+       height = 27,
+       units = c("cm"))
+
+```
