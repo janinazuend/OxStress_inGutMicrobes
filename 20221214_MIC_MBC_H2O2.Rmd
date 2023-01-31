@@ -1,0 +1,603 @@
+---
+title: "20221214_MIC_MBC_oxygen"
+output: html_document
+date: '2022-12-14'
+---
+
+```{r setup, echo =FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative stress", cho = TRUE, warning = FALSE, message = FALSE)
+
+# Install Packages:
+# install.packages("rlang")
+# install.packages("tidyr")
+# install.packages("ggbreak")
+
+# unload("mia")
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+# install.packages("devtools")
+# devtools::install_github("slowkow/ggrepel")
+library(ggrepel)
+library(ggbreak)
+library(openxlsx)
+```
+
+##Load the Data
+```{r}
+
+
+
+bacteria_MIC <- list.files(path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2/MIC")
+bacteria_MBC <- list.files(path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2/MBC")
+#bacteria<- bacteria[-(27:29)]
+
+
+options(scipen=999)
+
+
+#define empty matrices, no values added so far 
+MIC_average<- matrix(0, length(bacteria_MIC), 13)
+MBC_average<- matrix(0, length(bacteria_MBC), 13)
+
+blank_corrected_MIC<- matrix(0, length(bacteria_MIC)*6, 13)
+blank_corrected_MBC<- matrix(0, length(bacteria_MBC)*6, 13)
+
+#define MIC and MBC value for each species 
+#MIC, fill values into MIC, here OD corrected values, but not corrected with agar 
+row = 0
+
+setwd("C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2/MIC")
+for (l in 1:length(bacteria_MIC)) {
+  #generate MICwide format
+  MICwide = read.csv(bacteria_MIC[l], sep=";", header=F, check.names =F)
+  #look for A indicating the area in the excel file with the data
+  for (r in 1:40) {
+    if (MICwide[r,1]=="A") {
+      zeile = r
+    }
+  }
+#########################################
+  # print(bacteria_MIC[l])
+  row = (l-1)*6
+  # print(row)
+
+  #generate blank corrected values
+  for(i in 1:12) {
+    #x indicated the colum->'A' is in column 1 and the data next to it from column 2 on
+    x = 1+i
+    zeile_end = zeile+6
+    d = as.numeric(unlist(data.frame(MICwide[zeile:zeile_end, x])))
+    for(j in 1:6){
+      y = d[j] - d[7]
+      blank_corrected_MIC[row+j, i] = y
+    }
+  }
+  
+  
+  
+
+  
+  #########################################
+  #generate averages 
+  for(i in 1:12) {
+    r1= row+1
+    r2= row+6
+    MIC_average[l, i] = as.numeric(mean(blank_corrected_MIC[r1:r2, i],  na.rm=TRUE))
+  }
+} 
+
+
+
+
+
+
+
+
+#MBC
+setwd( "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2/MBC")
+row = 0
+for (l in 1:length(bacteria_MBC)) {
+  #generate MICwide format
+  MBCwide = read.csv(bacteria_MBC[l], sep=";", header=F, check.names =F)
+  #look for A indicating the area in the excel file with the data
+  for (r in 1:40) {
+    if (MBCwide[r,1]=="A") {
+      zeile = r
+    }
+  }
+  #########################################
+  # print(bacteria_MBC[l])
+  row = (l-1)*6
+  # print(row)
+  
+  #generate blank corrected values
+  for(i in 1:12) {
+    #x indicated the colum->'A' is in column 1 and the data next to it from column 2 on
+    x = 1+i
+    zeile_end = zeile+6
+    d = as.numeric(unlist(data.frame(MBCwide[zeile:zeile_end, x])))
+    for(j in 1:6){
+      y = d[j] - d[7]
+      blank_corrected_MBC[row+j, i] = y
+    }
+  }
+  
+  #########################################
+  #generate averages 
+  for(i in 1:12) {
+    r1= row+1
+    r2= row+6
+    MBC_average[l, i] = as.numeric(mean(blank_corrected_MBC[r1:r2, i],  na.rm=TRUE))
+  }
+} 
+
+```
+
+##Generate a df with names & phyla
+
+
+```{r}
+#########################################
+#Assign phyla to species name
+########################################
+
+
+#assign phylum level to bacteria names
+bacteria <- strsplit(bacteria_MIC, ".csv")
+bacteria <- as.character(bacteria)
+phyla<- rep(NA, length(bacteria))
+bacteria_pyla <-cbind(bacteria, phyla)
+
+###
+bacteroidetes<-grep("Bac", bacteria)
+bacteria_pyla[bacteroidetes,2]="Bacteroidetes"
+
+pre<-grep("Pre", bacteria)
+bacteria_pyla[pre,2]="Bacteroidetes"
+
+parabac<-grep("Parabac", bacteria)
+
+bacteria_pyla[parabac,2]="Bacteroidetes"
+
+blaut<-grep("Blaut", bacteria)
+bacteria_pyla[blaut,2]="Firmicutes"
+
+rumi<-grep("Rumi", bacteria)
+bacteria_pyla[rumi,2]="Firmicutes"
+
+rose<-grep("Rose", bacteria)
+bacteria_pyla[rose,2]="Firmicutes"
+
+clo<-grep("Clo", bacteria)
+bacteria_pyla[clo,2]="Firmicutes"
+
+Faec<-grep("Faecalibacterium", bacteria)
+
+bacteria_pyla[Faec,2]="Firmicutes"
+
+flavi<-grep("Flavi", bacteria)
+
+
+
+bacteria_pyla[flavi,2]="Firmicutes"
+
+copr<-grep("Copro", bacteria)
+bacteria_pyla[copr,2]="Firmicutes"
+
+eu<-grep("Eu", bacteria)
+bacteria_pyla[eu,2]="Firmicutes"
+
+flavi<-grep("Flavo", bacteria)
+bacteria_pyla[flavi,2]="Firmicutes"
+
+lacto<-grep("Lactobacillus", bacteria)
+bacteria_pyla[lacto,2]="Firmicutes"
+
+subdo<-grep("Sub", bacteria)
+bacteria_pyla[subdo,2]="Firmicutes"
+
+bif<-grep("Bif", bacteria)
+bacteria_pyla[bif,2]="Actinobacteria"
+
+colin<-grep("Collin", bacteria)
+bacteria_pyla[colin,2]="Actinobacteria"
+
+akk<-grep("Akk", bacteria)
+bacteria_pyla[akk,2]="Verrucumicrobia"
+
+anaero<-grep("Anaero", bacteria)
+bacteria_pyla[anaero,2]="Firmicutes"
+
+anaro<-grep("Anaro", bacteria)
+bacteria_pyla[anaro,2]="Firmicutes"
+
+marvin<-grep("Marvin", bacteria)
+bacteria_pyla[marvin,2]="Firmicutes"
+
+phasc<-grep("Phasco", bacteria)
+bacteria_pyla[phasc,2]="Firmicutes"
+
+entero<-grep("Entero", bacteria)
+bacteria_pyla[entero,2]="Firmicutes"
+
+esch<-grep("Esch", bacteria)
+bacteria_pyla[esch,2]="Proteobacteria"
+#########################
+
+bacteria_pyla_MIC<-as.data.frame(bacteria_pyla)
+
+
+#########################################
+#Assign phyla to species name
+########################################
+
+
+#assign phylum level to bacteria names
+bacteria <- strsplit(bacteria_MBC, ".csv")
+bacteria <- as.character(bacteria)
+phyla<- rep(NA, length(bacteria))
+bacteria_pyla <-cbind(bacteria, phyla)
+
+###
+bacteroidetes<-grep("Bac", bacteria)
+bacteria_pyla[bacteroidetes,2]="Bacteroidetes"
+
+pre<-grep("Pre", bacteria)
+bacteria_pyla[pre,2]="Bacteroidetes"
+
+parabac<-grep("Parabac", bacteria)
+
+bacteria_pyla[parabac,2]="Bacteroidetes"
+
+blaut<-grep("Blaut", bacteria)
+bacteria_pyla[blaut,2]="Firmicutes"
+
+rumi<-grep("Rumi", bacteria)
+bacteria_pyla[rumi,2]="Firmicutes"
+
+rose<-grep("Rose", bacteria)
+bacteria_pyla[rose,2]="Firmicutes"
+
+clo<-grep("Clo", bacteria)
+bacteria_pyla[clo,2]="Firmicutes"
+
+Faec<-grep("Faecalibacterium", bacteria)
+
+bacteria_pyla[Faec,2]="Firmicutes"
+
+flavi<-grep("Flavi", bacteria)
+
+
+
+bacteria_pyla[flavi,2]="Firmicutes"
+
+copr<-grep("Copro", bacteria)
+bacteria_pyla[copr,2]="Firmicutes"
+
+eu<-grep("Eu", bacteria)
+bacteria_pyla[eu,2]="Firmicutes"
+
+flavi<-grep("Flavo", bacteria)
+bacteria_pyla[flavi,2]="Firmicutes"
+
+lacto<-grep("Lactobacillus", bacteria)
+bacteria_pyla[lacto,2]="Firmicutes"
+
+subdo<-grep("Sub", bacteria)
+bacteria_pyla[subdo,2]="Firmicutes"
+
+bif<-grep("Bif", bacteria)
+bacteria_pyla[bif,2]="Actinobacteria"
+
+colin<-grep("Collin", bacteria)
+bacteria_pyla[colin,2]="Actinobacteria"
+
+akk<-grep("Akk", bacteria)
+bacteria_pyla[akk,2]="Verrucumicrobia"
+
+anaero<-grep("Anaero", bacteria)
+bacteria_pyla[anaero,2]="Firmicutes"
+
+anaro<-grep("Anaro", bacteria)
+bacteria_pyla[anaro,2]="Firmicutes"
+
+marvin<-grep("Marvin", bacteria)
+bacteria_pyla[marvin,2]="Firmicutes"
+
+phasc<-grep("Phasco", bacteria)
+bacteria_pyla[phasc,2]="Firmicutes"
+
+entero<-grep("Entero", bacteria)
+bacteria_pyla[entero,2]="Firmicutes"
+
+esch<-grep("Esch", bacteria)
+bacteria_pyla[esch,2]="Proteobacteria"
+#########################
+
+bacteria_pyla_MBC<-as.data.frame(bacteria_pyla)
+
+```
+
+##Add bacteria names & phyla to OD averages & generate long format
+
+```{r}
+col_names_phyla <- list("bacteria", "phyla", 0, 0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268, 8000)
+
+
+
+#row names + transformation into long format for relative blank corrected+phyla
+MIC_average_colname <-cbind(bacteria_pyla_MIC, MIC_average)
+MIC_average_colname<-as.data.frame(MIC_average_colname)
+colnames(MIC_average_colname)<-col_names_phyla
+
+
+MBC_average_colname <-cbind(bacteria_pyla_MBC, MBC_average)
+MBC_average_colname<-as.data.frame(MBC_average_colname)
+colnames(MBC_average_colname)<-col_names_phyla
+```
+##Find the average MIC values
+
+```{r}
+#find MIC value where growth is bigger than 0.0336
+MIC_vector <- vector()
+for (i in 1:nrow(MIC_average_colname)) { #vertical 
+  candidates <- vector()
+     for(j in 3:14) {#horizontal 
+       if (MIC_average_colname[i,j]>0.0336) {#-> MIC_value_absolut)
+         candidates <- append(candidates, colnames(MIC_average_colname[j+1]))
+         
+       }
+       
+     }
+  candidates<-as.numeric(candidates)
+  MIC_vector <- append(MIC_vector, max(candidates))
+}
+
+
+
+MBC_vector <- vector()
+for (i in 1:nrow(MBC_average_colname)) { #vertical 
+  candidates <- vector()
+  for(j in 3:14) {#horizontal 
+    if (MBC_average_colname[i,j]>0.0336) {#-> MIC_value_absolut)
+      
+      candidates <- append(candidates, colnames(MBC_average_colname)[j+1])
+    }
+  }
+  candidates<-as.numeric(candidates)
+  MBC_vector <- append(MBC_vector, max(candidates))
+}
+
+
+MBC_values <- as.data.frame(cbind(bacteria_pyla_MBC, MBC_vector))
+MIC_values <- as.data.frame(cbind(bacteria_pyla_MIC, MIC_vector))
+
+
+```
+
+```{r}
+final_h2O2 <-left_join(MIC_values, MBC_values)
+```
+
+```{r}
+
+
+final_h2O2['condition1'] = 'MIC'
+final_h2O2['condition2'] = 'MBC'
+
+final_h2O2$names <- as.data.frame(str_split_fixed(final_h2O2$bacteria, "_", 2))$V1
+
+final_h2O2_mc <-final_h2O2[-c(1, 30, 38),]
+
+final_h2O2_mc%>%
+  #factor(final_h2O2$MIC_vector, levels = c(0, 0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268))
+  #arrange(MIC_vector, decreasing = T)%>%
+  mutate(names = fct_reorder(names, MBC_vector, .desc=F))%>%
+  # mutate(MBC_vector = fct_reorder(MBC_vector, MBC_vector))%>%
+  ggplot(aes(y=names, x = MIC_vector))+ 
+  geom_point(aes(x=MIC_vector, colour=condition1), size=2, alpha=0.5)+
+  geom_point(aes(x=MBC_vector, colour=condition2), size=2, alpha=0.5)+#visualize as data points, different colors for the different phyla, size of point
+  labs(x="minimal inhibitory H2O2 concentration [uM]")+
+  ggtitle("MIC vs MBC")+
+  labs(colour="")+
+  theme(axis.title.y = element_blank())+
+  ggtitle("")+
+   scale_x_continuous( trans= "log2")->plot_MIC_vs_MBC
+plot_MIC_vs_MBC
+
+
+# ggsave(filename = "MIC_vs_MBC_Oxygen.jpeg", path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+#        width = 20,
+#        height = 16,
+#        units = c("cm"))
+
+```
+
+
+
+## Get the MIC for individual repleciates
+```{r}
+#########################################
+#define row names for the blank corrected 
+bacteria <- strsplit(bacteria_MBC, ".csv")
+bacteria <- as.character(bacteria)
+
+row_names_mbc<-matrix(0,length(bacteria)*6,1)
+position = 0
+for (i in 1:length(bacteria)) {
+  for (j in 1:6) {
+    row_names_mbc[position+j,1] = bacteria[i]
+  }
+  position = position+6
+}
+
+
+bacteria <- strsplit(bacteria_MIC, ".csv")
+bacteria <- as.character(bacteria)
+
+row_names_mic<-matrix(0,length(bacteria)*6,1)
+position = 0
+for (i in 1:length(bacteria)) {
+  for (j in 1:6) {
+    row_names_mic[position+j,1] = bacteria[i]
+  }
+  position = position+6
+}
+
+
+
+
+MIC_replicates_h2o2 <-data.frame(row_names_mic, blank_corrected_MIC)
+
+colnames(MIC_replicates_h2o2)<-list("bacteria", 0, 0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268, 8000)
+
+MBC_replicates_h2o2 <-data.frame(row_names_mbc, blank_corrected_MBC)
+colnames(MBC_replicates_h2o2)<-list("bacteria",0, 0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268, 8000)
+```
+
+```{r}
+write.xlsx(MBC_replicates_h2o2, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_H2O2_replicates.xlsx")
+write.xlsx(MIC_replicates_h2o2, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_H2O2_replicates.xlsx")
+
+
+
+MBC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_H2O2_replicates_mod.xlsx")
+MBC_mod[is.na(MBC_mod)] <- 0
+MIC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_H2O2_replicates_mod.xlsx")
+MIC_mod[is.na(MIC_mod)] <- 0
+```
+
+
+
+```{r}
+
+MIC_replicates_h2o2[is.na(MIC_replicates_h2o2)] <- 0
+MBC_replicates_h2o2[is.na(MBC_replicates_h2o2)] <- 0
+
+MIC_vector <- vector()
+for (i in 1:nrow(MIC_mod)) { #vertical 
+  candidates <- vector()
+     for(j in 2:13) {#horizontal 
+       if (MIC_mod[i,j]>0.05) {#-> MIC_value_absolut)
+
+         candidates <- append(candidates, colnames(MIC_mod)[j])
+         candidates <-as.numeric(candidates)
+         # print((MIC_replicates_h2o2)[j,1])
+       }
+     }
+  MIC_vector <- append(MIC_vector, max(candidates))
+}
+
+
+MBC_vector <- vector()
+for (i in 1:nrow(MBC_mod)) { #vertical 
+  candidates <- vector()
+  for(j in 2:13) {#horizontal 
+    if (MBC_mod[i,j]>0.05) {#-> MIC_value_absolut)
+      
+      candidates <- append(candidates, colnames(MBC_mod)[j])
+      candidates <-as.numeric(candidates)
+    }
+  }
+  MBC_vector <- append(MBC_vector, max(candidates))
+}
+
+```
+
+```{r}
+
+MBC<-MBC_vector
+
+MBC_values <- as.data.frame(cbind(row_names_mbc, MBC_vector))
+MIC_values <- as.data.frame(cbind(row_names_mic, MIC_vector))
+
+names(MBC_values)[1]<-"species"
+names(MBC_values)[2]<-"value"
+MBC_values$condition<-"MBC"
+
+names(MIC_values)[1]<-"species"
+names(MIC_values)[2]<-"value"
+MIC_values$condition<-"MIC"
+
+
+final_h2O2 <-rbind(MBC_values, MIC_values)
+
+final_h2O2$value<-as.numeric(final_h2O2$value)
+
+
+
+
+mean_ambc <- aggregate(final_h2O2$value, list(final_h2O2$condition, final_h2O2$species), FUN=mean)
+mean_ambc%>%
+  subset(Group.1 %in% "MBC")->mean_mbc
+
+        names(mean_mbc)[2]<-"species"
+        names(mean_mbc)[3]<-"mean_mbc"
+
+        
+join(final_h2O2, mean_mbc, by="species")->final
+
+```
+
+```{r}
+
+length(
+  bacteria
+)
+
+final%>%
+  mutate(bacteria = fct_reorder(species, final$mean_mbc))%>%
+  ggplot(aes(y=bacteria))+
+  stat_summary(fun="median", geom= "bar", aes(x= value, fill=condition), position= position_dodge(preserve = "single"), width =0.8, alpha=0.5, colour= "black")+
+  geom_point(aes(x=value, colour=condition, group=condition), position=position_jitterdodge(jitter.width = 0.2,
+  jitter.height = 0.05,
+  dodge.width = 0.75,
+  seed = NA), alpha=1, size=1)+
+  scale_color_manual(values=c("goldenrod2", "cyan4"))+
+  scale_fill_manual(values=c("goldenrod2", "cyan4"))+
+  # stat_summary(aes(x=MIC, colour=condition1), geom="point", fun="mean", alpha=0.5)+
+  # stat_summary(aes(x=MIC, colour=condition1), geom="errorbar", fun.data="mean_se", alpha=0.5)+
+  # stat_summary(aes(x=MBC, colour=condition2), geom="point", fun="mean", alpha=0.5)+
+  # stat_summary(aes(x=MBC, colour=condition2), geom="errorbar", fun.data="mean_se", alpha=0.5)+
+  # coord_trans(x="log2")+
+  ggtitle(expression(MIC~and~MBC~of~H[2]*O[2]))+
+  xlab(expression(H[2]*O[2]~(mu*M)))+
+  # facet_grid(rows=vars(species), scales="free", space="free_x", switch= "y")+
+  # force_panelsizes(cols = c(5, 0.3))+
+  # scale_x_break(c(6000, 6500), scale=0.1)+
+  scale_x_log10(breaks=c(0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268))+
+  theme(axis.text.y= element_text(size=15, face = "italic"), 
+        axis.title.y = element_blank(), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=15, angle=90),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 20),
+        strip.text.y = element_text(size = 15 , face = "italic", angle=90),
+        strip.background = element_blank(),
+        plot.title = element_text(size=20),
+        )+
+  guides(fill=guide_legend(title="Assay") ,colour="none")->plot_MIC_vs_MBC_table
+
+
+
+plot_MIC_vs_MBC_table
+
+ggsave(filename = "MIC_MBC_H2O2.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+       width = 18,
+       height = 25,
+       units = c("cm"))
+
+
+```
+```{r}
+names(final_h2O2)[2]<-"value_H2O2"
+names(final_h2O2)[3]<-"condition_H2O2"
+# Write the first data set in a new workbook
+write.csv(final_h2O2, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.csv")
+```
+
+
