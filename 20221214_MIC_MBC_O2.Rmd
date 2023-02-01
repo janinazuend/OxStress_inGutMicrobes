@@ -13,8 +13,8 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/tryptophan_en
 # install.packages("rlang")
 # install.packages("tidyr")
 # install.packages("ggbreak")
-
-
+library(dplyr)
+library(plyr)
 library(tidyverse)
 library(ggplot2)
 library(tidyr)
@@ -24,7 +24,7 @@ library(ggrepel)
 library(ggbreak)
 ```
 
-##Load the Data
+# 1. Load the Data
 ```{r}
 #########################################
 #Load the data
@@ -132,7 +132,7 @@ for (i in 1:length(bacteria)) {
 
 ```
 
-##Generate a df with names & phyla
+# 2. Generate a df with names & phyla
 
 ```{r}
 bacteria <- strsplit(bacteria, ".csv")
@@ -225,7 +225,7 @@ bacteria_pyla[esch,2]="Proteobacteria"
 
 ```
 
-##Add bacteria names & phyla to OD averages & generate long format
+# 2. Add bacteria names & phyla to OD averages & generate long format
 
 ```{r}
 col_names_phyla <- list("bacteria", "phyla", 1, 2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656, 5843.2)
@@ -256,7 +256,7 @@ MBC_values_phyla_long <- transform(MBC_values_phyla_long, OD = as.numeric(OD))
 MBC_values_phyla_long[MBC_values_phyla_long < 0] <- 0
 
 ```
-##Find the average MIC values
+# 3. Find the average MIC values
 
 ```{r}
 #find MIC value where growth is bigger than 0.0336
@@ -350,6 +350,7 @@ ggsave(filename = "MIC_vs_MBC_Oxygen.jpeg", path = "C:/Users/zuendj/Desktop/03_d
        units = c("cm"))
 
 ```
+
 ```{r}
 
 dataframe_final$MIC <- as.numeric(dataframe_final$MIC)
@@ -376,7 +377,7 @@ plot_MIC_vs_MBC_table
 ```
 
 
-## Get the MIC for individual repleciates
+# 4. Get the MIC for individual repleciates
 ```{r}
 #########################################
 #define row names for the blank corrected 
@@ -413,10 +414,7 @@ colnames(av_mic)<-c("bacteria", "average")
 MIC_replicates_mean<-join(MIC_replicates, av_mic, by=c("bacteria"))
 ```
 
-
-
-
-
+# 5. Export blanck corrected OD values for outlier correction
 ```{r}
 write.xlsx(MBC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates.xlsx")
 write.xlsx(MIC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates.xlsx")
@@ -537,7 +535,7 @@ ggsave(filename = "MIC_MBC_O2.jpeg",
 
 
 ```
-
+# 6. Export MIC/MBC values
 ```{r}
 setwd( "C:/Users/zuendj/Desktop/03_data R/oxidative stress")
 names(df_long)[5]<-"value_O2"
@@ -546,5 +544,8 @@ names(df_long)[4]<-"condition_O2"
 write.csv(df_long[,c(1,4,5)], file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2.csv")
 ```
 
+```{r}
+
+```
 
 
