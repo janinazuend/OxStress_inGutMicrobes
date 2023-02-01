@@ -301,3 +301,79 @@ ggsave(filename = "O2_H2O2.jpeg",
        units = c("cm"))
 
 ```
+#5. Correlation plots for H2O2 and O2 individually
+
+```{r}
+bacteria_pyla$assay<-as.character(bacteria_pyla$assay)
+bacteria_pyla$assay<-as.character(bacteria_pyla$assay)
+bacteria_pyla$value_h2o2<-as.integer(bacteria_pyla$value_h2o2)
+
+
+
+bacteria_pyla[, c("assay", "bacteria", "value_h2o2", "class")] %>%
+  pivot_wider(names_from = assay, values_from = value_h2o2, values_fill = NA) %>%
+  ggplot(aes(x=MIC, y=MBC))+
+  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F)+
+  # stat_poly_line()+
+  geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
+  # stat_poly_eq(aes(label=c(..rr.label..)), size=5)+
+  geom_jitter(aes(colour = class), width = 0.05, height = 0.05, size=3, alpha=0.5)+
+  # scale_colour_manual(values=c("goldenrod2","cyan6"))+
+  # geom_text_repel(aes(label=bacteria, colour=class),lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
+  scale_y_log10()+
+  scale_x_log10()+
+  theme(axis.text.y= element_text(size = 16 ), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20),
+        strip.text = element_text(size=20)
+        )+
+  xlab("MIC")+
+  ylab("MBC")+
+  guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
+  ggtitle(expression(Tolerance~to~H[2]*O[2]*~ (mu*M)))
+ 
+  
+ggsave(filename = "H2O2_micvsmbc.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+       width =20,
+       height = 14,
+       units = c("cm"))
+
+bacteria_pyla[, c("assay", "bacteria", "value_o2", "class")] %>%
+  pivot_wider(names_from = assay, values_from = value_o2, values_fill = NA) %>%
+  ggplot(aes(x=MIC, y=MBC))+
+  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F)+
+  # stat_poly_line()+
+  geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
+  # stat_poly_eq(aes(label=c(..rr.label..)), size=5)+
+  geom_jitter(aes(colour = class), width = 0.1, height = 0.1, size=3, alpha=0.5)+
+  # scale_colour_manual(values=c("goldenrod2","cyan6"))+
+  # geom_text_repel(aes(label=bacteria, colour=class),lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
+  scale_y_log10()+
+  scale_x_log10()+
+  theme(axis.text.y= element_text(size = 16 ), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20),
+        strip.text = element_text(size=20)
+        )+
+  xlab("MIC")+
+  ylab("MBC")+
+  guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
+  ggtitle(expression(Tolerance~to~O[2]*~(oxygenation~scale)))
+ 
+  
+ggsave(filename = "O2_micvsmbc.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+       width =20,
+       height = 14,
+       units = c("cm"))
+
+```
