@@ -1,0 +1,94 @@
+---
+title: "H2O2 and O2 correlations"
+output: html_document
+date: '2022-12-15'
+---
+
+
+```{r setup, echo =FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative stress", cho = TRUE, warning = FALSE, message = FALSE)
+
+# Install Packages:
+# install.packages("rlang")
+# install.packages("tidyr")
+# install.packages("ggbreak")
+# install.packages("caret")
+library(caret)
+
+library(tidyverse)
+library(ggplot2)
+library(tidyr)
+# install.packages("devtools")
+# devtools::install_github("slowkow/ggrepel")
+library(ggrepel)
+library(ggbreak)
+library(openxlsx)
+```
+
+# 1. Load the data and calculate median MIC & MBC
+```{r}
+h2o2 = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.csv", sep=",", header=T, check.names =F)
+names(h2o2)[2]<-"bacteria"
+o2 = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2.csv", sep=",", header=T, check.names =F)
+
+
+median_h2o2 <- aggregate(h2o2$value_H2O2, list(h2o2$condition_H2O2, h2o2$bacteria), FUN=median)
+names(median_h2o2)[1]<-"assay"
+names(median_h2o2)[2]<-"bacteria"
+names(median_h2o2)[3]<-"value_h2o2"
+
+h2o2_wide<-pivot_wider(median_h2o2, names_from = assay, values_from = value_h2o2, values_fill = NA)
+
+
+
+median_o2 <- aggregate(o2$value_O2, list(o2$condition_O2, o2$bacteria), FUN=median)
+names(median_o2)[1]<-"assay"
+names(median_o2)[2]<-"bacteria"
+names(median_o2)[3]<-"value_o2"
+
+o2_wide<-pivot_wider(median_o2, names_from = assay, values_from = value_o2, values_fill = NA)
+```
+
+```{r}
+coverage = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/final_coverage.csv", sep=";", header=T, check.names =F)
+```
+
+```{r}
+coverage_o2<-join(o2_wide, coverage, by=("bacteria"))
+rownames(coverage_o2)<-coverage_o2[,1]
+
+coverage_o2[, c("MBC", "MIC")]<-log10(coverage_o2[, c("MBC", "MIC")])
+coverage_o2$MIC<-(coverage_o2$MIC-min(coverage_o2$MIC))/(max(coverage_o2$MIC)-min(coverage_o2$MIC))
+coverage_o2$MBC<-(coverage_o2$MBC-min(coverage_o2$MBC))/(max(coverage_o2$MBC)-min(coverage_o2$MBC))
+
+```
+
+```{r}
+o2matrix<-as.matrix(coverage_o2[, c(  "superoxide dismutase", "MBC")])
+
+
+jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat.jpeg", width=500, height=1000)
+
+
+heatmap.2(as.matrix(o2matrix), # data frame a matrix
+          marg = c(15,15),
+          density.info = "none", # Remove density legend lines
+          trace = "none",
+          dendrogram = "row", 
+           colsep=1:nrow(o2matrix), # Add vertical grid lines
+          rowsep=1:nrow(o2matrix), # Add horizontal grid lines
+          sepcolor = "black",
+          col = viridis::viridis_pal(),
+          cexRow = 1.5,
+          cexCol = 1.5,
+          lwid=c(6, 6),
+          lhei = c(2,20), key=T, keysize = 5)
+
+dev.off()
+
+
+```
+
+
