@@ -55,11 +55,13 @@ o2_wide<-pivot_wider(median_o2, names_from = assay, values_from = value_o2, valu
 coverage = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/final_coverage.csv", sep=";", header=T, check.names =F)
 ```
 
+
+# 2. correlation MBC O2 & SOD
 ```{r}
 coverage_o2<-join(o2_wide, coverage, by=("bacteria"))
 rownames(coverage_o2)<-coverage_o2[,1]
 
-coverage_o2[, c("MBC", "MIC")]<-log10(coverage_o2[, c("MBC", "MIC")])
+coverage_o2[, c("MBC", "MIC")]<-log2(coverage_o2[, c("MBC", "MIC")])
 coverage_o2$MIC<-(coverage_o2$MIC-min(coverage_o2$MIC))/(max(coverage_o2$MIC)-min(coverage_o2$MIC))
 coverage_o2$MBC<-(coverage_o2$MBC-min(coverage_o2$MBC))/(max(coverage_o2$MBC)-min(coverage_o2$MBC))
 
@@ -72,11 +74,11 @@ o2matrix<-as.matrix(coverage_o2[, c(  "superoxide dismutase", "MBC")])
 jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat.jpeg", width=500, height=1000)
 
 
-heatmap.2(as.matrix(o2matrix), # data frame a matrix
+heatmap.2(o2matrix, # data frame a matrix
           marg = c(15,15),
           density.info = "none", # Remove density legend lines
           trace = "none",
-          dendrogram = "row", 
+          # dendrogram = "row", 
            colsep=1:nrow(o2matrix), # Add vertical grid lines
           rowsep=1:nrow(o2matrix), # Add horizontal grid lines
           sepcolor = "black",
@@ -90,5 +92,51 @@ dev.off()
 
 
 ```
+
+# 3. correlation MBC/MIC H2O2 and ox. defense
+
+
+```{r}
+coverage_h2o2<-join(h2o2_wide, coverage, by=("bacteria"))
+rownames(coverage_h2o2)<-coverage_h2o2[,1]
+
+coverage_h2o2<-drop_na(coverage_h2o2)
+
+
+
+coverage_h2o2[, c("MBC", "MIC")]<-log2(coverage_h2o2[, c("MBC", "MIC")])
+coverage_h2o2$MIC<-(coverage_h2o2$MIC-min(coverage_h2o2$MIC))/(max(coverage_h2o2$MIC)-min(coverage_h2o2$MIC))
+coverage_h2o2$MBC<-(coverage_h2o2$MBC-min(coverage_h2o2$MBC))/(max(coverage_h2o2$MBC)-min(coverage_h2o2$MBC))
+
+```
+
+```{r}
+h2o2matrix<-as.matrix(coverage_h2o2[,-1])
+
+
+jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2.jpeg", width=500, height=1000)
+
+
+heatmap.2(h2o2matrix, # data frame a matrix
+          marg = c(20,15),
+          density.info = "none", # Remove density legend lines
+          trace = "none",
+          # dendrogram = "row", 
+           colsep=1:nrow(o2matrix), # Add vertical grid lines
+          rowsep=1:nrow(o2matrix), # Add horizontal grid lines
+          sepcolor = "black",
+          col = viridis::viridis_pal(),
+          cexRow = 1.5,
+          cexCol = 1.5,
+          lwid=c(1, 6),
+          lhei = c(2,20), key=T, keysize = 5)
+
+dev.off()
+
+
+```
+
+
+
 
 
