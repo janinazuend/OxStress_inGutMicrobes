@@ -26,6 +26,7 @@ library(ggbreak)
 library(openxlsx)
 ```
 
+# 1. Load the data and calculate median MIC & MBC
 ```{r}
 h2o2 = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.csv", sep=",", header=T, check.names =F)
 names(h2o2)[2]<-"bacteria"
@@ -48,6 +49,8 @@ names(median_o2)[3]<-"value_o2"
 joined<- join(median_h2o2, median_o2, by=c("bacteria", "assay"))
 
 ```
+
+# 2. Correlation of MIC and MBC between H2O2 and O2
 ```{r}
 library(ggpmisc)
 
@@ -85,8 +88,7 @@ ggsave(filename = "O2_H2O2.jpeg",
 
 ```
 
-##Generate a df with names & phyla
-
+# 3. Generate a df with names & phyla or class
 
 ```{r}
 #########################################
@@ -178,7 +180,7 @@ bacteria_pyla
 
 ```{r}
 #########################################
-#Assign phyla to species name
+#Assign class to species name
 ########################################
 
 
@@ -259,11 +261,8 @@ bacteria_pyla[entero,6]="Bacilli"
 esch<-grep("Esch", joined$bacteria)
 bacteria_pyla[esch,6]="Gammaproteobacteria"
 #########################
-
-bacteria_pyla
-
 ```
-
+# 4. Correlation MIC and MBC coloured by class
 ```{r}
 library(ggpmisc)
 

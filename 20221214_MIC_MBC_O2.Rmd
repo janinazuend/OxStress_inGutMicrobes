@@ -543,8 +543,27 @@ names(df_long)[4]<-"condition_O2"
 # Write the first data set in a new workbook
 write.csv(df_long[,c(1,4,5)], file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2.csv")
 ```
-
+# 7. Trial fitting
 ```{r}
+
+
+MIC_mod%>%
+  subset(bacteria %in% c("Anaerostipes hadrus"))%>%
+  gather(condition, OD, "2.2":"50000", factor_key = T )->sub
+
+sub$condition<-as.numeric(sub$condition)
+
+sub%>%
+  ggplot(aes(x=condition, y=OD))+
+  geom_point()+
+  stat_smooth(method="nls", 
+              formula=y~1+Vmax*(1-exp(-x/tau)), # this is an nls argument, 
+                                                #but stat_smooth passes the parameter along
+              start=c(tau=0.2,Vmax=1), # this too
+              se=FALSE)
+
+
+
 
 ```
 
