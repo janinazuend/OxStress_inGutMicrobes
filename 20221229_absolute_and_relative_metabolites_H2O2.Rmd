@@ -24,10 +24,11 @@ library(ggbreak)
 library(openxlsx)
 library(readxl)
 ```
-##1. Read all the data into one df
+
+# 1. Read all the data into one df
 ```{r}
-setwd("P:/Shared_documents/Janina Zünd/08_phd/04_experimentation/07_H202 MIC")
-hplc_raw <- read.xlsx("20221220_final mic_hplc data_corrected blank.xlsx")
+setwd("C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2")
+hplc_raw <- read.csv(file= "20221220_final mic_hplc data_corrected blank_only_knon_metabolites.csv", sep=";")
 ```
 
 ```{r}
@@ -35,14 +36,14 @@ hplc_raw%>%
   subset(remove_for_data_analysis != "yes")%>%
   subset(condition != "blank")->subset
 
-subset[is.na(subset[])] <- 0
+# subset[is.na(subset[])] <- 0
 
 
 subset<-subset[, c(1, 2, 21, 22, 23, 24, 25, 27)]
 ```
 
 
-##2. Calculate relative values
+# 2. Calculate relative values
 ```{r}
 ##starting again with the wide table
 
@@ -55,7 +56,7 @@ HPLC_values$total_SCFA<-0
 
 for (i in 1:nrow(HPLC_values)){
   x<-HPLC_values[i,c(3:8)]
-  HPLC_values[i,9]<- sum(x[x>0])
+  HPLC_values[i,9]<- sum(x[!is.na(x) & x > 0], na.rm=T)
   
   for (j in 3:8){
     HPLC_values_relative_wide[i,j] = HPLC_values[i,j] / HPLC_values[i, 9]
@@ -63,31 +64,29 @@ for (i in 1:nrow(HPLC_values)){
 }
 ```
 
-
-
 ```{r}
 #transform into long
 HPLC_relative_long <-  gather(HPLC_values_relative_wide, metabolite, concentration, "Succinate":"Butyrate", factor_key = T ) 
 ```
 
 
-
-
-
-##3. Calculate means & SD -> replicates do not correspont to each other -> better display mean
+# 3. Calculate means & SD -> replicates do not correspont to each other -> better display mean
 
 ```{r}
+#calculate means & sd
 mean_metabolites <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$assay, HPLC_relative_long$condition, HPLC_relative_long$metabolite), FUN=mean)
-
 sdv <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$assay, HPLC_relative_long$condition, HPLC_relative_long$metabolite), FUN=sd)
 
 names(mean_metabolites)<-c("Bacteria",  "condition", "metabolite",  "mean_conc")
 names(sdv)<-c("Bacteria",  "condition", "metabolite",  "sd")
 
-
+#long table with all means
 total_means<-join(mean_metabolites, sdv)
+```
 
-
+## wide table for correlation plots
+```{r}
+#separate table for all the conditions-> both NIC and NIC-1 have to be linked with control,...
 total_means%>%
   subset(condition %in% c("control"))->control_means
 
@@ -105,11 +104,6 @@ names(NIC_means)[4]<-"mean_h2o2"
 
 NIC_means<-NIC_means[, -c(2)]
 
-NIC_means%>%
-  subset(mean_h2o2 != "NaN")->NIC_means
-
-
-
 
 total_means%>%
   subset(condition %in% c("NIC-1"))->NIC_1_means
@@ -119,11 +113,7 @@ names(NIC_1_means)[4]<-"mean_h2o2"
 
 NIC_1_means<-NIC_1_means[, -c(2)]
 
-NIC_1_means%>%
-  subset(mean_h2o2 != "NaN")->NIC_1_means
-
-
-
+#####
 means_corr_nic<-inner_join(control_means, NIC_means)
 means_corr_nic$condition<-"NIC"
 
@@ -136,10 +126,11 @@ all_means<-rbind(means_corr_nic, means_corr_nic_1)
 
 ```
 
-##4. Plots with means
+# 4. Plots correlation of means
 
 ```{r}
 setwd("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output")
+library(scales)
 
 bacteria_names<-unique(all_means$Bacteria)
 
@@ -171,12 +162,12 @@ for (i in 1:length(bacteria_names)) {
   
   x<-paste0(bacteria_names[i], ".jpg")
   
-  ggsave(filename = x,   
-         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/corr_H2O2", 
-         width = 18,
-         height = 15,
-         units = c("cm"))
-  
+  # ggsave(filename = x,   
+  #        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/corr_H2O2", 
+  #        width = 18,
+  #        height = 15,
+  #        units = c("cm"))
+  # 
   }
 
 
@@ -184,15 +175,13 @@ for (i in 1:length(bacteria_names)) {
 
 ```
 
-## display absolute values
-
-
-
+# 5. display absolute values
 
 ```{r}
 #transform into long
-HPLC_relative_long <-  gather(HPLC_values, metabolite, concentration, "Succinate":"Butyrate", factor_key = T ) 
+HPLC_absolute_long <-  gather(HPLC_values, metabolite, concentration, "Succinate":"Butyrate", factor_key = T ) 
 ```
+
 ```{r}
 ############################
 #PLOT ABSOLUTE - blank corrected
@@ -216,12 +205,12 @@ HPLC_relative_long <-  gather(HPLC_values, metabolite, concentration, "Succinate
 #loop for plots for all bacteria
 for (i in 1:length(bacteria_names)) {
 ##create subset
-HPLC_relative_long%>%
+HPLC_absolute_long%>%
     subset(assay %in% bacteria_names[i])->bacteria_subset
 
   t<-paste0(bacteria_names[i])
 
-  p_individual<-ggplot(bacteria_subset, aes(x=metabolite, y=concentration, fill=condition)) +
+  ggplot(bacteria_subset, aes(x=metabolite, y=concentration, fill=condition)) +
     stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
     stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
     #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
@@ -237,122 +226,16 @@ HPLC_relative_long%>%
 
   x<-paste0(bacteria_names[i], ".jpg")
 
-  ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_H2O2",
-         width = 14,
-         height = 12,
-         units = c("cm"))
+  # ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_H2O2",
+  #        width = 14,
+  #        height = 12,
+  #        units = c("cm"))
   }
 ```
 
-##3. Calculate means & SD -> replicates do not correspont to each other -> better display mean
-
-```{r}
-mean_metabolites <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$assay, HPLC_relative_long$condition, HPLC_relative_long$metabolite), FUN=mean)
-
-sdv <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$assay, HPLC_relative_long$condition, HPLC_relative_long$metabolite), FUN=sd)
-
-names(mean_metabolites)<-c("Bacteria",  "condition", "metabolite",  "mean_conc")
-names(sdv)<-c("Bacteria",  "condition", "metabolite",  "sd")
+#6. Assign taxonomy to bacteria name
 
 
-total_means<-join(mean_metabolites, sdv)
-
-
-total_means%>%
-  subset(condition %in% c("control"))->control_means
-
-names(control_means)[5]<-"sd_control"
-names(control_means)[4]<-"mean_control"
-
-control_means<-control_means[, -c(2)]
-
-
-total_means%>%
-  subset(condition %in% c("NIC"))->NIC_means
-
-names(NIC_means)[5]<-"sd_h2o2"
-names(NIC_means)[4]<-"mean_h2o2"
-
-NIC_means<-NIC_means[, -c(2)]
-
-NIC_means%>%
-  subset(mean_h2o2 != "NaN")->NIC_means
-
-
-
-
-total_means%>%
-  subset(condition %in% c("NIC-1"))->NIC_1_means
-
-names(NIC_1_means)[5]<-"sd_h2o2"
-names(NIC_1_means)[4]<-"mean_h2o2"
-
-NIC_1_means<-NIC_1_means[, -c(2)]
-
-NIC_1_means%>%
-  subset(mean_h2o2 != "NaN")->NIC_1_means
-
-
-
-means_corr_nic<-inner_join(control_means, NIC_means)
-means_corr_nic$condition<-"NIC"
-
-
-means_corr_nic_1<-inner_join(control_means, NIC_1_means)
-means_corr_nic_1$condition<-"NIC-1"
-
-
-all_means<-rbind(means_corr_nic, means_corr_nic_1)
-
-```
-
-##4. Plots with means-absolute
-
-```{r}
-setwd("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output")
-
-bacteria_names<-unique(all_means$Bacteria)
-
-
-for (i in 1:length(bacteria_names)) {
-  # for (i in 1:1) {
-##create subset 
-    
-    
-    all_means%>%
-      subset(Bacteria %in% c(bacteria_names[i]))->bacteria_subset
-  
-  plot <-ggplot(bacteria_subset, aes(y=mean_control, x=mean_h2o2))+
-    geom_abline(intercept=0, slope=1, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
-    stat_poly_line(color="darkgrey", b_0.constant =T) +
-    geom_point(aes(colour=metabolite, shape=condition), size=3, alpha=0.5) +
-    geom_errorbar(aes(ymin=(mean_control - sd_control), ymax=(mean_control + sd_control), colour=metabolite, group=condition))+
-    geom_errorbarh(aes(xmin=mean_h2o2 - sd_h2o2, xmax=mean_h2o2 + sd_h2o2, colour=metabolite, group=condition))+
-    coord_fixed()+
-    #expand_limits(x=c(0.05, 1), y=c(0.05, 1))+
-    # geom_abline(intercept=0.0, slope=1.1111111, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
-    # geom_abline(intercept=-0.0, slope=0.9, color="darkgrey", size=0.75, alpha=0.5, linetype =3 )+
-    ggtitle(bacteria_names[i])+
-    labs(x=expression(H[2]*O[2]), y="control")+
-    stat_poly_eq(b_0.constant =T)+
-    scale_x_continuous( limits = c(-35, 40), labels = label_number(accuracy = 0.01)) +
-    scale_y_continuous( limits = c(-35, 40), labels = label_number(accuracy = 0.01))
-  show(plot)
-  
-  x<-paste0(bacteria_names[i], ".jpg")
-  
-  ggsave(filename = x,   
-         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/corr_H2O2_absolute", 
-         width = 18,
-         height = 15,
-         units = c("cm"))
-  
-  }
-
-
-
-
-```
 ```{r}
 
 #########################################
@@ -445,6 +328,8 @@ names(bacteria_pyla)<-c("Bacteria", "Class")
 
 ```
 
+#7. calculate the difference between treatment & control
+
 ```{r}
 ratio<-all_means
 
@@ -478,35 +363,89 @@ ggplot(subset(ratio, condition %in% "NIC"), aes(x=metabolite, y=Bacteria, fill=r
 ```
 
 
+#8. select NIC-1 for some bacteria with lower metabolites for NIC
 
-###5. PCA plot
 ```{r}
-
-HPLC_values%>% 
-  subset(assay %in% c("Anarostipes caccae", "Anaerostipes hadrus"))->df
-
-
-
-metabolites.pca <- prcomp(df[,c(5,6,8,9)],
-                   center = TRUE,
-                   scale. = TRUE)
+HPLC_values[, c("assay","condition", "total_SCFA")]%>%
+  ggplot(aes(y=assay, x=total_SCFA))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+```
 
 
-# install.packages("ggfortify")
+```{r}
+ratio%>%
+  subset(Bacteria %in% c("Anaerostipes caccae", 
+                         "Anaerostipes hadrus", 
+                         "Anaerotignum lactatifermentans",
+                         "Bacteroides caccae",
+                         "Bacteroides faecis",
+                         "Bacteroides fragilis",
+                         "Bacteroides thetaiotaomicron" ,
+                         "Bacteroides uniformis" ,
+                         "Bacteroides vulgatus" , 
+                         "Bifidobacterium adolescentis"  , 
+                         "Bifidobacterium longum" ,
+                         "Blautia hansenii" ,
+                         "Blautia hydrogenotrophica",
+                         "Blautia obeum"  , "Blautia producta" ,
+                         "Enterococcus faecalis"  ,
+                         "Escherichia coli" , 
+                         "Flavonifractor sp.", 
+                         "Lactobacillus plantarum" , 
+                         "Parabacteroides merdae"  ,
+                         "Phascolarctobacterium faecium", 
+                         "Ruminococcus gnavus",
+                         "Bacteroides faecis", 
+                         "Bacteroides ovatus", 
+                         "Eubacterium eligens",
+                         "Prevotella copri",
+                         "Bacteroides xylanisolvens",
+                         "Bacteroides fragilis",
+                         "Clostridium sporogenes",
+                         "Collinsella aerofaciens" ,
+                         "Bacteroides intestinalis",
+                         "Subdoligranulum variabile",
+                         "Ruminococcus bromi",
+                         "Marvinbryantia formatixigens",
+                         "Eubacterium hallii")) %>%
+           subset(condition %in% c("NIC"))->sub_nic
 
-library(ggfortify)
 
-pca.plot <- autoplot(metabolites.pca,
-                          data = df,
-                          colour = 'condition',
-                     shape="assay",
-                     loadings = T, loadings.colour = 'blue',
-                     # alpha="inoculum_dilution",
-         loadings.label = T, loadings.label.size = 3)
-  
-pca.plot
+ratio%>% 
+  subset(Bacteria %in% c("Eubacterium limosum",
+                         "Roseburia intestinalis")) %>%
+           subset(condition %in% c("NIC-1"))->sub_nic_1
 
-  
+
+selection<-rbind(sub_nic, sub_nic_1)
+#unique(ratio$Bacteria)
 
 ```
+
+
+```{r}
+
+
+ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
+  geom_tile()+
+  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), values = rescale(c(-0.5,0,0.4)))+
+  facet_grid(rows=vars(Class), space="free", scale="free")+
+  theme(strip.text.y = element_text(angle=0, size = 15),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
+        axis.text.y = element_text(size=15, face="italic"))+
+  labs(fill="Δrel. metabolites")
+
+
+ ggsave(filename = "H2O2_heatplot_selected.jpeg",   
+         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+         width = 22,
+         height = 20,
+         units = c("cm"))
+
+```
+
+
+
 
