@@ -94,6 +94,7 @@ for (l in 1:length(bacteria)) {
     gather(metabolite, concentration, "succinate":"valerate", factor_key = T )
   
   HPLC_values_wide<-rbind(HPLC_values_wide, aerobe, stringsAsFactors = FALSE)
+  HPLC_values_wide$condition_agar[is.na(HPLC_values_wide$condition_agar)] <- "agar with highest growth"
   HPLC_values_blank_corrected<- rbind(HPLC_values_blank_corrected, aerobe_long)}
 ```
 
@@ -208,7 +209,7 @@ for (i in 1:nrow(HPLC_values)){
 ```{r}
 #re-name
 ##recode some variables
-HPLC_values_relative_wide$condition_agar[HPLC_values_relative_wide$condition_agar == '0'] <- "agar with highest growth"
+
 HPLC_values_relative_wide$condition_agar[HPLC_values_relative_wide$condition_agar == 'highest'] <- "0.15% agar"
 HPLC_values_relative_wide$condition_agar[HPLC_values_relative_wide$condition_agar == 'lowest'] <- "minimal agar (''MIC'')"
 HPLC_values_relative_wide$condition_agar <-factor(HPLC_values_relative_wide$condition_agar, levels = c("0.15% agar", "agar with highest growth", "minimal agar (''MIC'')"))
@@ -453,5 +454,78 @@ ggplot(subset(ratio_O2, agar_condition %in% "minimal agar (''MIC'')"), aes(x=met
          units = c("cm"))
 
 ```
+
+
+
+```{r}
+ratio_O2%>%
+  subset(Bacteria %in% c("Anaerostipes_caccae", 
+                         "Anaerostipes_hadrus", 
+                         "Anaerotignum_lactatifermentans",
+                         "Bacteroides_caccae",
+                         "Bacteroides_faecis",
+                         "Bacteroides_fragilis",
+                         "Bacteroides_thetaiotaomicron" ,
+                         "Bacteroides_uniformis" ,
+                         "Bacteroides_vulgatus" , 
+                         "Bifidobacterium_adolescentis"  , 
+                         "Bifidobacterium_longum" ,
+                         "Blautia_hansenii" ,
+                         "Blautia_hydrogenotrophica",
+                         "Blautia_obeum"  , "Blautia_producta" , 
+                         "Coprococcus_sp" ,
+                         "Enterococcus_faecalis"  ,
+                         "Escherichia_coli" , 
+                         "Eubacterium_limosum" ,
+                         "Faecalibacterium_prausnitzii" ,
+                         "Flavonifractor_sp", 
+                         "Lactobacillus_plantarum" , 
+                         "Parabacterium_merdae"  ,
+                         "Phascolarctobacterium_faecium", 
+                         "Roseburia_intestinalis"   ,
+                         "Ruminococcus_gnavus" )) %>%
+           subset(agar_condition %in% c("minimal agar (''MIC'')"))->sub_nic
+
+
+ratio_O2%>% 
+  subset(Bacteria %in% c("Bacteroides_faecis", "Bacteroides_ovatus", "Eubacterium_eligens", "Prevotella_copri", "Bacteroides_xylanisolvens", "Bacteroides_fragilis", "Clostridium_sporogenes", "Collinsella_aerofaciens"  )) %>%
+           subset(agar_condition %in% c("agar with highest growth"))->sub_nic_1
+
+
+selection<-rbind(sub_nic, sub_nic_1)
+
+
+
+```
+
+```{r}
+
+ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
+  geom_tile()+
+  scale_fill_gradientn(colors = c("coral", "coral", "white", "cyan4"),  values = rescale(c(-0.6, -0.5,0,0.37)))+
+  facet_grid(rows=vars(Class), space="free", scale="free")+
+    theme(strip.text.y = element_text(angle=0, size = 15),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
+        axis.text.y = element_text(size=15 , face="italic"))+
+  labs(fill="Δrel. metabolites")
+
+ggsave(filename = "O2_heatplot_selection.jpeg",   
+         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+         width = 22,
+         height = 20,
+         units = c("cm"))
+
+
+
+
+
+```
+
+
+
+
+
+
 
 
