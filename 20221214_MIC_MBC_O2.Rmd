@@ -556,13 +556,20 @@ sub$condition<-as.numeric(sub$condition)
 sub%>%
   ggplot(aes(x=condition, y=OD))+
   geom_point()+
-  stat_smooth(method="nls", 
-              formula=y~1+Vmax*(1-exp(-x/tau)), # this is an nls argument, 
-                                                #but stat_smooth passes the parameter along
-              start=c(tau=0.2,Vmax=1), # this too
-              se=FALSE)
+  stat_smooth(method="loess", 
+              formula=y~x)
 
 
+
+library(stats)
+hoi<-as.list(sub[,c(2,3)])
+
+nls(OD ~ a/(1 + exp(-b * (condition - c))), data=hoi , start = list(a = -1, b = 1, c = 0)) -> fit
+
+sub %>%
+  ggplot(aes(x=condition, y=OD)) +
+  geom_point() +
+  geom_line(aes(x=condition, y=predict(fit)), color="red")
 
 
 ```

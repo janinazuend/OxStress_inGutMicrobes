@@ -114,7 +114,7 @@ coverage_h2o2$MBC<-(coverage_h2o2$MBC-min(coverage_h2o2$MBC))/(max(coverage_h2o2
 h2o2matrix<-as.matrix(coverage_h2o2[,-1])
 
 
-jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2.jpeg", width=500, height=1000)
+jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2.jpeg", width=1000, height=1000)
 
 
 heatmap.2(h2o2matrix, # data frame a matrix

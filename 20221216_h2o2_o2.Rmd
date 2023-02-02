@@ -368,6 +368,9 @@ bacteria_pyla[, c("assay", "bacteria", "value_o2", "class")] %>%
   ylab("MBC")+
   guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
   ggtitle(expression(Tolerance~to~O[2]*~(oxygenation~scale)))
+
+
+
  
   
 ggsave(filename = "O2_micvsmbc.jpeg", 
