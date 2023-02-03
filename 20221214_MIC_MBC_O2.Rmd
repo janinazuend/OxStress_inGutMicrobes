@@ -391,10 +391,10 @@ for (i in 1:length(bacteria)) {
 }
 
 MIC_replicates <-data.frame(row_names, MIC_values)
-colnames(MIC_replicates)<-list("bacteria", 2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656, 5843.2, 50000)
+colnames(MIC_replicates)<-list("bacteria",  2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9, 2385.2, 5191.4, )
 
 MBC_replicates <-data.frame(row_names, MBC_values)
-colnames(MBC_replicates)<-list("bacteria",2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656, 5843.2, 50000)
+colnames(MBC_replicates)<-list("bacteria", 2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9, 2385.2, 5191.4, )
 
 ```
 
@@ -478,7 +478,7 @@ colnames(df_final_replicates) <-col_names
 
 df_long<-gather(df_final_replicates, condition, value, "MIC":"MBC", factor_key = T)
 
-df_long$range[df_long$value== "50000"]<-"out_range"
+df_long$range[df_long$value== " 11298.8"]<-"out_range"
 
 
 
@@ -498,7 +498,7 @@ length(bacteria)
 df_long%>%
   mutate(bacteria = fct_reorder(bacteria, df_long$MBC_factor))%>%
   ggplot(aes(y=bacteria))+
-   stat_summary(fun="median", geom= "bar", aes(x= value, fill=condition), position= position_dodge(preserve = "single"), width= 0.8, alpha=0.5, colour= "black")+
+  stat_summary(fun="median", geom= "bar", aes(x= value, fill=condition), position= position_dodge(preserve = "single"), width= 0.8, alpha=0.5, colour= "black")+
   geom_point(aes(x=value, colour=condition, group=condition), position=position_jitterdodge(jitter.width = 0.2,
   jitter.height = 0.05,
   dodge.width = 0.75,
@@ -509,8 +509,8 @@ df_long%>%
   xlab("Oxygenation")+
   # facet_grid(cols=vars(range), scales="free", space="free")+
   # force_panelsizes(cols = c(5, 0.3))+
-  scale_x_break(breaks=c(6500, 45000))+
-  scale_x_log10(breaks=c(1, 2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656, 5843.2), position = "bottom")+
+  scale_x_break(breaks=c(6500, 9000))+
+  scale_x_log10(breaks=c( 2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656, 5843.2), position = "bottom")+
   theme(axis.text.y= element_text(size = 15 , face = "italic"), 
         axis.title.y = element_blank(), 
         axis.title.x = element_text(size=20),
@@ -521,11 +521,7 @@ df_long%>%
         axis.text.x.top=element_blank(),
         axis.ticks.x.top =  element_blank()
         )+
-  guides(fill=guide_legend(title="Assay") ,colour="none")->plot_MIC_vs_MBC_table
-
-
-
-plot_MIC_vs_MBC_table
+  guides(fill=guide_legend(title="Assay") ,colour="none")
 
 ggsave(filename = "MIC_MBC_O2.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
@@ -537,6 +533,7 @@ ggsave(filename = "MIC_MBC_O2.jpeg",
 ```
 # 6. Export MIC/MBC values
 ```{r}
+library(readr)
 setwd( "C:/Users/zuendj/Desktop/03_data R/oxidative stress")
 names(df_long)[5]<-"value_O2"
 names(df_long)[4]<-"condition_O2"
