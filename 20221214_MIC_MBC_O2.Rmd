@@ -22,6 +22,8 @@ library(tidyr)
 # devtools::install_github("slowkow/ggrepel")
 library(ggrepel)
 library(ggbreak)
+# install.packages("openxlsx")
+library(openxlsx)
 ```
 
 # 1. Load the Data
@@ -391,11 +393,10 @@ for (i in 1:length(bacteria)) {
 }
 
 MIC_replicates <-data.frame(row_names, MIC_values)
-colnames(MIC_replicates)<-list("bacteria",  2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9, 2385.2, 5191.4, )
+colnames(MIC_replicates)<-list("bacteria",  2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9 , 2385.2 , 5191.4, 11299.08 )
 
 MBC_replicates <-data.frame(row_names, MBC_values)
-colnames(MBC_replicates)<-list("bacteria", 2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9, 2385.2, 5191.4, )
-
+colnames(MBC_replicates)<-list("bacteria", 2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9, 2385.2, 5191.4, 11299.08 )
 ```
 
 ```{r}
@@ -422,20 +423,32 @@ write.xlsx(MIC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative s
 MBC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates_mod.xlsx")
 MIC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates_mod.xlsx")
 
-MIC_mod[is.na(MIC_mod)] <- 0
-MBC_mod[is.na(MBC_mod)] <- 0
 ```
 
 
 ```{r}
 
+average<-aggregate(MIC_mod$`2.2`, list(MIC_mod$bacteria), FUN=mean, na.rm=TRUE, na.action=NULL)
+names(average)<-c("bacteria", "average")
+MIC_mod_av<-join(MIC_mod, average)
+
+
+
+average<-aggregate(MBC_mod$`2.2`, list(MBC_mod$bacteria), FUN=mean, na.rm=TRUE, na.action=NULL)
+names(average)<-c("bacteria", "average")
+MBC_mod_av<-join(MBC_mod, average)
+
+MIC_mod_av[is.na(MIC_mod_av)] <- 0
+MBC_mod_av[is.na(MBC_mod_av)] <- 0
+
+
 MIC_vector <- vector()
-for (i in 1:nrow(MIC_mod)) { #vertical 
+for (i in 1:nrow(MIC_mod_av)) { #vertical 
   candidates <- vector()
      for(j in 2:13) {#horizontal 
-       if (MIC_mod[i,j]>0.05) {#-> MIC_value_absolut)
+       if (MIC_mod_av[i,j]>0.02 & MIC_mod_av[i,j]/MIC_mod_av[i, 14]>0.10) {#-> MIC_value_absolut)
 
-         candidates <- append(candidates, colnames(MIC_mod)[j])
+         candidates <- append(candidates, colnames(MIC_mod_av)[j])
          candidates <-as.numeric(candidates)
        }
      }
@@ -444,12 +457,12 @@ for (i in 1:nrow(MIC_mod)) { #vertical
 
 
 MBC_vector <- vector()
-for (i in 1:nrow(MBC_mod)) { #vertical 
+for (i in 1:nrow(MBC_mod_av)) { #vertical 
   candidates <- vector()
   for(j in 2:13) {#horizontal 
-    if (MBC_mod[i,j]>0.05) {#-> MIC_value_absolut)
+    if (MBC_mod_av[i,j]>0.02 & MBC_mod_av[i,j]/MBC_mod_av[i, 14]>0.10) {#-> MIC_value_absolut)
       
-      candidates <- append(candidates, colnames(MBC_mod)[j])
+      candidates <- append(candidates, colnames(MBC_mod_av)[j])
       candidates <-as.numeric(candidates)
     }
   }
@@ -478,7 +491,6 @@ colnames(df_final_replicates) <-col_names
 
 df_long<-gather(df_final_replicates, condition, value, "MIC":"MBC", factor_key = T)
 
-df_long$range[df_long$value== " 11298.8"]<-"out_range"
 
 
 
