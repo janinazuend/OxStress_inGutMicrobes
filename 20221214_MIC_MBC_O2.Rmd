@@ -415,6 +415,13 @@ colnames(av_mic)<-c("bacteria", "average")
 MIC_replicates_mean<-join(MIC_replicates, av_mic, by=c("bacteria"))
 ```
 
+```{r}
+ggplot(MIC_replicates, aes(y=MIC_replicates[,1], x= MIC_replicates[,3]))+
+  geom_boxplot()
+```
+
+
+
 # 5. Export blanck corrected OD values for outlier correction
 ```{r}
 write.xlsx(MBC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates.xlsx")
@@ -555,29 +562,29 @@ write.csv(df_long[,c(1,4,5)], file = "C:/Users/zuendj/Desktop/03_data R/oxidativ
 # 7. Trial fitting
 ```{r}
 
-
-MIC_mod%>%
-  subset(bacteria %in% c("Anaerostipes hadrus"))%>%
-  gather(condition, OD, "2.2":"50000", factor_key = T )->sub
-
-sub$condition<-as.numeric(sub$condition)
-
-sub%>%
-  ggplot(aes(x=condition, y=OD))+
-  geom_point()+
-  stat_smooth(method="loess", 
-              formula=y~x)
-
-
-
-library(stats)
-hoi<-as.list(sub[,c(2,3)])
-
-nls(OD ~ a/(1 + exp(-b * (condition - c))), data=hoi , start = list(a = -1, b = 1, c = 0)) -> fit
-
-sub %>%
-  ggplot(aes(x=condition, y=OD)) +
-  geom_point() +
+# 
+# MIC_mod%>%
+#   subset(bacteria %in% c("Anaerostipes hadrus"))%>%
+#   gather(condition, OD, "2.2":"50000", factor_key = T )->sub
+# 
+# sub$condition<-as.numeric(sub$condition)
+# 
+# sub%>%
+#   ggplot(aes(x=condition, y=OD))+
+#   geom_point()+
+#   stat_smooth(method="loess", 
+#               formula=y~x)
+# 
+# 
+# 
+# library(stats)
+# hoi<-as.list(sub[,c(2,3)])
+# 
+# nls(OD ~ a/(1 + exp(-b * (condition - c))), data=hoi , start = list(a = -1, b = 1, c = 0)) -> fit
+# 
+# sub %>%
+#   ggplot(aes(x=condition, y=OD)) +
+#   geom_point() +
   geom_line(aes(x=condition, y=predict(fit)), color="red")
 
 
