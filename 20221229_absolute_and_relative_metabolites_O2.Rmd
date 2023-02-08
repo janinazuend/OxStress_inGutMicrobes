@@ -23,134 +23,135 @@ library(ggrepel)
 library(ggbreak)
 library(openxlsx)
 library(readxl)
+library(ggh4x)
+library(ggpubr)
+library(ggpubr)
+library(rstatix)
+library(dplyr)
 ```
-##1. Read all the data into one df
+
+# 1. Read all the data into one df
 ```{r}
 setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
 bacteria <- list.files(path = "P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
 ```
-###aerobic and anaerobic values go next to each other in order to do correlation
+## aerobic and anaerobic values go next to each other in order to do correlation: blank correction
 ```{r}
-setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
-
-#########################################
-#blank correction
-########################################
-#define empty matrices, no values added so far 
-HPLC_values_blank_corrected<- matrix(0, 0, 5)
-HPLC_values_wide<- matrix(0, 0, 13)
-
-#room for bacteria, phyla, agar condition,growth condition, aerobic/anaerobic and 10 metabolites, each species has 21 data point which are 7 triplicates 
-#HPLC_values_relative_mean<-matrix(0, 6, 15)#same matrix as above but with mean of the triplicates 
-
-#column names for matrix 
-col_names_HPLC <- list("sample_ID", "condition_agar", "condition", "succinate", "lactate", "formate", "acetate","propionate", "isobutyrate", "butyrate", "ethanol", "isovalerate", "valerate")
-
-
-col_names<- list("sample_ID", "condition_agar", "oxygen_condition", "metabolite", "concentration")
-colnames(HPLC_values_blank_corrected)<- col_names
-colnames(HPLC_values_wide)<- col_names_HPLC
-
-for (l in 1:length(bacteria)) {
-  #generate MICwide format
-  
-  HPLCwide = read_excel(bacteria[l])
-  # print(bacteria[l])
-  aerobe<-as.data.frame(HPLCwide[c(2:25), c(7,3,5,17:26)])
-  colnames(aerobe)<- col_names_HPLC
-  # aerobe[is.na(aerobe)] <- 0
-
-  
-  for (i in 1:3) {
-
-  for (z in 4:12) {
-    aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[4, z])
-  }}
-  for (i in 5:7) {
-    for (z in 4:12) {
-      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[8, z])
-    }}
-  for (i in 9:11) {
-    for (z in 4:12) {
-      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[12, z])
-    }}
-  
-  for (i in 13:15) {
-    for (z in 4:12) {
-      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[16, z])
-    }}
-  for (i in 17:19) {
-    for (z in 4:12) {
-      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[20, z])
-    }}
-  for (i in 21:23) {
-    for (z in 4:12) {
-      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[24, z])
-    }}
-  
-  aerobe<-aerobe[-c(4,8,12,16,20,24),]
-  
-  aerobe_long <- aerobe%>%
-    gather(metabolite, concentration, "succinate":"valerate", factor_key = T )
-  
-  HPLC_values_wide<-rbind(HPLC_values_wide, aerobe, stringsAsFactors = FALSE)
-  HPLC_values_wide$condition_agar[is.na(HPLC_values_wide$condition_agar)] <- "agar with highest growth"
-  HPLC_values_blank_corrected<- rbind(HPLC_values_blank_corrected, aerobe_long)}
-```
-
-###get row names & recode some variables
-```{r}
-HPLC_values_blank_corrected$condition_agar[is.na(HPLC_values_blank_corrected$condition_agar)] <- "agar with highest growth"
-HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'highest'] <- "0.15% agar"
-HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'lowest'] <- "minimal agar (''MIC'')"
-HPLC_values_blank_corrected$condition_agar <-factor(HPLC_values_blank_corrected$condition_agar, levels = c("0.15% agar", "agar with highest growth", "minimal agar (''MIC'')"))
-
-
-bacteria_names <- strsplit(bacteria, ".xls")
-bacteria_names <- as.character(bacteria_names)
-row_names<-matrix(0,length(bacteria)*180,1)
-position = 0
-for (i in 1:length(bacteria)) {
-  for (j in 1:180) {
-    row_names[position+j,1] = bacteria_names[i]
-  }
-  position = position+180
-}
-
-
-HPLC_values_blank_corrected_names<-cbind(row_names, HPLC_values_blank_corrected)
-HPLC_values_blank_corrected_names$concentration<-as.numeric(HPLC_values_blank_corrected_names$concentration)
-```
-
-```{r, echo=FALSE, include=FALSE}
-############################
-#PLOT ABSOLUTE - blank corrected
-###############################
-
-# #plot single bactrium
-# p_box_subset<-ggplot(subset(HPLC_values_blank_corrected_names, row_names %in% c("Anaerostipes_caccae") & metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
-#   stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
-#   stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
-#   #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
-#   facet_grid( rows=vars(condition_agar), cols= vars(metabolite), scales = "free", switch="y")+
-#   #geom_hline(yintercept=0)+
-#   theme()+
-#   ylab("metabolites produced [%]")
+# setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
+# 
+# #########################################
+# #blank correction
+# ########################################
+# 
+# #define empty matrices, no values added so far 
+# HPLC_values_blank_corrected<- matrix(0, 0, 5)
+# HPLC_values_wide<- matrix(0, 0, 13)
+# 
+# #room for bacteria, phyla, agar condition,growth condition, aerobic/anaerobic and 10 metabolites, each species has 21 data point which are 7 triplicates 
+# #HPLC_values_relative_mean<-matrix(0, 6, 15)#same matrix as above but with mean of the triplicates 
+# 
+# #column names for matrix 
+# col_names_HPLC <- list("sample_ID", "condition_agar", "condition", "succinate", "lactate", "formate", "acetate","propionate", "isobutyrate", "butyrate", "ethanol", "isovalerate", "valerate")
 # 
 # 
-# p_box_subset
+# col_names<- list("sample_ID", "condition_agar", "oxygen_condition", "metabolite", "concentration")
+# colnames(HPLC_values_blank_corrected)<- col_names
+# colnames(HPLC_values_wide)<- col_names_HPLC
+# 
+# for (l in 1:length(bacteria)) {
+#   #generate MICwide format
+#   
+#   HPLCwide = read_excel(bacteria[l])
+#   # print(bacteria[l])
+#   aerobe<-as.data.frame(HPLCwide[c(2:25), c(7,3,5,17:26)])
+#   colnames(aerobe)<- col_names_HPLC
+#   # aerobe[is.na(aerobe)] <- 0
+# 
+#   
+#   for (i in 1:3) {
+# 
+#   for (z in 4:12) {
+#     aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[4, z])
+#   }}
+#   for (i in 5:7) {
+#     for (z in 4:12) {
+#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[8, z])
+#     }}
+#   for (i in 9:11) {
+#     for (z in 4:12) {
+#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[12, z])
+#     }}
+#   
+#   for (i in 13:15) {
+#     for (z in 4:12) {
+#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[16, z])
+#     }}
+#   for (i in 17:19) {
+#     for (z in 4:12) {
+#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[20, z])
+#     }}
+#   for (i in 21:23) {
+#     for (z in 4:12) {
+#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[24, z])
+#     }}
+#   
+#   aerobe<-aerobe[-c(4,8,12,16,20,24),]
+#   
+#   aerobe_long <- aerobe%>%
+#     gather(metabolite, concentration, "succinate":"valerate", factor_key = T )
+#   
+#   HPLC_values_wide<-rbind(HPLC_values_wide, aerobe, stringsAsFactors = FALSE)
+#   HPLC_values_wide$condition_agar[is.na(HPLC_values_wide$condition_agar)] <- "agar with highest growth"
+#   HPLC_values_blank_corrected<- rbind(HPLC_values_blank_corrected, aerobe_long)}
+```
 
+### get row names & recode some variables
+```{r}
+# HPLC_values_blank_corrected$condition_agar[is.na(HPLC_values_blank_corrected$condition_agar)] <- "agar with highest growth"
+# HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'highest'] <- "0.15% agar"
+# HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'lowest'] <- "minimal agar (''MIC'')"
+# HPLC_values_blank_corrected$condition_agar <-factor(HPLC_values_blank_corrected$condition_agar, levels = c("0.15% agar", "agar with highest growth", "minimal agar (''MIC'')"))
+# 
+# 
+ bacteria_names <- strsplit(bacteria, ".xls")
+# bacteria_names <- as.character(bacteria_names)
+# row_names<-matrix(0,length(bacteria)*180,1)
+# position = 0
+# for (i in 1:length(bacteria)) {
+#   for (j in 1:180) {
+#     row_names[position+j,1] = bacteria_names[i]
+#   }
+#   position = position+180
+# }
+# 
+# 
+# HPLC_values_blank_corrected_names<-cbind(row_names, HPLC_values_blank_corrected)
+# HPLC_values_blank_corrected_names$concentration<-as.numeric(HPLC_values_blank_corrected_names$concentration)
+```
 
+```{r}
+# write.csv(HPLC_values_blank_corrected_names, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/metabolites_O2.csv")
+# write.csv(HPLC_values_wide, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/wide_metabolites_O2.csv")
+```
 
+# 2. Load the data from excel
+
+```{r}
+HPLC_blank_corrected_O2<- read.csv("C:/Users/zuendj/Desktop/03_data R/oxidative stress/metabolites_O2.csv", sep=",", header=T, check.names =F)
+```
+
+# 3. Plots: absolute data
+
+```{r}
 #loop for plots for all bacteria
 for (i in 1:length(bacteria_names)) {
 ##create subset
-  subset<- HPLC_values_blank_corrected_names$row_names == bacteria_names[i]
-  bacteria_subset<-HPLC_values_blank_corrected_names[subset,]
+  subset<- HPLC_blank_corrected_O2$row_names == bacteria_names[i]
+  bacteria_subset<- HPLC_blank_corrected_O2[subset,]
 
   t<-paste0(bacteria_names[i])
 
-  p_individual<-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
+ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
     stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
     stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
     #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
@@ -160,19 +161,23 @@ for (i in 1:length(bacteria_names)) {
           axis.text.x = element_blank(),
           axis.ticks.x = element_blank() )+
     ggtitle(t)+
-    ylab("metabolites produced [mM]")
+    ylab("metabolites produced [mM]")->p
   #scale_y_continuous(limits = c(-0.5, 1))+
 
+  
+show(p)
 
   x<-paste0(bacteria[i], ".jpg")
 
-  ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_O2")
-  }
+  # ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_O2")
+}
 ```
 
-##2. Calculate relative values
+# 4. Calculate relative values
 ```{r}
 ##starting again with the wide table
+HPLC_values_wide<- read.csv("C:/Users/zuendj/Desktop/03_data R/oxidative stress/wide_metabolites_O2.csv", sep=",", header=T, check.names =F)
+
 ##values have to be numeric
 HPLC_values_wide$succinate<-as.numeric(HPLC_values_wide$succinate)
 HPLC_values_wide$lactate<-as.numeric(HPLC_values_wide$lactate)
@@ -184,8 +189,8 @@ HPLC_values_wide$valerate<-as.numeric(HPLC_values_wide$valerate)
 HPLC_values_wide$isobutyrate<-as.numeric(HPLC_values_wide$isobutyrate)
 HPLC_values_wide$isovalerate<-as.numeric(HPLC_values_wide$isovalerate)
 
-#drop ethanol
-HPLC_values<-HPLC_values_wide[,-c(9,11,12,13)]
+#drop ethanol etc.
+HPLC_values<-HPLC_values_wide[,-c(10,12,13,14)]
 
 #define new df for relative values
 HPLC_values_relative_wide <- HPLC_values
@@ -195,13 +200,15 @@ HPLC_values_relative_wide <- HPLC_values
 HPLC_values$total_SCFA<-0
 
 for (i in 1:nrow(HPLC_values)){
-  x<-HPLC_values[i,c(4:9)]
-  HPLC_values[i,10]<- sum(x[!is.na(x) & x > 0], na.rm=T)
+  x<-HPLC_values[i,c(5:10)]
+  HPLC_values[i,11]<- sum(x[!is.na(x) & x > 0], na.rm=T)
   
-  for (j in 4:9){
-    HPLC_values_relative_wide[i,j] = HPLC_values[i,j] / HPLC_values[i, 10]
+  for (j in 5:10){
+    HPLC_values_relative_wide[i,j] = HPLC_values[i,j] / HPLC_values[i, 11]
   }
 }
+
+
 ```
 
 
@@ -209,12 +216,10 @@ for (i in 1:nrow(HPLC_values)){
 ```{r}
 #re-name
 ##recode some variables
-
 HPLC_values_relative_wide$condition_agar[HPLC_values_relative_wide$condition_agar == 'highest'] <- "0.15% agar"
 HPLC_values_relative_wide$condition_agar[HPLC_values_relative_wide$condition_agar == 'lowest'] <- "minimal agar (''MIC'')"
 HPLC_values_relative_wide$condition_agar <-factor(HPLC_values_relative_wide$condition_agar, levels = c("0.15% agar", "agar with highest growth", "minimal agar (''MIC'')"))
 ```
-
 
 
 ```{r}
@@ -242,10 +247,153 @@ HPLC_relative_long<-cbind(row_names_relative_2, HPLC_relative_long)
 ```
 
 
+# 5. relative plots & Statistics: t-test
+
+```{r}
+stats<-matrix(0,0,5)
+bacteria_names<- unique(HPLC_relative_long$row_names_relative_2)
+metabol<- unique(HPLC_relative_long$metabolite)
+cond<- unique(HPLC_relative_long$condition_agar)
+
+
+HPLC_relative_long$condition<-factor(HPLC_relative_long$condition, levels=c("anaerobe", "aerobe"))
+
+
+#loop for plots for all bacteria
+for (i in 1:length(bacteria_names)) {
+##create subset
+  subset(HPLC_relative_long, row_names_relative_2 == bacteria_names[i])->bacteria_subset
+  
+
+rm(wil) 
+  
+try(
+  
+  
+  bacteria_subset %>%
+  filter(!is.na(concentration)) %>%
+  group_by(metabolite, condition_agar) %>%
+  t_test(data= .,
+  formula = concentration ~ condition, ref.group = 
+    "anaerobe")%>%
+  add_significance()%>% 
+  add_xy_position(x="metabolite") -> wil
+  
+  
+  , silent = T)
+    
+    
+  t<-paste0(bacteria_names[i])
+  
+  
+  p_individual<-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration)) +
+    stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black", aes(fill=condition)) +
+    stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1), aes(group=condition)) +
+    #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
+    facet_grid( rows=vars(condition_agar), scales = "free", switch="y")+
+    #geom_hline(yintercept=0)+
+    theme(axis.title.x = element_blank(),
+          # axis.text.x = element_blank(),
+          axis.ticks.x = element_blank() )+
+    ggtitle(t)+
+    ylab("metabolites produced [mM]")
+  
+ 
+
+try(show(p_individual+stat_pvalue_manual(wil, hide.ns = F, label = "p.signif", tip.length = 0)), silent=T)
+try(wil$Bacteria<- bacteria_names[i], silent=T)
+try(out<-wil[, c("condition_agar", "metabolite", "p", "p.signif", "Bacteria")], silent=T)
+
+
+stats<-rbind(stats, out)
+
+  
+  x<-paste0(bacteria_names[i], ".jpg")
+
+  ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/relative_O2")
+  }
+```
+# 6. Perform T test & Shapiro Wilk test to check for normality
+
+
+```{r}
+stats<-matrix(0,0,5)
+stats_shapi<-matrix(0,0,5)
+bacteria_names<- unique(HPLC_relative_long$row_names_relative_2)
+metabol<- unique(HPLC_relative_long$metabolite)
+cond<- unique(HPLC_relative_long$condition_agar)
+ana<- unique(HPLC_relative_long$condition)
+
+
+#loop for plots for all bacteria
+for (i in 1:length(bacteria_names)) {
+##create subset
+  subset(HPLC_relative_long, row_names_relative_2 == bacteria_names[i])->bacteria_subset
+  
+  for (j in 1:length(metabol)){
+     subset(bacteria_subset, metabolite == metabol[j])->metabol_subset
+    
+    for (x in 1:length(cond)){
+    
+     subset(metabol_subset, condition_agar == cond[x])->subset
+
+rm(wil) 
+rm(out)
+rm(shapi_out)
+rm(shapi)
+
+  
+try(
+  subset %>%
+  filter(!is.na(concentration)) %>%
+  t_test(data= .,
+  formula = concentration ~ condition, ref.group = 
+    "anaerobe")%>%
+  add_significance()%>% 
+  add_xy_position(x="metabolite") -> wil
+  , 
+  silent = T)
+    
+    
+try(wil$Bacteria<- bacteria_names[i], silent=T)
+try(wil$agar_condition<- cond[x], silent=T)
+try(wil$metabolite<- metabol[j], silent=T)
+try(out<-wil[, c("agar_condition", "metabolite", "p", "p.signif", "Bacteria")], silent=T)
 
 
 
-##3. Calculate means & SD -> replicates do not correspont to each other -> better display mean
+for (z in 1:length(ana)){
+try(
+  subset%>%
+    subset(condition %in% ana[z])%>%
+     shapiro_test(concentration) -> shapi_out
+  , silent = T)
+  
+try(shapi<-shapi_out[, c("p")], silent=T)
+try(shapi$Bacteria<- bacteria_names[i], silent=T)
+try(shapi$agar_condition<- cond[x], silent=T)
+try(shapi$metabolite<- metabol[j], silent=T)
+try(shapi$condition<- ana[z], silent=T)
+
+
+try(stats_shapi<-rbind(stats_shapi, shapi), silent=T)
+try(stats<-rbind(stats, out), silent=T)
+
+}}}}
+
+stats%>%
+  filter(p != "NaN")->stats
+
+```
+
+
+```{r}
+shapiro_wide<-pivot_wider(stats_shapi, values_from = p, names_from = condition)
+names(shapiro_wide)<-c(    "Bacteria", "agar_condition", "metabolite", "p_shapiro_aerobe", "p_shapiro_anaerobe")
+```
+
+
+# 4. Calculate means & SD -> replicates do not correspont to each other -> better display mean
 
 ```{r}
 mean_metabolites <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$row_names_relative, HPLC_relative_long$condition_agar, HPLC_relative_long$metabolite, HPLC_relative_long$condition), FUN=mean)
@@ -256,7 +404,7 @@ names(mean_metabolites)<-c("Bacteria",  "agar_condition", "metabolite", "conditi
 names(sdv)<-c("Bacteria",  "agar_condition", "metabolite", "condition", "sd")
 
 
-total_means<-join(mean_metabolites, sdv)
+total_means<-merge(mean_metabolites, sdv)
 
 
 total_means%>%
@@ -275,10 +423,65 @@ names(anaerobe_means)[5]<-"mean_anaerobe"
 
 anaerobe_means<-anaerobe_means[, -c(4)]
 
-means_corr<-join(anaerobe_means, aerobe_means)
+means_corr<-merge(anaerobe_means, aerobe_means)
+
+means_corr<-means_corr[!is.na(means_corr$mean_anaerobe),]
+```
+## Merge mean values with statistics
+
+```{r}
+means_stats<-left_join(means_corr, stats, by = c("Bacteria", "agar_condition", "metabolite"))
+means_stats_shapiro<-left_join(means_stats, shapiro_wide, by = c("Bacteria", "agar_condition", "metabolite"))
+
+means_stats_shapiro<-means_stats_shapiro[!is.na(means_stats_shapiro$p),]
+
+
+means_stats_shapiro$shapiro_min<-0
+
+for (i in 1:nrow(means_stats_shapiro)){
+  
+  
+x<-c(means_stats_shapiro[i,"p_shapiro_aerobe"], means_stats_shapiro[i,"p_shapiro_anaerobe"])
+
+x<-x[!is.na(x)]
+  
+means_stats_shapiro[i, "shapiro_min"] <- min(x)
+                                         }
 ```
 
-##4. Plots with means
+## if shapiro is sig. -> non-normal distribution -> replace p.sig with "ns" (wilcox stest is non-sig. for all)
+
+```{r}
+means_stats_shapiro$p_corrected<-means_stats_shapiro$p.signif
+
+# means_stats_shapiro$p_shapiro_aerobe[is.na(means_stats_shapiro$p_shapiro_aerobe)]<-0
+# means_stats_shapiro$p_shapiro_anaerobe[is.na(means_stats_shapiro$p_shapiro_anaerobe)]<-0
+
+
+for (i in 1:nrow(means_stats_shapiro)){
+  if (is.na(means_stats_shapiro[i,c("p.signif")])){
+    
+    means_stats_shapiro[i,c("p_shapiro_aerobe")] = 0
+    means_stats_shapiro[i,c("p_shapiro_anaerobe")] = 0}}
+
+
+
+  
+  
+  if (!is.na(means_stats_shapiro[i,c("p_shapiro_anaerobe")]) <= 0.05){
+    means_stats_shapiro[i,c("p_corrected")] ="ns"}
+  
+  if (!is.na(means_stats_shapiro[i,c("p_shapiro_aerobe")])<=0.05){
+    means_stats_shapiro[i,c("p_corrected")] ="ns"}
+  }
+
+
+means_stats_shapiro%>%
+  filter(p_shapiro_anaerobe <= 0.05)
+```
+
+
+# 5. Correlation-Plots with means
 
 ```{r, echo=FALSE, include=FALSE}
 library(scales)
@@ -321,7 +524,7 @@ for (i in 1:length(bacteria_names)) {
 
 ```
 
-
+# 6. assign taxonomy 
 
 ```{r}
 
@@ -412,12 +615,11 @@ bacteria_pyla[esch,2]="Gammaproteobacteria"
 #########################
 
 names(bacteria_pyla)<-c("Bacteria", "Class")
-
 ```
 
 
 ```{r}
-ratio_O2<-means_corr
+ratio_O2<-means_stats_shapiro
 
 min(ratio_O2$mean_aerobe)
 
@@ -463,8 +665,6 @@ ratio_O2%>%
                          "Anaerostipes_hadrus", 
                          "Anaerotignum_lactatifermentans",
                          "Bacteroides_caccae",
-                         "Bacteroides_faecis",
-                         "Bacteroides_fragilis",
                          "Bacteroides_thetaiotaomicron" ,
                          "Bacteroides_uniformis" ,
                          "Bacteroides_vulgatus" , 
@@ -495,6 +695,10 @@ ratio_O2%>%
 selection<-rbind(sub_nic, sub_nic_1)
 
 
+selection$p.signif[selection$p.signif=="ns"]<-NA
+selection$p_corrected[selection$p_corrected=="ns"]<-NA
+
+
 
 ```
 
@@ -502,13 +706,15 @@ selection<-rbind(sub_nic, sub_nic_1)
 
 ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
-  scale_fill_gradientn(colors = c("coral", "coral", "white", "cyan4"),  values = rescale(c(-0.6, -0.5,0,0.37)))+
+  scale_fill_gradientn(colors = c("coral", "coral", "white", "cyan4"),  values = rescale(c(-0.6, -0.5,0,0.5)))+
   facet_grid(rows=vars(Class), space="free", scale="free")+
     theme(strip.text.y = element_text(angle=0, size = 15),
         axis.title = element_blank(),
         axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
         axis.text.y = element_text(size=15 , face="italic"))+
-  labs(fill="Δrel. metabolites")
+  labs(fill="Δrel. metabolites")+
+  ggtitle(expression(Metabolic~changes~as~a~response~to~O[2]))+
+  geom_text(aes(label=p_corrected))
 
 ggsave(filename = "O2_heatplot_selection.jpeg",   
          path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
@@ -518,13 +724,55 @@ ggsave(filename = "O2_heatplot_selection.jpeg",
 
 
 
-
+selection %>%
+  subset(Bacteria %in% c("Escherichia_coli"))
 
 ```
 
 
+```{r}
+HPLC_values[, c("assay","condition", "total_SCFA")]%>%
+  ggplot(aes(y=assay, x=total_SCFA))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
 
 
+
+HPLC_values[, c("assay","condition", "acetate")]%>%
+  ggplot(aes(y=assay, x=acetate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+
+
+HPLC_values[, c("assay","condition", "propionate")]%>%
+  ggplot(aes(y=assay, x=propionate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+HPLC_values[, c("assay","condition", "butyrate")]%>%
+  ggplot(aes(y=assay, x=butyrate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+HPLC_values[, c("assay","condition", "succinate")]%>%
+  ggplot(aes(y=assay, x=succinate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+
+HPLC_values[, c("assay","condition", "lactate")]%>%
+  ggplot(aes(y=assay, x=lactate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+
+HPLC_values[, c("assay","condition", "formate")]%>%
+  ggplot(aes(y=assay, x=Formate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+```
 
 
 

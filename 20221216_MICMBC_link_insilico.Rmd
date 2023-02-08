@@ -117,8 +117,8 @@ h2o2matrix<-as.matrix(coverage_h2o2[,-1])
 jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2.jpeg", width=1000, height=1000)
 
 
-heatmap.2(h2o2matrix, # data frame a matrix
-          marg = c(20,15),
+heatmap.2(h2o2matrix[, c("MBC", "MIC", "catalase")], # data frame a matrix
+          marg = c(10,15),
           density.info = "none", # Remove density legend lines
           trace = "none",
           # dendrogram = "row", 

@@ -345,7 +345,7 @@ ratio$ratio <-  ratio$mean_h2o2 -ratio$mean_control
 
 ggplot(subset(ratio, condition %in% "NIC"), aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
-  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), values = rescale(c(-0.5,0,0.4)))+
+  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), values = rescale(c(-0.5,0,0.48)))+
   facet_grid(rows=vars(Class), space="free", scale="free")+
   theme(strip.text.y = element_text(angle=0, size = 15),
         axis.title = element_blank(),
@@ -370,6 +370,43 @@ HPLC_values[, c("assay","condition", "total_SCFA")]%>%
   ggplot(aes(y=assay, x=total_SCFA))+
   geom_boxplot(aes(colour=condition) )+
   geom_point(aes(colour=condition))
+
+
+
+HPLC_values[, c("assay","condition", "Acetate")]%>%
+  ggplot(aes(y=assay, x=Acetate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+
+
+HPLC_values[, c("assay","condition", "Propionate")]%>%
+  ggplot(aes(y=assay, x=Propionate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+HPLC_values[, c("assay","condition", "Butyrate")]%>%
+  ggplot(aes(y=assay, x=Butyrate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+HPLC_values[, c("assay","condition", "Succinate")]%>%
+  ggplot(aes(y=assay, x=Succinate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+
+HPLC_values[, c("assay","condition", "Lactate")]%>%
+  ggplot(aes(y=assay, x=Lactate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
+
+HPLC_values[, c("assay","condition", "Formate")]%>%
+  ggplot(aes(y=assay, x=Formate))+
+  geom_boxplot(aes(colour=condition) )+
+  geom_point(aes(colour=condition))
+
 ```
 
 
@@ -429,13 +466,14 @@ selection<-rbind(sub_nic, sub_nic_1)
 
 ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
-  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), values = rescale(c(-0.5,0,0.4)))+
+  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), values = rescale(c(-0.5,0,0.49)))+
   facet_grid(rows=vars(Class), space="free", scale="free")+
   theme(strip.text.y = element_text(angle=0, size = 15),
         axis.title = element_blank(),
         axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
         axis.text.y = element_text(size=15, face="italic"))+
-  labs(fill="Δrel. metabolites")
+  labs(fill="Δrel. metabolites")+
+  ggtitle(expression(Metabolic~changes~as~a~response~to~H[2]*O[2]))
 
 
  ggsave(filename = "H2O2_heatplot_selected.jpeg",   

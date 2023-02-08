@@ -380,3 +380,34 @@ ggsave(filename = "O2_micvsmbc.jpeg",
        units = c("cm"))
 
 ```
+
+
+```{r}
+
+
+h2o2matrix<-as.matrix(coverage_h2o2[,-1])
+
+
+jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2vso2.jpeg", width=1000, height=1000)
+
+subset(bacteria_pyla, assay %in% c("MBC"))%>%
+  as.matrix()->mbc
+
+heatmap.2(mbc[, c("value_h2o2", "value_o2")], # data frame a matrix
+          marg = c(10,15),
+          density.info = "none", # Remove density legend lines
+          trace = "none",
+          # dendrogram = "row", 
+           colsep=1:nrow(o2matrix), # Add vertical grid lines
+          rowsep=1:nrow(o2matrix), # Add horizontal grid lines
+          sepcolor = "black",
+          col = viridis::viridis_pal(),
+          cexRow = 1.5,
+          cexCol = 1.5,
+          lwid=c(1, 6),
+          lhei = c(2,20), key=T, keysize = 5)
+
+dev.off()
+
+```
+
