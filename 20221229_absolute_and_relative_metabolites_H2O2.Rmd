@@ -526,9 +526,14 @@ selection<-rbind(sub_nic, sub_nic_1)
 ```{r}
 selection$p_corrected[selection$p_corrected=="ns"]<-NA
 
-ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
+selectionn<-selection[!is.na(selection$ratio),]
+
+max<-max(selectionn$ratio)
+min<-min(selectionn$ratio)
+
+ggplot(selectionn, aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
-  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), values = rescale(c(-0.5,0,0.49)))+
+  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), na.value= "grey",values = rescale(c(min,0,max)))+
   facet_grid(rows=vars(Class), space="free", scale="free")+
   theme(strip.text.y = element_text(angle=0, size = 15),
         axis.title = element_blank(),

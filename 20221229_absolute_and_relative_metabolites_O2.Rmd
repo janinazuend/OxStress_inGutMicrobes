@@ -143,34 +143,34 @@ HPLC_blank_corrected_O2<- read.csv("C:/Users/zuendj/Desktop/03_data R/oxidative 
 # 3. Plots: absolute data
 
 ```{r}
-#loop for plots for all bacteria
-for (i in 1:length(bacteria_names)) {
-##create subset
-  subset<- HPLC_blank_corrected_O2$row_names == bacteria_names[i]
-  bacteria_subset<- HPLC_blank_corrected_O2[subset,]
-
-  t<-paste0(bacteria_names[i])
-
-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
-    stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
-    stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
-    #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
-    facet_grid( rows=vars(condition_agar), cols= vars(metabolite), scales = "free", switch="y")+
-    #geom_hline(yintercept=0)+
-    theme(axis.title.x = element_blank(),
-          axis.text.x = element_blank(),
-          axis.ticks.x = element_blank() )+
-    ggtitle(t)+
-    ylab("metabolites produced [mM]")->p
-  #scale_y_continuous(limits = c(-0.5, 1))+
-
-  
-show(p)
-
-  x<-paste0(bacteria[i], ".jpg")
-
-  # ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_O2")
-}
+# #loop for plots for all bacteria
+# for (i in 1:length(bacteria_names)) {
+# ##create subset
+#   subset<- HPLC_blank_corrected_O2$row_names == bacteria_names[i]
+#   bacteria_subset<- HPLC_blank_corrected_O2[subset,]
+# 
+#   t<-paste0(bacteria_names[i])
+# 
+# ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
+#     stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
+#     stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
+#     #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
+#     facet_grid( rows=vars(condition_agar), cols= vars(metabolite), scales = "free", switch="y")+
+#     #geom_hline(yintercept=0)+
+#     theme(axis.title.x = element_blank(),
+#           axis.text.x = element_blank(),
+#           axis.ticks.x = element_blank() )+
+#     ggtitle(t)+
+#     ylab("metabolites produced [mM]")->p
+#   #scale_y_continuous(limits = c(-0.5, 1))+
+# 
+#   
+# show(p)
+# 
+#   x<-paste0(bacteria[i], ".jpg")
+# 
+#   # ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_O2")
+# }
 ```
 
 # 4. Calculate relative values
@@ -246,60 +246,60 @@ HPLC_relative_long<-cbind(row_names_relative_2, HPLC_relative_long)
 # 5. relative plots & Statistics: t-test
 
 ```{r}
-bacteria_names<- unique(HPLC_relative_long$row_names_relative_2)
-metabol<- unique(HPLC_relative_long$metabolite)
-cond<- unique(HPLC_relative_long$condition_agar)
-
-
-HPLC_relative_long$condition<-factor(HPLC_relative_long$condition, levels=c("anaerobe", "aerobe"))
-
-wil<-x
-
-
-#loop for plots for all bacteria
-for (i in 1:length(bacteria_names)) {
-##create subset
-  subset(HPLC_relative_long, row_names_relative_2 == bacteria_names[i])->bacteria_subset
-  
-
-rm(wil) 
-  
-try(
-  bacteria_subset %>%
-  filter(!is.na(concentration)) %>%
-  group_by(metabolite, condition_agar) %>%
-  t_test(data= .,
-  formula = concentration ~ condition, ref.group = 
-    "anaerobe")%>%
-  add_significance()%>% 
-  add_xy_position(x="metabolite") -> wil
-  
-  
-  , silent = T)
-    
-    
-  t<-paste0(bacteria_names[i])
-  
-  
-  p_individual<-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration)) +
-    stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black", aes(fill=condition)) +
-    stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1), aes(group=condition)) +
-    #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
-    facet_grid( rows=vars(condition_agar), scales = "free", switch="y")+
-    #geom_hline(yintercept=0)+
-    theme(axis.title.x = element_blank(),
-          # axis.text.x = element_blank(),
-          axis.ticks.x = element_blank() )+
-    ggtitle(t)+
-    ylab("metabolites produced [mM]")
-  
-  try(show(p_individual+stat_pvalue_manual(wil, hide.ns = F, label = "p.signif", tip.length = 0)), silent=T)
-  
-  
-  x<-paste0(bacteria_names[i], ".jpg")
-
-  ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/relative_O2")
-  }
+# bacteria_names<- unique(HPLC_relative_long$row_names_relative_2)
+# metabol<- unique(HPLC_relative_long$metabolite)
+# cond<- unique(HPLC_relative_long$condition_agar)
+# 
+# 
+# HPLC_relative_long$condition<-factor(HPLC_relative_long$condition, levels=c("anaerobe", "aerobe"))
+# 
+# wil<-x
+# 
+# 
+# #loop for plots for all bacteria
+# for (i in 1:length(bacteria_names)) {
+# ##create subset
+#   subset(HPLC_relative_long, row_names_relative_2 == bacteria_names[i])->bacteria_subset
+#   
+# 
+# rm(wil) 
+#   
+# try(
+#   bacteria_subset %>%
+#   filter(!is.na(concentration)) %>%
+#   group_by(metabolite, condition_agar) %>%
+#   t_test(data= .,
+#   formula = concentration ~ condition, ref.group = 
+#     "anaerobe")%>%
+#   add_significance()%>% 
+#   add_xy_position(x="metabolite") -> wil
+#   
+#   
+#   , silent = T)
+#     
+#     
+#   t<-paste0(bacteria_names[i])
+#   
+#   
+#   p_individual<-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration)) +
+#     stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black", aes(fill=condition)) +
+#     stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1), aes(group=condition)) +
+#     #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
+#     facet_grid( rows=vars(condition_agar), scales = "free", switch="y")+
+#     #geom_hline(yintercept=0)+
+#     theme(axis.title.x = element_blank(),
+#           # axis.text.x = element_blank(),
+#           axis.ticks.x = element_blank() )+
+#     ggtitle(t)+
+#     ylab("metabolites produced [mM]")
+#   
+#   try(show(p_individual+stat_pvalue_manual(wil, hide.ns = F, label = "p.signif", tip.length = 0)), silent=T)
+#   
+#   
+#   x<-paste0(bacteria_names[i], ".jpg")
+# 
+#   ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/relative_O2")
+#   }
 ```
 # 6. Perform T test & Shapiro Wilk test to check for normality
 
@@ -467,40 +467,40 @@ means_stats_shapiro%>%
 # 5. Correlation-Plots with means
 
 ```{r, echo=FALSE, include=FALSE}
-library(scales)
-
-for (i in 1:length(bacteria_names)) {
-  # for (i in 1:1) {
-##create subset 
-    
-    
-    means_corr%>%
-      subset(Bacteria %in% c(bacteria_names[i]))->bacteria_subset
-  
-  plot <-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "butyrate", "propionate", "acetate")), aes(x=mean_aerobe, y=mean_anaerobe))+
-    geom_abline(intercept=0, slope=1, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
-    stat_poly_line(color="darkgrey", b_0.constant =T) +
-    geom_point(aes(colour=metabolite, shape=agar_condition), size=3, alpha=0.5) +
-    geom_errorbar(aes(ymin=mean_anaerobe-sd_anaerobe, ymax=mean_anaerobe+sd_anaerobe, colour=metabolite))+
-    geom_errorbarh(aes(xmin=mean_aerobe-sd_aerobe, xmax=mean_aerobe+sd_aerobe, colour=metabolite))+
-    coord_fixed()+
-    #expand_limits(x=c(0.05, 1), y=c(0.05, 1))+
-    # geom_abline(intercept=0.0, slope=1.1111111, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
-    # geom_abline(intercept=-0.0, slope=0.9, color="darkgrey", size=0.75, alpha=0.5, linetype =3 )+
-    ggtitle(bacteria_names[i])+
-    labs(x="aerobic", y="anaerobic")+
-    stat_poly_eq(b_0.constant =T)+
-    scale_x_continuous( limits = c(-1, 1), labels = label_number(accuracy = 0.01)) +
-    scale_y_continuous( limits = c(-1, 1), labels = label_number(accuracy = 0.01))
-  show(plot)
-  
-  x<-paste0(bacteria[i], ".jpg")
-  
-  ggsave(filename = x,   path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/correlations_O2", 
-         width = 18,
-         height = 15,
-         units = c("cm"))
-  }
+# library(scales)
+# 
+# for (i in 1:length(bacteria_names)) {
+#   # for (i in 1:1) {
+# ##create subset 
+#     
+#     
+#     means_corr%>%
+#       subset(Bacteria %in% c(bacteria_names[i]))->bacteria_subset
+#   
+#   plot <-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "butyrate", "propionate", "acetate")), aes(x=mean_aerobe, y=mean_anaerobe))+
+#     geom_abline(intercept=0, slope=1, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
+#     stat_poly_line(color="darkgrey", b_0.constant =T) +
+#     geom_point(aes(colour=metabolite, shape=agar_condition), size=3, alpha=0.5) +
+#     geom_errorbar(aes(ymin=mean_anaerobe-sd_anaerobe, ymax=mean_anaerobe+sd_anaerobe, colour=metabolite))+
+#     geom_errorbarh(aes(xmin=mean_aerobe-sd_aerobe, xmax=mean_aerobe+sd_aerobe, colour=metabolite))+
+#     coord_fixed()+
+#     #expand_limits(x=c(0.05, 1), y=c(0.05, 1))+
+#     # geom_abline(intercept=0.0, slope=1.1111111, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
+#     # geom_abline(intercept=-0.0, slope=0.9, color="darkgrey", size=0.75, alpha=0.5, linetype =3 )+
+#     ggtitle(bacteria_names[i])+
+#     labs(x="aerobic", y="anaerobic")+
+#     stat_poly_eq(b_0.constant =T)+
+#     scale_x_continuous( limits = c(-1, 1), labels = label_number(accuracy = 0.01)) +
+#     scale_y_continuous( limits = c(-1, 1), labels = label_number(accuracy = 0.01))
+#   show(plot)
+#   
+#   x<-paste0(bacteria[i], ".jpg")
+#   
+#   ggsave(filename = x,   path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/correlations_O2", 
+#          width = 18,
+#          height = 15,
+#          units = c("cm"))
+#   }
 
 ```
 
@@ -677,10 +677,21 @@ selection$p_corrected[selection$p_corrected=="ns"]<-NA
 ```
 
 ```{r}
+# install.packages("base")
+library(base)
+
+selection$Bacteria <- gsub("_", " ", selection$Bacteria)
+```
+
+
+```{r}
+
+max<-max(selection$ratio)
+min<-min(selection$ratio)
 
 ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
-  scale_fill_gradientn(colors = c("coral", "coral", "white", "cyan4"),  values = rescale(c(-0.6, -0.5,0,0.5)))+
+  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(min, 0, max)))+
   facet_grid(rows=vars(Class), space="free", scale="free")+
     theme(strip.text.y = element_text(angle=0, size = 15),
         axis.title = element_blank(),
