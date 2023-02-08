@@ -696,9 +696,6 @@ ggsave(filename = "O2_heatplot_selection.jpeg",
          height = 20,
          units = c("cm"))
 
-
-
-
 ```
 
 

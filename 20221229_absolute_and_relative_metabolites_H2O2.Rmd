@@ -23,6 +23,11 @@ library(ggrepel)
 library(ggbreak)
 library(openxlsx)
 library(readxl)
+library(ggh4x)
+library(ggpubr)
+library(ggpubr)
+library(rstatix)
+library(dplyr)
 ```
 
 # 1. Read all the data into one df
@@ -39,13 +44,14 @@ hplc_raw%>%
 # subset[is.na(subset[])] <- 0
 
 
-subset<-subset[, c(1, 2, 21, 22, 23, 24, 25, 27)]
+subset<-subset[, c("assay", "condition", "Succinate", "Lactate", "Formate", "Acetate", "Propionate", "Butyrate")]
+
+names(subset)<-c("assay", "condition", "succinate", "lactate", "formate", "acetate", "propionate", "butyrate")
 ```
 
 
 # 2. Calculate relative values
 ```{r}
-##starting again with the wide table
 
 #define new df for relative values
 HPLC_values_relative_wide <- subset
@@ -54,19 +60,21 @@ HPLC_values<- subset
 #calculate relative values; first calculate total SCFA
 HPLC_values$total_SCFA<-0
 
+scfas<-c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")
+
 for (i in 1:nrow(HPLC_values)){
-  x<-HPLC_values[i,c(3:8)]
-  HPLC_values[i,9]<- sum(x[!is.na(x) & x > 0], na.rm=T)
+  x<-HPLC_values[i,c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")]
+  HPLC_values[i,c("total_SCFA")]<- sum(x[!is.na(x) & x > 0], na.rm=T)
   
-  for (j in 3:8){
-    HPLC_values_relative_wide[i,j] = HPLC_values[i,j] / HPLC_values[i, 9]
+  for (j in 1:length(scfas)){
+    HPLC_values_relative_wide[i,scfas[j]] = HPLC_values[i,scfas[j]] / HPLC_values[i, c("total_SCFA")]
   }
 }
 ```
 
 ```{r}
 #transform into long
-HPLC_relative_long <-  gather(HPLC_values_relative_wide, metabolite, concentration, "Succinate":"Butyrate", factor_key = T ) 
+HPLC_relative_long <-  gather(HPLC_values_relative_wide, metabolite, concentration, "succinate":"butyrate", factor_key = T ) 
 ```
 
 
@@ -81,7 +89,7 @@ names(mean_metabolites)<-c("Bacteria",  "condition", "metabolite",  "mean_conc")
 names(sdv)<-c("Bacteria",  "condition", "metabolite",  "sd")
 
 #long table with all means
-total_means<-join(mean_metabolites, sdv)
+total_means<-left_join(mean_metabolites, sdv)
 ```
 
 ## wide table for correlation plots
@@ -90,30 +98,29 @@ total_means<-join(mean_metabolites, sdv)
 total_means%>%
   subset(condition %in% c("control"))->control_means
 
-names(control_means)[5]<-"sd_control"
-names(control_means)[4]<-"mean_control"
-
-control_means<-control_means[, -c(2)]
+names(control_means)[names(control_means) == "sd"] <- "sd_control"
+names(control_means)[names(control_means) == "mean_conc"] <- "mean_control"
+control_means <- control_means[, !colnames(control_means) %in% c("condition")]
 
 
 total_means%>%
   subset(condition %in% c("NIC"))->NIC_means
 
-names(NIC_means)[5]<-"sd_h2o2"
-names(NIC_means)[4]<-"mean_h2o2"
 
-NIC_means<-NIC_means[, -c(2)]
+names(NIC_means)[names(NIC_means) == "sd"] <- "sd_h2o2"
+names(NIC_means)[names(NIC_means) == "mean_conc"] <- "mean_h2o2"
+NIC_means <- NIC_means[, !colnames(NIC_means) %in% c("condition")]
 
 
 total_means%>%
   subset(condition %in% c("NIC-1"))->NIC_1_means
 
-names(NIC_1_means)[5]<-"sd_h2o2"
-names(NIC_1_means)[4]<-"mean_h2o2"
-
-NIC_1_means<-NIC_1_means[, -c(2)]
+names(NIC_1_means)[names(NIC_1_means) == "sd"] <- "sd_h2o2"
+names(NIC_1_means)[names(NIC_1_means) == "mean_conc"] <- "mean_h2o2"
+NIC_1_means <- NIC_1_means[, !colnames(NIC_1_means) %in% c("condition")]
 
 #####
+#this generates a wide table with the sd and means of controls and h2o2 next to each other... controls are duplicated in the dataframe
 means_corr_nic<-inner_join(control_means, NIC_means)
 means_corr_nic$condition<-"NIC"
 
@@ -123,7 +130,6 @@ means_corr_nic_1$condition<-"NIC-1"
 
 
 all_means<-rbind(means_corr_nic, means_corr_nic_1)
-
 ```
 
 # 4. Plots correlation of means
@@ -169,39 +175,16 @@ for (i in 1:length(bacteria_names)) {
   #        units = c("cm"))
   # 
   }
-
-
-
-
 ```
 
 # 5. display absolute values
 
 ```{r}
 #transform into long
-HPLC_absolute_long <-  gather(HPLC_values, metabolite, concentration, "Succinate":"Butyrate", factor_key = T ) 
+HPLC_absolute_long <-  gather(HPLC_values, metabolite, concentration, "succinate":"butyrate", factor_key = T ) 
 ```
 
 ```{r}
-############################
-#PLOT ABSOLUTE - blank corrected
-###############################
-
-# #plot single bactrium
-# p_box_subset<-ggplot(subset(HPLC_values_blank_corrected_names, row_names %in% c("Anaerostipes_caccae") & metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
-#   stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
-#   stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
-#   #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
-#   facet_grid( rows=vars(condition_agar), cols= vars(metabolite), scales = "free", switch="y")+
-#   #geom_hline(yintercept=0)+
-#   theme()+
-#   ylab("metabolites produced [%]")
-# 
-# 
-# p_box_subset
-
-
-
 #loop for plots for all bacteria
 for (i in 1:length(bacteria_names)) {
 ##create subset
@@ -277,9 +260,6 @@ Faec<-grep("Faecalibacterium", bacteria_pyla$Bacteria)
 bacteria_pyla[Faec,2]="Clostridia"
 
 flavi<-grep("Flavi", bacteria_pyla$Bacteria)
-
-
-
 bacteria_pyla[flavi,2]="Clostridia"
 
 copr<-grep("Copro", bacteria_pyla$Bacteria)
@@ -302,8 +282,6 @@ bacteria_pyla[bif,2]="Actinomycetia"
 
 colin<-grep("Collin", bacteria_pyla$Bacteria)
 bacteria_pyla[colin,2]="Coriobacteriia"
-
-
 
 anaero<-grep("Anaero", bacteria_pyla$Bacteria)
 bacteria_pyla[anaero,2]="Clostridia"
@@ -328,12 +306,143 @@ names(bacteria_pyla)<-c("Bacteria", "Class")
 
 ```
 
-#7. calculate the difference between treatment & control
+# 7. Perform T test & Shapiro Wilk test to check for normality
+```{r}
+
+# stats<-as.data.frame(matrix(0,0,5))
+# names(stats)<-c("condition_agar", "metabolite", "p", "p.signif", "Bacteria")
+
+stats<-matrix(0,0,5)
+stats_shapi<-matrix(0,0,5)
+
+
+bacteria_names<- unique(HPLC_relative_long$assay)
+metabol<- unique(HPLC_relative_long$metabolite)
+cond<- c("NIC", "NIC-1")
+
+
+
+wil<-"init"
+out<-"init"
+shapi_out<-"init"
+shapi<-"init"
+
+HPLC_relative_long%>%
+  filter(!is.na(concentration))->lon_na_filtered
+  
+
+#loop for plots for all bacteria
+for (i in 1:length(bacteria_names)) {
+##create subset
+  subset(HPLC_relative_long, assay == bacteria_names[i])->bacteria_subset
+  
+  for (j in 1:length(metabol)){
+     subset(bacteria_subset, metabolite == metabol[j])->metabol_subset
+    
+    for (x in 1:length(cond)){
+     subset(metabol_subset, condition %in% c(cond[x], "control"))->subset
+
+rm(wil) 
+rm(out)
+
+rm(shapi_out)
+rm(shapi)
+print(subset)
+try(
+  subset %>%
+  t_test(data= .,
+  formula = concentration ~ condition, ref.group = 
+    "control")%>%
+  add_significance() -> wil
+   , 
+ silent = T)
+    
+    
+try(wil$Bacteria<- bacteria_names[i], silent=T)
+try(wil$condition<- cond[x], silent=T)
+try(wil$metabolite<- metabol[j], silent=T)
+try(out<-wil[, c("condition", "metabolite", "p", "p.signif", "Bacteria")], silent=T)
+
+
+try(stats<-rbind(stats, out), silent=T)
+
+ana<-c("control", cond[x])
+
+for (z in 1:length(ana)){
+try(
+  subset%>%
+    subset(condition %in% ana[z])%>%
+     shapiro_test(concentration) -> shapi_out
+  , silent = T)
+  
+try(shapi<-shapi_out[, c("p")], silent=T)
+try(shapi$Bacteria<- bacteria_names[i], silent=T)
+try(shapi$metabolite<- metabol[j], silent=T)
+try(shapi$condition<- ana[z], silent=T)
+try(stats_shapi<-rbind(stats_shapi, shapi), silent=T)}
+
+
+
+}}}
+
+stats
+stats_shapi
+
+# %>%
+#   filter(p != "NaN")->stats
+
+```
+
 
 ```{r}
-ratio<-all_means
+stats_shapi_distinct<-distinct(stats_shapi)
 
-ratio<-join(ratio, bacteria_pyla, by= "Bacteria")
+
+shapiro_wide<-pivot_wider(stats_shapi_distinct, values_from = p, names_from = condition)
+names(shapiro_wide)<-c( "Bacteria",  "metabolite", "p_shapiro_control", "p_shapiro_NIC", "p_shapiro_NIC_1")
+```
+
+
+## Merge mean values with statistics
+
+```{r}
+means_stats<-left_join(all_means, stats)
+means_stats_shapiro<-left_join(means_stats, shapiro_wide)
+
+means_stats_shapiro$shapiro_min<-0
+
+for (i in 1:nrow(means_stats_shapiro)){
+  
+  
+x<-c(means_stats_shapiro[i,"p_shapiro_control"], means_stats_shapiro[i,"p_shapiro_NIC"], means_stats_shapiro[i,"p_shapiro_NIC_1"])
+
+x<-x[!is.na(x)]
+  
+means_stats_shapiro[i, "shapiro_min"] <- min(x)
+}
+
+
+means_stats_shapiro$p_corrected<-means_stats_shapiro$p.signif
+
+# means_stats_shapiro$p_shapiro_aerobe[is.na(means_stats_shapiro$p_shapiro_aerobe)]<-0
+# means_stats_shapiro$p_shapiro_anaerobe[is.na(means_stats_shapiro$p_shapiro_anaerobe)]<-0
+
+
+for (i in 1:nrow(means_stats_shapiro)){
+  
+    if (!is.na(means_stats_shapiro[i,c("shapiro_min")]) <= 0.05){
+    means_stats_shapiro[i,c("p_corrected")] ="ns"}
+  }
+
+```
+
+
+# 8. calculate the difference between treatment & control
+
+```{r}
+ratio<-means_stats_shapiro
+
+ratio<-left_join(ratio, bacteria_pyla, by= "Bacteria")
 
 # ratio$mean_control[ratio$mean_control<0.001]<-0
 # ratio$mean_h2o2[ratio$mean_h2o2<0.001]<-0
@@ -359,53 +468,6 @@ ggplot(subset(ratio, condition %in% "NIC"), aes(x=metabolite, y=Bacteria, fill=r
          width = 22,
          height = 20,
          units = c("cm"))
-
-```
-
-
-#8. select NIC-1 for some bacteria with lower metabolites for NIC
-
-```{r}
-HPLC_values[, c("assay","condition", "total_SCFA")]%>%
-  ggplot(aes(y=assay, x=total_SCFA))+
-  geom_boxplot(aes(colour=condition) )+
-  geom_point(aes(colour=condition))
-
-
-
-HPLC_values[, c("assay","condition", "Acetate")]%>%
-  ggplot(aes(y=assay, x=Acetate))+
-  geom_boxplot(aes(colour=condition) )+
-  geom_point(aes(colour=condition))
-
-
-
-HPLC_values[, c("assay","condition", "Propionate")]%>%
-  ggplot(aes(y=assay, x=Propionate))+
-  geom_boxplot(aes(colour=condition) )+
-  geom_point(aes(colour=condition))
-
-HPLC_values[, c("assay","condition", "Butyrate")]%>%
-  ggplot(aes(y=assay, x=Butyrate))+
-  geom_boxplot(aes(colour=condition) )+
-  geom_point(aes(colour=condition))
-
-HPLC_values[, c("assay","condition", "Succinate")]%>%
-  ggplot(aes(y=assay, x=Succinate))+
-  geom_boxplot(aes(colour=condition) )+
-  geom_point(aes(colour=condition))
-
-
-HPLC_values[, c("assay","condition", "Lactate")]%>%
-  ggplot(aes(y=assay, x=Lactate))+
-  geom_boxplot(aes(colour=condition) )+
-  geom_point(aes(colour=condition))
-
-
-HPLC_values[, c("assay","condition", "Formate")]%>%
-  ggplot(aes(y=assay, x=Formate))+
-  geom_boxplot(aes(colour=condition) )+
-  geom_point(aes(colour=condition))
 
 ```
 
@@ -462,7 +524,7 @@ selection<-rbind(sub_nic, sub_nic_1)
 
 
 ```{r}
-
+selection$p_corrected[selection$p_corrected=="ns"]<-NA
 
 ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
@@ -473,7 +535,8 @@ ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
         axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
         axis.text.y = element_text(size=15, face="italic"))+
   labs(fill="Δrel. metabolites")+
-  ggtitle(expression(Metabolic~changes~as~a~response~to~H[2]*O[2]))
+  ggtitle(expression(Metabolic~changes~as~a~response~to~H[2]*O[2]))+
+   geom_text(aes(label=p_corrected))
 
 
  ggsave(filename = "H2O2_heatplot_selected.jpeg",   
