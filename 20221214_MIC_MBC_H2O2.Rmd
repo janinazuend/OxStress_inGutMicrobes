@@ -136,287 +136,6 @@ for (l in 1:length(bacteria_MBC)) {
 
 ```
 
-##Generate a df with names & phyla
-
-
-```{r}
-#########################################
-#Assign phyla to species name
-########################################
-
-
-#assign phylum level to bacteria names
-bacteria <- strsplit(bacteria_MIC, ".csv")
-bacteria <- as.character(bacteria)
-phyla<- rep(NA, length(bacteria))
-bacteria_pyla <-cbind(bacteria, phyla)
-
-###
-bacteroidetes<-grep("Bac", bacteria)
-bacteria_pyla[bacteroidetes,2]="Bacteroidetes"
-
-pre<-grep("Pre", bacteria)
-bacteria_pyla[pre,2]="Bacteroidetes"
-
-parabac<-grep("Parabac", bacteria)
-
-bacteria_pyla[parabac,2]="Bacteroidetes"
-
-blaut<-grep("Blaut", bacteria)
-bacteria_pyla[blaut,2]="Firmicutes"
-
-rumi<-grep("Rumi", bacteria)
-bacteria_pyla[rumi,2]="Firmicutes"
-
-rose<-grep("Rose", bacteria)
-bacteria_pyla[rose,2]="Firmicutes"
-
-clo<-grep("Clo", bacteria)
-bacteria_pyla[clo,2]="Firmicutes"
-
-Faec<-grep("Faecalibacterium", bacteria)
-
-bacteria_pyla[Faec,2]="Firmicutes"
-
-flavi<-grep("Flavi", bacteria)
-
-
-
-bacteria_pyla[flavi,2]="Firmicutes"
-
-copr<-grep("Copro", bacteria)
-bacteria_pyla[copr,2]="Firmicutes"
-
-eu<-grep("Eu", bacteria)
-bacteria_pyla[eu,2]="Firmicutes"
-
-flavi<-grep("Flavo", bacteria)
-bacteria_pyla[flavi,2]="Firmicutes"
-
-lacto<-grep("Lactobacillus", bacteria)
-bacteria_pyla[lacto,2]="Firmicutes"
-
-subdo<-grep("Sub", bacteria)
-bacteria_pyla[subdo,2]="Firmicutes"
-
-bif<-grep("Bif", bacteria)
-bacteria_pyla[bif,2]="Actinobacteria"
-
-colin<-grep("Collin", bacteria)
-bacteria_pyla[colin,2]="Actinobacteria"
-
-akk<-grep("Akk", bacteria)
-bacteria_pyla[akk,2]="Verrucumicrobia"
-
-anaero<-grep("Anaero", bacteria)
-bacteria_pyla[anaero,2]="Firmicutes"
-
-anaro<-grep("Anaro", bacteria)
-bacteria_pyla[anaro,2]="Firmicutes"
-
-marvin<-grep("Marvin", bacteria)
-bacteria_pyla[marvin,2]="Firmicutes"
-
-phasc<-grep("Phasco", bacteria)
-bacteria_pyla[phasc,2]="Firmicutes"
-
-entero<-grep("Entero", bacteria)
-bacteria_pyla[entero,2]="Firmicutes"
-
-esch<-grep("Esch", bacteria)
-bacteria_pyla[esch,2]="Proteobacteria"
-#########################
-
-bacteria_pyla_MIC<-as.data.frame(bacteria_pyla)
-
-
-#########################################
-#Assign phyla to species name
-########################################
-
-
-#assign phylum level to bacteria names
-bacteria <- strsplit(bacteria_MBC, ".csv")
-bacteria <- as.character(bacteria)
-phyla<- rep(NA, length(bacteria))
-bacteria_pyla <-cbind(bacteria, phyla)
-
-###
-bacteroidetes<-grep("Bac", bacteria)
-bacteria_pyla[bacteroidetes,2]="Bacteroidetes"
-
-pre<-grep("Pre", bacteria)
-bacteria_pyla[pre,2]="Bacteroidetes"
-
-parabac<-grep("Parabac", bacteria)
-
-bacteria_pyla[parabac,2]="Bacteroidetes"
-
-blaut<-grep("Blaut", bacteria)
-bacteria_pyla[blaut,2]="Firmicutes"
-
-rumi<-grep("Rumi", bacteria)
-bacteria_pyla[rumi,2]="Firmicutes"
-
-rose<-grep("Rose", bacteria)
-bacteria_pyla[rose,2]="Firmicutes"
-
-clo<-grep("Clo", bacteria)
-bacteria_pyla[clo,2]="Firmicutes"
-
-Faec<-grep("Faecalibacterium", bacteria)
-
-bacteria_pyla[Faec,2]="Firmicutes"
-
-flavi<-grep("Flavi", bacteria)
-
-
-
-bacteria_pyla[flavi,2]="Firmicutes"
-
-copr<-grep("Copro", bacteria)
-bacteria_pyla[copr,2]="Firmicutes"
-
-eu<-grep("Eu", bacteria)
-bacteria_pyla[eu,2]="Firmicutes"
-
-flavi<-grep("Flavo", bacteria)
-bacteria_pyla[flavi,2]="Firmicutes"
-
-lacto<-grep("Lactobacillus", bacteria)
-bacteria_pyla[lacto,2]="Firmicutes"
-
-subdo<-grep("Sub", bacteria)
-bacteria_pyla[subdo,2]="Firmicutes"
-
-bif<-grep("Bif", bacteria)
-bacteria_pyla[bif,2]="Actinobacteria"
-
-colin<-grep("Collin", bacteria)
-bacteria_pyla[colin,2]="Actinobacteria"
-
-akk<-grep("Akk", bacteria)
-bacteria_pyla[akk,2]="Verrucumicrobia"
-
-anaero<-grep("Anaero", bacteria)
-bacteria_pyla[anaero,2]="Firmicutes"
-
-anaro<-grep("Anaro", bacteria)
-bacteria_pyla[anaro,2]="Firmicutes"
-
-marvin<-grep("Marvin", bacteria)
-bacteria_pyla[marvin,2]="Firmicutes"
-
-phasc<-grep("Phasco", bacteria)
-bacteria_pyla[phasc,2]="Firmicutes"
-
-entero<-grep("Entero", bacteria)
-bacteria_pyla[entero,2]="Firmicutes"
-
-esch<-grep("Esch", bacteria)
-bacteria_pyla[esch,2]="Proteobacteria"
-#########################
-
-bacteria_pyla_MBC<-as.data.frame(bacteria_pyla)
-
-```
-
-##Add bacteria names & phyla to OD averages & generate long format
-
-```{r}
-col_names_phyla <- list("bacteria", "phyla", 0, 0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268, 8000)
-
-
-
-#row names + transformation into long format for relative blank corrected+phyla
-MIC_average_colname <-cbind(bacteria_pyla_MIC, MIC_average)
-MIC_average_colname<-as.data.frame(MIC_average_colname)
-colnames(MIC_average_colname)<-col_names_phyla
-
-
-MBC_average_colname <-cbind(bacteria_pyla_MBC, MBC_average)
-MBC_average_colname<-as.data.frame(MBC_average_colname)
-colnames(MBC_average_colname)<-col_names_phyla
-```
-##Find the average MIC values
-
-```{r}
-#find MIC value where growth is bigger than 0.0336
-MIC_vector <- vector()
-for (i in 1:nrow(MIC_average_colname)) { #vertical 
-  candidates <- vector()
-     for(j in 3:14) {#horizontal 
-       if (MIC_average_colname[i,j]>0.0336) {#-> MIC_value_absolut)
-         candidates <- append(candidates, colnames(MIC_average_colname[j+1]))
-         
-       }
-       
-     }
-  candidates<-as.numeric(candidates)
-  MIC_vector <- append(MIC_vector, max(candidates))
-}
-
-
-
-MBC_vector <- vector()
-for (i in 1:nrow(MBC_average_colname)) { #vertical 
-  candidates <- vector()
-  for(j in 3:14) {#horizontal 
-    if (MBC_average_colname[i,j]>0.0336) {#-> MIC_value_absolut)
-      
-      candidates <- append(candidates, colnames(MBC_average_colname)[j+1])
-    }
-  }
-  candidates<-as.numeric(candidates)
-  MBC_vector <- append(MBC_vector, max(candidates))
-}
-
-
-MBC_values <- as.data.frame(cbind(bacteria_pyla_MBC, MBC_vector))
-MIC_values <- as.data.frame(cbind(bacteria_pyla_MIC, MIC_vector))
-
-
-```
-
-```{r}
-final_h2O2 <-left_join(MIC_values, MBC_values)
-```
-
-```{r}
-
-
-final_h2O2['condition1'] = 'MIC'
-final_h2O2['condition2'] = 'MBC'
-
-final_h2O2$names <- as.data.frame(str_split_fixed(final_h2O2$bacteria, "_", 2))$V1
-
-final_h2O2_mc <-final_h2O2[-c(1, 30, 38),]
-
-final_h2O2_mc%>%
-  #factor(final_h2O2$MIC_vector, levels = c(0, 0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268))
-  #arrange(MIC_vector, decreasing = T)%>%
-  mutate(names = fct_reorder(names, MBC_vector, .desc=F))%>%
-  # mutate(MBC_vector = fct_reorder(MBC_vector, MBC_vector))%>%
-  ggplot(aes(y=names, x = MIC_vector))+ 
-  geom_point(aes(x=MIC_vector, colour=condition1), size=2, alpha=0.5)+
-  geom_point(aes(x=MBC_vector, colour=condition2), size=2, alpha=0.5)+#visualize as data points, different colors for the different phyla, size of point
-  labs(x="minimal inhibitory H2O2 concentration [uM]")+
-  ggtitle("MIC vs MBC")+
-  labs(colour="")+
-  theme(axis.title.y = element_blank())+
-  ggtitle("")+
-   scale_x_continuous( trans= "log2")->plot_MIC_vs_MBC
-plot_MIC_vs_MBC
-
-
-# ggsave(filename = "MIC_vs_MBC_Oxygen.jpeg", path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-#        width = 20,
-#        height = 16,
-#        units = c("cm"))
-
-```
-
-
 
 ## Get the MIC for individual repleciates
 ```{r}
@@ -448,8 +167,6 @@ for (i in 1:length(bacteria)) {
 }
 
 
-
-
 MIC_replicates_h2o2 <-data.frame(row_names_mic, blank_corrected_MIC)
 
 colnames(MIC_replicates_h2o2)<-list("bacteria", 0, 0.06, 0.021, 0.66, 2.21, 6.77, 21.66, 69.31, 221.8, 709.7, 2271.25, 7268, 8000)
@@ -464,26 +181,46 @@ write.xlsx(MIC_replicates_h2o2, file = "C:/Users/zuendj/Desktop/03_data R/oxidat
 
 
 
-MBC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_H2O2_replicates_mod.xlsx")
-MBC_mod[is.na(MBC_mod)] <- 0
-MIC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_H2O2_replicates_mod.xlsx")
-MIC_mod[is.na(MIC_mod)] <- 0
+MIC_replicates_h2o2[c(24, 161, 81),c("7268")]<-0
+MIC_replicates_h2o2[c(81),c("2271.25")]<-0
+
+MBC_replicates_h2o2[c(69, 161, 162),c("2271.25")]<-0
+MBC_replicates_h2o2[c(171),c("7268")]<-0
+
+
+
+
+# MBC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_H2O2_replicates_mod.xlsx")
+# MBC_mod[is.na(MBC_mod)] <- 0
+# MIC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_H2O2_replicates_mod.xlsx")
+# MIC_mod[is.na(MIC_mod)] <- 0
 ```
 
 
 
 ```{r}
 
-MIC_replicates_h2o2[is.na(MIC_replicates_h2o2)] <- 0
-MBC_replicates_h2o2[is.na(MBC_replicates_h2o2)] <- 0
+average<-aggregate(MIC_replicates_h2o2$`0`, list(MIC_replicates_h2o2$bacteria), FUN=mean)
+names(average)<-c("bacteria", "average")
+MIC_mod_av<-left_join(MIC_replicates_h2o2, average)
+
+
+
+average<-aggregate(MBC_replicates_h2o2$`0`, list(MBC_replicates_h2o2$bacteria), FUN=mean)
+names(average)<-c("bacteria", "average")
+MBC_mod_av<-left_join(MBC_replicates_h2o2, average)
+
+MIC_mod_av[is.na(MIC_mod_av)] <- 0
+MBC_mod_av[is.na(MBC_mod_av)] <- 0
+
 
 MIC_vector <- vector()
-for (i in 1:nrow(MIC_mod)) { #vertical 
+for (i in 1:nrow(MIC_mod_av)) { #vertical 
   candidates <- vector()
      for(j in 2:13) {#horizontal 
-       if (MIC_mod[i,j]>0.05) {#-> MIC_value_absolut)
+       if (MIC_mod_av[i,j]>0.02 & MIC_mod_av[i,j]/MIC_mod_av[i, 15]>0.1) {#-> MIC_value_absolut)
 
-         candidates <- append(candidates, colnames(MIC_mod)[j])
+         candidates <- append(candidates, colnames(MIC_mod_av)[j])
          candidates <-as.numeric(candidates)
          # print((MIC_replicates_h2o2)[j,1])
        }
@@ -493,12 +230,12 @@ for (i in 1:nrow(MIC_mod)) { #vertical
 
 
 MBC_vector <- vector()
-for (i in 1:nrow(MBC_mod)) { #vertical 
+for (i in 1:nrow(MBC_mod_av)) { #vertical 
   candidates <- vector()
   for(j in 2:13) {#horizontal 
-    if (MBC_mod[i,j]>0.05) {#-> MIC_value_absolut)
+    if (MBC_mod_av[i,j]>0.02 & MBC_mod_av[i,j]/MBC_mod_av[i, 15]>0.1) {#-> MIC_value_absolut)
       
-      candidates <- append(candidates, colnames(MBC_mod)[j])
+      candidates <- append(candidates, colnames(MBC_mod_av)[j])
       candidates <-as.numeric(candidates)
     }
   }
@@ -538,7 +275,7 @@ mean_ambc%>%
         names(mean_mbc)[3]<-"mean_mbc"
 
         
-join(final_h2O2, mean_mbc, by="species")->final
+left_join(final_h2O2, mean_mbc, by="species")->final
 
 ```
 
