@@ -134,130 +134,7 @@ for (i in 1:length(bacteria)) {
 
 ```
 
-# 2. Generate a df with names & phyla
 
-```{r}
-bacteria <- strsplit(bacteria, ".csv")
-bacteria <- as.character(bacteria)
-```
-
-```{r}
-#########################################
-#Assign phyla to species name
-########################################
-
-
-#assign phylum level to bacteria names
-phyla<- rep(NA, length(bacteria))
-bacteria_pyla <-cbind(bacteria, phyla)
-###
-bacteroidetes<-grep("Bac", bacteria)
-bacteria_pyla[bacteroidetes,2]="Bacteroidetes"
-
-pre<-grep("Pre", bacteria)
-bacteria_pyla[pre,2]="Bacteroidetes"
-
-parabac<-grep("Parabac", bacteria)
-
-bacteria_pyla[parabac,2]="Bacteroidetes"
-
-blaut<-grep("Blaut", bacteria)
-bacteria_pyla[blaut,2]="Firmicutes"
-
-rumi<-grep("Rumi", bacteria)
-bacteria_pyla[rumi,2]="Firmicutes"
-
-rose<-grep("Rose", bacteria)
-bacteria_pyla[rose,2]="Firmicutes"
-
-clo<-grep("Clo", bacteria)
-bacteria_pyla[clo,2]="Firmicutes"
-
-Faec<-grep("Faecalibacterium", bacteria)
-
-bacteria_pyla[Faec,2]="Firmicutes"
-
-flavi<-grep("Flavi", bacteria)
-
-bacteria_pyla[flavi,2]="Firmicutes"
-
-copr<-grep("Copro", bacteria)
-bacteria_pyla[copr,2]="Firmicutes"
-
-eu<-grep("Eu", bacteria)
-bacteria_pyla[eu,2]="Firmicutes"
-
-flavi<-grep("Flavo", bacteria)
-bacteria_pyla[flavi,2]="Firmicutes"
-
-lacto<-grep("Lactobacillus", bacteria)
-bacteria_pyla[lacto,2]="Firmicutes"
-
-subdo<-grep("Sub", bacteria)
-bacteria_pyla[subdo,2]="Firmicutes"
-
-bif<-grep("Bif", bacteria)
-bacteria_pyla[bif,2]="Actinobacteria"
-
-colin<-grep("Collin", bacteria)
-bacteria_pyla[colin,2]="Actinobacteria"
-
-akk<-grep("Akk", bacteria)
-bacteria_pyla[akk,2]="Verrucumicrobia"
-
-anaero<-grep("Anaero", bacteria)
-bacteria_pyla[anaero,2]="Firmicutes"
-
-anaro<-grep("Anaro", bacteria)
-bacteria_pyla[anaro,2]="Firmicutes"
-
-marvin<-grep("Marvin", bacteria)
-bacteria_pyla[marvin,2]="Firmicutes"
-
-phasc<-grep("Phasco", bacteria)
-bacteria_pyla[phasc,2]="Firmicutes"
-
-entero<-grep("Entero", bacteria)
-bacteria_pyla[entero,2]="Firmicutes"
-
-esch<-grep("Esch", bacteria)
-bacteria_pyla[esch,2]="Proteobacteria"
-
-#########################
-
-```
-
-# 2. Add bacteria names & phyla to OD averages & generate long format
-
-```{r}
-col_names_phyla <- list("bacteria", "phyla", 1, 2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656, 5843.2)
-
-MIC_values_phyla <-cbind(bacteria_pyla, MIC_average)
-colnames(MIC_values_phyla)<-col_names_phyla
-MIC_values_phyla <-as.data.frame(MIC_values_phyla)
-MIC_values_phyla$"6000"<-0
-
-
-
-head(MIC_values_phyla)
-
-MBC_values_phyla <-cbind(bacteria_pyla, MBC_average)
-colnames(MBC_values_phyla)<-col_names_phyla
-MBC_values_phyla <-as.data.frame(MBC_values_phyla)
-MBC_values_phyla$"6000"<-0
-
-head(MBC_values_phyla)
-
-MIC_values_phyla_long <- MIC_values_phyla%>%gather(condition, OD, "1":"6000", factor_key = T )
-MIC_values_phyla_long <- transform(MIC_values_phyla_long, OD = as.numeric(OD))
-MIC_values_phyla_long[MIC_values_phyla_long < 0] <- 0
-
-
-MBC_values_phyla_long <- MBC_values_phyla%>%gather(condition, OD, "1":"6000", factor_key = T )
-MBC_values_phyla_long <- transform(MBC_values_phyla_long, OD = as.numeric(OD))
-MBC_values_phyla_long[MBC_values_phyla_long < 0] <- 0
-
-```
 # 3. Find the average MIC values
 
 ```{r}
@@ -290,93 +167,6 @@ for (i in 1:nrow(MBC_values_phyla)) { #vertical
 
 ```
 
-```{r}
-#define matrix containing species, phyla, MIC and MBC 
-final <- matrix(0, length(bacteria), 5)
-final[, 1] <- bacteria
-final[, 2] <- MIC_values_phyla[, 2]
-final[, 3] <- MIC_vector
-final[, 4] <- MBC_vector
-final[, 5] <- MBC_vector
-
-#convert matrix into a data frame
-dataframe_final=as.data.frame(final)
-
-#naming columns of the dataframe_final
-col_names <- list("bacteria", "phyla", "MIC","MBC", "MBC_factor")
-colnames(dataframe_final) <-col_names
-```
-
-```{r}
-dataframe_final$MIC <-as.numeric(dataframe_final$MIC)
-dataframe_final$MBC <-as.numeric(dataframe_final$MBC)
-
-names <- as.data.frame(str_split_fixed(dataframe_final$bacteria, "_", 2))
-names$letter <-substring(names[,1], 1, 1)
-names$species <- paste(names$letter,".", names$V2)
-names$species <- recode(names$species, "F . sp." = "Flavonifractor sp.", "C . sp." = "Coprococcus sp.")
-
-# dataframe_final$MBC_factor <- factor(dataframe_final$MBC_factor, levels = c("2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"))
-
-dataframe_final_names<-cbind(dataframe_final, names)
-
-#create ggplot (Raster) using MBC as x and MIC as y 
-plot_MIC_vs_MBC<-ggplot (dataframe_final_names, aes(x=MBC, y=MIC))+ 
-    geom_point(aes(x=MBC, y= MIC), size=1.5, alpha = 0.5)+ #visualize as data points, different colors for the different phyla, size of point
-    labs(x="MBC (oxygenation scale)", y="MIC (oxygenation scale)")+ #labels for x and y axis 
-    #geom_text_repel(aes(color=phyla), point.size = NA, label=bacteria)+
-    geom_text_repel(aes( label=species), lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+ #add labels to each of the data points and make sure that they don't overlap, nudge will shift labels indicated amount on coordinate system  
-    geom_abline(intercept=0, slope=1, size=0.75, alpha=0.5)+ #adds straight line into plot
-    ggtitle("")+
-  facet_wrap(~phyla)+
-  theme(
-    #legend.position = "none",
-        axis.text.y = element_text(size = 15), 
-        axis.title.y = element_text(size = 15), 
-        axis.title.x = element_text(size= 15),
-        axis.text.x = element_text(size=15),
-        legend.text = element_text(size= 15),
-        legend.title = element_text( size= 12),
-        plot.title = element_text(size=15),
-        strip.text = element_text(size=15),
-        legend.position = "none")
-
-      
-plot_MIC_vs_MBC #plot the plot 
-
-
-
-ggsave(filename = "MIC_vs_MBC_Oxygen.jpeg", path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width = 20,
-       height = 16,
-       units = c("cm"))
-
-```
-
-```{r}
-
-dataframe_final$MIC <- as.numeric(dataframe_final$MIC)
-dataframe_final$MBC <- as.numeric(dataframe_final$MBC)
-
-dataframe_final['condition1'] = 'MIC'
-
-dataframe_final['condition2'] = 'MBC'
-
-dataframe_final%>%
-  mutate(bacteria = fct_reorder(bacteria, dataframe_final$MBC))%>%
-  ggplot (aes(y=bacteria))+ 
-  geom_point(aes(x=MIC, colour=condition1), size=2, alpha=0.5)+
-  geom_point(aes(x=MBC, colour=condition2), size=2, alpha=0.5)+#visualize as data points, different colors for the different phyla, size of point
-  labs(x="oxygenation scale")+
-  ggtitle("MIC vs MBC")+
-  labs(colour="")+
-  theme(axis.title.y = element_blank())+
-  # scale_x_continuous(trans='log2', limits = c(2.2, 6100), breaks=c(2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656, 5843.2, 6000)) +
-  ggtitle("")+ scale_x_break(c(4000, 6000), scale=0.1)+scale_x_log10(breaks=c(1, 2.2, 4.8, 10.6, 23.4, 51.5, 113.4, 249.4, 548.8, 1207.3, 2656,  6000))->plot_MIC_vs_MBC_table
-
-plot_MIC_vs_MBC_table
-
-```
 
 
 # 4. Get the MIC for individual repleciates
@@ -402,16 +192,9 @@ colnames(MBC_replicates)<-list("bacteria", 2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 2
 ```{r}
 av_mbc<- aggregate(MBC_replicates[,2], list(MBC_replicates$bacteria), FUN=mean)
 colnames(av_mbc)<-c("bacteria", "average")
-
-
 MBC_replicates_mean<-join(MBC_replicates, av_mbc, by=c("bacteria"))
-
-
-
 av_mic<- aggregate(MIC_replicates[,2], list(MIC_replicates$bacteria), FUN=mean)
 colnames(av_mic)<-c("bacteria", "average")
-
-
 MIC_replicates_mean<-join(MIC_replicates, av_mic, by=c("bacteria"))
 ```
 
@@ -427,23 +210,43 @@ ggplot(MIC_replicates, aes(y=MIC_replicates[,1], x= MIC_replicates[,3]))+
 write.xlsx(MBC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates.xlsx")
 write.xlsx(MIC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates.xlsx")
 
-MBC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates_mod.xlsx")
-MIC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates_mod.xlsx")
+MIC_replicates ->backup_mic_rep
+MBC_replicates ->backup_mbc_rep
+
+##outlier correction
+
+MIC_replicates[1,c("503.5")]<-0
+MIC_replicates[3,c("11299.08")]<-0
+MIC_replicates[37,c("2385.2")]<-0
+MIC_replicates[94,c("11299.08")]<-0
+MIC_replicates[103,c("1095.9")]<-0
+MIC_replicates[105,c("11299.08")]<-0
+MIC_replicates[133,c("2.2")]<-NA
+MIC_replicates[135,c("2.2")]<-NA
+MIC_replicates[138,c("2.2")]<-NA
+
+
+MBC_replicates[1,c("503.5")]<-0
+MBC_replicates[31,c("2.2")]<-NA
+MBC_replicates[c(50, 52, 134, 173),c("2.2")]<-NA
+MBC_replicates[105,c("11299.08")]<-0
+MBC_replicates[173,c("2385.2")]<-0
+MBC_replicates[176,c("48.85")]<-0
 
 ```
 
 
 ```{r}
 
-average<-aggregate(MIC_mod$`2.2`, list(MIC_mod$bacteria), FUN=mean, na.rm=TRUE, na.action=NULL)
+average<-aggregate(MIC_replicates$`2.2`, list(MIC_replicates$bacteria), FUN=mean, na.rm=TRUE, na.action=NULL)
 names(average)<-c("bacteria", "average")
-MIC_mod_av<-join(MIC_mod, average)
+MIC_mod_av<-join(MIC_replicates, average)
 
 
 
-average<-aggregate(MBC_mod$`2.2`, list(MBC_mod$bacteria), FUN=mean, na.rm=TRUE, na.action=NULL)
+average<-aggregate(MBC_replicates$`2.2`, list(MBC_replicates$bacteria), FUN=mean, na.rm=TRUE, na.action=NULL)
 names(average)<-c("bacteria", "average")
-MBC_mod_av<-join(MBC_mod, average)
+MBC_mod_av<-join(MBC_replicates, average)
 
 MIC_mod_av[is.na(MIC_mod_av)] <- 0
 MBC_mod_av[is.na(MBC_mod_av)] <- 0
@@ -559,35 +362,6 @@ names(df_long)[4]<-"condition_O2"
 # Write the first data set in a new workbook
 write.csv(df_long[,c(1,4,5)], file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2.csv")
 ```
-# 7. Trial fitting
-```{r}
 
-# 
-# MIC_mod%>%
-#   subset(bacteria %in% c("Anaerostipes hadrus"))%>%
-#   gather(condition, OD, "2.2":"50000", factor_key = T )->sub
-# 
-# sub$condition<-as.numeric(sub$condition)
-# 
-# sub%>%
-#   ggplot(aes(x=condition, y=OD))+
-#   geom_point()+
-#   stat_smooth(method="loess", 
-#               formula=y~x)
-# 
-# 
-# 
-# library(stats)
-# hoi<-as.list(sub[,c(2,3)])
-# 
-# nls(OD ~ a/(1 + exp(-b * (condition - c))), data=hoi , start = list(a = -1, b = 1, c = 0)) -> fit
-# 
-# sub %>%
-#   ggplot(aes(x=condition, y=OD)) +
-#   geom_point() +
-  geom_line(aes(x=condition, y=predict(fit)), color="red")
-
-
-```
 
 
