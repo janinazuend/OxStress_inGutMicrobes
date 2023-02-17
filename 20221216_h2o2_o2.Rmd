@@ -46,47 +46,11 @@ names(median_o2)[2]<-"bacteria"
 names(median_o2)[3]<-"value_o2"
 
 
-joined<- join(median_h2o2, median_o2, by=c("bacteria", "assay"))
+joined<- left_join(median_h2o2, median_o2, by=c("bacteria", "assay"))
 
 ```
 
-# 2. Correlation of MIC and MBC between H2O2 and O2
-```{r}
-library(ggpmisc)
 
-joined$assay<-factor(joined$assay, levels=c("MIC", "MBC"))
-
-
-ggplot(joined, aes(x=value_h2o2, y=value_o2))+
-  geom_point(aes(colour=assay))+
-  scale_colour_manual(values=c("goldenrod2","cyan4"))+
-  geom_text_repel(aes(label=bacteria), size=4)+
-  facet_grid(cols=vars(assay))+
-  scale_y_log10()+
-  scale_x_log10()+
-  stat_poly_line()+
-  theme(axis.text.y= element_text(size = 15 ), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20),
-        strip.text = element_text(size=20)
-        )+
-  xlab(expression(H[2]*O[2]*~ concentration~(mu*M)))+
-  ylab("Oxigenation scale")+
-  guides(colour=guide_legend(title="Assay"))+
-  ggtitle(expression(Tolerance~to~O[2]*vs.~H[2]*O[2]))
-  
-  
-ggsave(filename = "O2_H2O2.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width = 50,
-       height = 26,
-       units = c("cm"))
-
-```
 
 # 3. Generate a df with names & phyla or class
 
@@ -99,6 +63,12 @@ bacteria_pyla<-joined
 bacteria_pyla$phyla<-0
 
 ###
+
+parabac<-grep("Phocaei", joined$bacteria)
+bacteria_pyla[parabac,5]="Bacteroidetes"
+
+
+
 bacteroidetes<-grep("Bac", joined$bacteria)
 bacteria_pyla[bacteroidetes, c(5)] ="Bacteroidetes"
 
@@ -108,6 +78,7 @@ bacteria_pyla[pre,5]="Bacteroidetes"
 parabac<-grep("Parabac", joined$bacteria)
 
 bacteria_pyla[parabac,5]="Bacteroidetes"
+
 
 blaut<-grep("Blaut", joined$bacteria)
 bacteria_pyla[blaut,5]="Firmicutes"
@@ -126,9 +97,6 @@ Faec<-grep("Faecalibacterium", joined$bacteria)
 bacteria_pyla[Faec,5]="Firmicutes"
 
 flavi<-grep("Flavi", joined$bacteria)
-
-
-
 bacteria_pyla[flavi,5]="Firmicutes"
 
 copr<-grep("Copro", joined$bacteria)
@@ -140,7 +108,7 @@ bacteria_pyla[eu,5]="Firmicutes"
 flavi<-grep("Flavo", joined$bacteria)
 bacteria_pyla[flavi,5]="Firmicutes"
 
-lacto<-grep("Lactobacillus", joined$bacteria)
+lacto<-grep("Lacti", joined$bacteria)
 bacteria_pyla[lacto,5]="Firmicutes"
 
 subdo<-grep("Sub", joined$bacteria)
@@ -155,10 +123,10 @@ bacteria_pyla[colin,5]="Actinobacteria"
 akk<-grep("Akk", joined$bacteria)
 bacteria_pyla[akk,5]="Verrucumicrobia"
 
-anaero<-grep("Anaero", joined$bacteria)
+anaero<-grep("Ana", joined$bacteria)
 bacteria_pyla[anaero,5]="Firmicutes"
 
-anaro<-grep("Anaro", joined$bacteria)
+anaro<-grep("Ana", joined$bacteria)
 bacteria_pyla[anaro,5]="Firmicutes"
 
 marvin<-grep("Marvin", joined$bacteria)
@@ -190,6 +158,9 @@ bacteria_pyla$class<-0
 bacteroidetes<-grep("Bac", joined$bacteria)
 bacteria_pyla[bacteroidetes, c(6)] ="Bacteroidia"
 
+pho<-grep("Phoc", joined$bacteria)
+bacteria_pyla[pho,6]="Bacteroidetes"
+
 pre<-grep("Prevo", joined$bacteria)
 bacteria_pyla[pre,6]="Bacteroidia"
 
@@ -214,9 +185,6 @@ Faec<-grep("Faecalibacterium", joined$bacteria)
 bacteria_pyla[Faec,6]="Clostridia"
 
 flavi<-grep("Flavi", joined$bacteria)
-
-
-
 bacteria_pyla[flavi,6]="Clostridia"
 
 copr<-grep("Copro", joined$bacteria)
@@ -228,7 +196,7 @@ bacteria_pyla[eu,6]="Clostridia"
 flavi<-grep("Flavo", joined$bacteria)
 bacteria_pyla[flavi,6]="Clostridia"
 
-lacto<-grep("Lactobacillus", joined$bacteria)
+lacto<-grep("Lacti", joined$bacteria)
 bacteria_pyla[lacto,6]="Bacilli"
 
 subdo<-grep("Sub", joined$bacteria)
@@ -243,11 +211,10 @@ bacteria_pyla[colin,6]="Coriobacteriia"
 akk<-grep("Akk", joined$bacteria)
 bacteria_pyla[akk,6]="Verrucomicrobiae"
 
-anaero<-grep("Anaero", joined$bacteria)
+anaero<-grep("Ana", joined$bacteria)
 bacteria_pyla[anaero,6]="Clostridia"
 
-anaro<-grep("Anaro", joined$bacteria)
-bacteria_pyla[anaro,6]="Clostridia"
+
 
 marvin<-grep("Marvin", joined$bacteria)
 bacteria_pyla[marvin,6]="Clostridia"
@@ -311,15 +278,16 @@ bacteria_pyla$value_h2o2<-as.integer(bacteria_pyla$value_h2o2)
 
 
 bacteria_pyla[, c("assay", "bacteria", "value_h2o2", "class")] %>%
-  pivot_wider(names_from = assay, values_from = value_h2o2, values_fill = NA) %>%
-  ggplot(aes(x=MIC, y=MBC))+
+  pivot_wider(names_from = assay, values_from = value_h2o2, values_fill = NA) ->wide_H2O2
+
+  ggplot(wide_H2O2, aes(x=MIC, y=MBC))+
   stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F)+
   # stat_poly_line()+
   geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
   # stat_poly_eq(aes(label=c(..rr.label..)), size=5)+
   geom_jitter(aes(colour = class), width = 0.04, height = 0.04, size=3, alpha=0.5)+
   # scale_colour_manual(values=c("goldenrod2","cyan6"))+
-  # geom_text_repel(aes(label=bacteria, colour=class),lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
+  geom_text_repel(data=subset(wide_H2O2, MBC > MIC), aes(label=bacteria, colour=class), lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
   scale_y_log10()+
   scale_x_log10()+
   theme(axis.text.y= element_text(size = 16 ), 
@@ -339,20 +307,19 @@ bacteria_pyla[, c("assay", "bacteria", "value_h2o2", "class")] %>%
   
 ggsave(filename = "H2O2_micvsmbc.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width =20,
-       height = 14,
+       width =24.5,
+       height = 17,
        units = c("cm"))
 
 bacteria_pyla[, c("assay", "bacteria", "value_o2", "class")] %>%
-  pivot_wider(names_from = assay, values_from = value_o2, values_fill = NA) %>%
-  ggplot(aes(x=MIC, y=MBC))+
+  pivot_wider(names_from = assay, values_from = value_o2, values_fill = NA) ->wide_O2
+
+
+  ggplot(wide_O2, aes(x=MIC, y=MBC))+
   stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F)+
-  # stat_poly_line()+
   geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
-  # stat_poly_eq(aes(label=c(..rr.label..)), size=5)+
   geom_jitter(aes(colour = class), width = 0.04, height = 0.04, size=3, alpha=0.5)+
-  # scale_colour_manual(values=c("goldenrod2","cyan6"))+
-  # geom_text_repel(aes(label=bacteria, colour=class),lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
+  geom_text_repel(data=subset(wide_O2, MBC > MIC), aes(label=bacteria, colour=class), lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
   scale_y_log10()+
   scale_x_log10()+
   theme(axis.text.y= element_text(size = 16 ), 
@@ -375,36 +342,45 @@ bacteria_pyla[, c("assay", "bacteria", "value_o2", "class")] %>%
   
 ggsave(filename = "O2_micvsmbc.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width =21.5,
-       height = 14,
+       width =24.5,
+       height = 17,
        units = c("cm"))
 
 ```
 
 
 ```{r}
+x<-expression(MBC~H[2]*O[2])
+names(wide_O2)<-c("bacteria", "class", "MBC oxygen", "MIC oxygen")
+names(wide_H2O2)<-c("bacteria", "class", "MBC h2o2",  "MIC h2o2")
 
 
-h2o2matrix<-as.matrix(coverage_h2o2[,-1])
 
+
+
+corr<-as.data.frame(left_join(wide_O2, wide_H2O2))
+rownames(corr)<-NULL
+rownames(corr)<-corr$bacteria
+
+
+
+h2o2matrix<-as.matrix(corr[,-c(1,2)])
+matrix_log<-log(h2o2matrix)
 
 jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2vso2.jpeg", width=1000, height=1000)
 
-subset(bacteria_pyla, assay %in% c("MBC"))%>%
-  as.matrix()->mbc
-
-heatmap.2(mbc[, c("value_h2o2", "value_o2")], # data frame a matrix
+heatmap.2(scale(matrix_log), # data frame a matrix
           marg = c(10,15),
           density.info = "none", # Remove density legend lines
           trace = "none",
           # dendrogram = "row", 
-           colsep=1:nrow(o2matrix), # Add vertical grid lines
-          rowsep=1:nrow(o2matrix), # Add horizontal grid lines
+           colsep=1:nrow(h2o2matrix), # Add vertical grid lines
+          rowsep=1:nrow(h2o2matrix), # Add horizontal grid lines
           sepcolor = "black",
           col = viridis::viridis_pal(),
           cexRow = 1.5,
           cexCol = 1.5,
-          lwid=c(1, 6),
+          lwid=c(1, 4),
           lhei = c(2,20), key=T, keysize = 5)
 
 dev.off()
