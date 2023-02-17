@@ -37,101 +37,101 @@ bacteria <- list.files(path = "P:/Shared_documents/Janina Zünd/08_phd/09_studen
 ```
 ## aerobic and anaerobic values go next to each other in order to do correlation: blank correction
 ```{r}
-# setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
-# 
-# #########################################
-# #blank correction
-# ########################################
-# 
-# #define empty matrices, no values added so far 
-# HPLC_values_blank_corrected<- matrix(0, 0, 5)
-# HPLC_values_wide<- matrix(0, 0, 13)
-# 
-# #room for bacteria, phyla, agar condition,growth condition, aerobic/anaerobic and 10 metabolites, each species has 21 data point which are 7 triplicates 
-# #HPLC_values_relative_mean<-matrix(0, 6, 15)#same matrix as above but with mean of the triplicates 
-# 
-# #column names for matrix 
-# col_names_HPLC <- list("sample_ID", "condition_agar", "condition", "succinate", "lactate", "formate", "acetate","propionate", "isobutyrate", "butyrate", "ethanol", "isovalerate", "valerate")
-# 
-# 
-# col_names<- list("sample_ID", "condition_agar", "oxygen_condition", "metabolite", "concentration")
-# colnames(HPLC_values_blank_corrected)<- col_names
-# colnames(HPLC_values_wide)<- col_names_HPLC
-# 
-# for (l in 1:length(bacteria)) {
-#   #generate MICwide format
-#   
-#   HPLCwide = read_excel(bacteria[l])
-#   # print(bacteria[l])
-#   aerobe<-as.data.frame(HPLCwide[c(2:25), c(7,3,5,17:26)])
-#   colnames(aerobe)<- col_names_HPLC
-#   # aerobe[is.na(aerobe)] <- 0
-# 
-#   
-#   for (i in 1:3) {
-# 
-#   for (z in 4:12) {
-#     aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[4, z])
-#   }}
-#   for (i in 5:7) {
-#     for (z in 4:12) {
-#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[8, z])
-#     }}
-#   for (i in 9:11) {
-#     for (z in 4:12) {
-#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[12, z])
-#     }}
-#   
-#   for (i in 13:15) {
-#     for (z in 4:12) {
-#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[16, z])
-#     }}
-#   for (i in 17:19) {
-#     for (z in 4:12) {
-#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[20, z])
-#     }}
-#   for (i in 21:23) {
-#     for (z in 4:12) {
-#       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[24, z])
-#     }}
-#   
-#   aerobe<-aerobe[-c(4,8,12,16,20,24),]
-#   
-#   aerobe_long <- aerobe%>%
-#     gather(metabolite, concentration, "succinate":"valerate", factor_key = T )
-#   
-#   HPLC_values_wide<-rbind(HPLC_values_wide, aerobe, stringsAsFactors = FALSE)
-#   HPLC_values_wide$condition_agar[is.na(HPLC_values_wide$condition_agar)] <- "agar with highest growth"
-#   HPLC_values_blank_corrected<- rbind(HPLC_values_blank_corrected, aerobe_long)}
+setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
+
+#########################################
+#blank correction
+########################################
+
+#define empty matrices, no values added so far
+HPLC_values_blank_corrected<- matrix(0, 0, 5)
+HPLC_values_wide<- matrix(0, 0, 13)
+
+#room for bacteria, phyla, agar condition,growth condition, aerobic/anaerobic and 10 metabolites, each species has 21 data point which are 7 triplicates
+#HPLC_values_relative_mean<-matrix(0, 6, 15)#same matrix as above but with mean of the triplicates
+
+#column names for matrix
+col_names_HPLC <- list("sample_ID", "condition_agar", "condition", "succinate", "lactate", "formate", "acetate","propionate", "isobutyrate", "butyrate", "ethanol", "isovalerate", "valerate")
+
+
+col_names<- list("sample_ID", "condition_agar", "oxygen_condition", "metabolite", "concentration")
+colnames(HPLC_values_blank_corrected)<- col_names
+colnames(HPLC_values_wide)<- col_names_HPLC
+
+for (l in 1:length(bacteria)) {
+  #generate MICwide format
+
+  HPLCwide = read_excel(bacteria[l])
+  # print(bacteria[l])
+  aerobe<-as.data.frame(HPLCwide[c(2:25), c(7,3,5,17:26)])
+  colnames(aerobe)<- col_names_HPLC
+  # aerobe[is.na(aerobe)] <- 0
+
+
+  for (i in 1:3) {
+
+  for (z in 4:12) {
+    aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[4, z])
+  }}
+  for (i in 5:7) {
+    for (z in 4:12) {
+      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[8, z])
+    }}
+  for (i in 9:11) {
+    for (z in 4:12) {
+      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[12, z])
+    }}
+
+  for (i in 13:15) {
+    for (z in 4:12) {
+      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[16, z])
+    }}
+  for (i in 17:19) {
+    for (z in 4:12) {
+      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[20, z])
+    }}
+  for (i in 21:23) {
+    for (z in 4:12) {
+      aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[24, z])
+    }}
+
+  aerobe<-aerobe[-c(4,8,12,16,20,24),]
+
+  aerobe_long <- aerobe%>%
+    gather(metabolite, concentration, "succinate":"valerate", factor_key = T )
+
+  HPLC_values_wide<-rbind(HPLC_values_wide, aerobe, stringsAsFactors = FALSE)
+  HPLC_values_wide$condition_agar[is.na(HPLC_values_wide$condition_agar)] <- "agar with highest growth"
+  HPLC_values_blank_corrected<- rbind(HPLC_values_blank_corrected, aerobe_long)}
 ```
 
 ### get row names & recode some variables
 ```{r}
-# HPLC_values_blank_corrected$condition_agar[is.na(HPLC_values_blank_corrected$condition_agar)] <- "agar with highest growth"
-# HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'highest'] <- "0.15% agar"
-# HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'lowest'] <- "minimal agar (''MIC'')"
-# HPLC_values_blank_corrected$condition_agar <-factor(HPLC_values_blank_corrected$condition_agar, levels = c("0.15% agar", "agar with highest growth", "minimal agar (''MIC'')"))
-# 
-# 
- bacteria_names <- strsplit(bacteria, ".xls")
-# bacteria_names <- as.character(bacteria_names)
-# row_names<-matrix(0,length(bacteria)*180,1)
-# position = 0
-# for (i in 1:length(bacteria)) {
-#   for (j in 1:180) {
-#     row_names[position+j,1] = bacteria_names[i]
-#   }
-#   position = position+180
-# }
-# 
-# 
-# HPLC_values_blank_corrected_names<-cbind(row_names, HPLC_values_blank_corrected)
-# HPLC_values_blank_corrected_names$concentration<-as.numeric(HPLC_values_blank_corrected_names$concentration)
+HPLC_values_blank_corrected$condition_agar[is.na(HPLC_values_blank_corrected$condition_agar)] <- "agar with highest growth"
+HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'highest'] <- "0.15% agar"
+HPLC_values_blank_corrected$condition_agar[HPLC_values_blank_corrected$condition_agar == 'lowest'] <- "minimal agar (''MIC'')"
+HPLC_values_blank_corrected$condition_agar <-factor(HPLC_values_blank_corrected$condition_agar, levels = c("0.15% agar", "agar with highest growth", "minimal agar (''MIC'')"))
+#
+#
+bacteria_names <- strsplit(bacteria, ".xls")
+bacteria_names <- as.character(bacteria_names)
+row_names<-matrix(0,length(bacteria)*180,1)
+position = 0
+for (i in 1:length(bacteria)) {
+  for (j in 1:180) {
+    row_names[position+j,1] = bacteria_names[i]
+  }
+  position = position+180
+}
+#
+#
+HPLC_values_blank_corrected_names<-cbind(row_names, HPLC_values_blank_corrected)
+HPLC_values_blank_corrected_names$concentration<-as.numeric(HPLC_values_blank_corrected_names$concentration)
 ```
 
 ```{r}
-# write.csv(HPLC_values_blank_corrected_names, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/metabolites_O2.csv")
-# write.csv(HPLC_values_wide, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/wide_metabolites_O2.csv")
+write.csv(HPLC_values_blank_corrected_names, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/metabolites_O2.csv")
+write.csv(HPLC_values_wide, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/wide_metabolites_O2.csv")
 ```
 
 # 2. Load the data from excel
@@ -520,6 +520,10 @@ bacteria_pyla<-as.data.frame(bacteria_pyla)
 names(bacteria_pyla)<-c("Bacteria", "class")
 
 ###
+bacteroidetes<-grep("Phocaei", bacteria_pyla$Bacteria)
+bacteria_pyla[bacteroidetes, c(2)] ="Bacteroidia"
+
+
 bacteroidetes<-grep("Bac", bacteria_pyla$Bacteria)
 bacteria_pyla[bacteroidetes, c(2)] ="Bacteroidia"
 
@@ -558,7 +562,7 @@ bacteria_pyla[eu,2]="Clostridia"
 flavi<-grep("Flavo", bacteria_pyla$Bacteria)
 bacteria_pyla[flavi,2]="Clostridia"
 
-lacto<-grep("Lactobacillus", bacteria_pyla$Bacteria)
+lacto<-grep("Lacti", bacteria_pyla$Bacteria)
 bacteria_pyla[lacto,2]="Bacilli"
 
 subdo<-grep("Sub", bacteria_pyla$Bacteria)
@@ -641,7 +645,7 @@ ratio_O2%>%
                          "Bacteroides_caccae",
                          "Bacteroides_thetaiotaomicron" ,
                          "Bacteroides_uniformis" ,
-                         "Bacteroides_vulgatus" , 
+                         "Phocaeicola_vulgatus" , 
                          "Bifidobacterium_adolescentis"  , 
                          "Bifidobacterium_longum" ,
                          "Blautia_hansenii" ,
@@ -653,7 +657,7 @@ ratio_O2%>%
                          "Eubacterium_limosum" ,
                          "Faecalibacterium_prausnitzii" ,
                          "Flavonifractor_sp", 
-                         "Lactobacillus_plantarum" , 
+                         "Lactiplantibacillus_plantarum" , 
                          "Parabacterium_merdae"  ,
                          "Phascolarctobacterium_faecium", 
                          "Roseburia_intestinalis"   ,
