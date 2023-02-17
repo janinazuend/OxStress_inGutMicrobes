@@ -286,6 +286,9 @@ length(
 )
 
 final%>%
+  subset(bacteria != c("Subdoligranulum variable"))->final
+
+final%>%
   mutate(bacteria = fct_reorder(species, final$mean_mbc))%>%
   ggplot(aes(y=bacteria))+
   stat_summary(fun="median", geom= "bar", aes(x= value, fill=condition), position= position_dodge(preserve = "single"), width =0.8, alpha=0.5, colour= "black")+
