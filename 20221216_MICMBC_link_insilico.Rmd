@@ -49,94 +49,110 @@ names(median_o2)[2]<-"bacteria"
 names(median_o2)[3]<-"value_o2"
 
 o2_wide<-pivot_wider(median_o2, names_from = assay, values_from = value_o2, values_fill = NA)
+names(o2_wide)<-c("bacteria", "MBC oxygen", "MIC oxygen")
+names(h2o2_wide)<-c("bacteria", "MBC h2o2", "MIC h2o2")
+
+joined_mics<-as.data.frame(left_join(o2_wide, h2o2_wide))
+rownames(joined_mics)<-joined_mics[,1]
+
 ```
 
 ```{r}
 coverage = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/final_coverage.csv", sep=";", header=T, check.names =F)
+names(coverage)[2]<-"bacteria"
+
 ```
 
+
+```{r}
+coverage<-coverage[,-1]
+
+coverage%>%
+  group_by(bacteria)%>%
+  summarize_all(mean)%>%
+  as.data.frame()->coverage_mean
+rownames(coverage_mean)<-coverage_mean[,1]
+coverage_mean<-coverage_mean[,-1]
+
+mean_matrix<-as.matrix(coverage_mean)
+
+```
+
+```{r}
+jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/defense.jpeg", width=1000, height=1000)
+
+heatmap.2(mean_matrix, # data frame a matrix
+          marg = c(30,20),
+          density.info = "none", # Remove density legend lines
+          trace = "none",
+          # dendrogram = "row", 
+           colsep=1:nrow(h2o2matrix), # Add vertical grid lines
+          rowsep=1:nrow(h2o2matrix), # Add horizontal grid lines
+          sepcolor = "black",
+          col = viridis::viridis_pal(),
+          cexRow = 1.5,
+          cexCol = 1.5,
+          lwid=c(1, 10),
+          lhei = c(1,10), key=T, keysize = 5)
+
+dev.off()
+
+```
 
 # 2. correlation MBC O2 & SOD
 ```{r}
-coverage_o2<-join(o2_wide, coverage, by=("bacteria"))
-rownames(coverage_o2)<-coverage_o2[,1]
+coverage_o2<-merge(coverage_mean, joined_mics[,-1], by ="row.names")
+row.names(coverage_o2)<-coverage_o2$Row.names
 
-coverage_o2[, c("MBC", "MIC")]<-log2(coverage_o2[, c("MBC", "MIC")])
-coverage_o2$MIC<-(coverage_o2$MIC-min(coverage_o2$MIC))/(max(coverage_o2$MIC)-min(coverage_o2$MIC))
-coverage_o2$MBC<-(coverage_o2$MBC-min(coverage_o2$MBC))/(max(coverage_o2$MBC)-min(coverage_o2$MBC))
-
+coverage_o2[, c("MBC oxygen", "MIC oxygen","MBC h2o2", "MIC h2o2" )]<-log2(coverage_o2[, c("MBC oxygen", "MIC oxygen","MBC h2o2", "MIC h2o2")])
+                                                                                       
+                                                                                       
+coverage_o2$`MIC oxygen`<-(coverage_o2$`MIC oxygen`-min(coverage_o2$`MIC oxygen`))/(max(coverage_o2$`MIC oxygen`)-min(coverage_o2$`MIC oxygen`))
+coverage_o2$`MIC h2o2`<-(coverage_o2$`MIC h2o2`-min(coverage_o2$`MIC h2o2`))/(max(coverage_o2$`MIC h2o2`)-min(coverage_o2$`MIC h2o2`))
+coverage_o2$`MBC oxygen`<-(coverage_o2$`MBC oxygen`-min(coverage_o2$`MBC oxygen`))/(max(coverage_o2$`MBC oxygen`)-min(coverage_o2$`MBC oxygen`))
+coverage_o2$`MBC h2o2`<-(coverage_o2$`MBC h2o2`-min(coverage_o2$`MBC h2o2`))/(max(coverage_o2$`MBC h2o2`)-min(coverage_o2$`MBC h2o2`))
 ```
 
 ```{r}
-o2matrix<-as.matrix(coverage_o2[, c(  "superoxide dismutase", "MBC")])
+o2matrix<-as.matrix(coverage_o2[,-c(1, 31, 32, 33, 34)])
+
+vec <- c(rep("green", 29), rep("red", 4))
 
 
-jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat.jpeg", width=500, height=1000)
+
+jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_mbc_h2o2.jpeg", width=1000, height=1000)
 
 
-heatmap.2(o2matrix, # data frame a matrix
-          marg = c(15,15),
+heatmap.2(as.matrix(coverage_o2[,-c(1)]), # data frame a matrix
+          marg = c(27,20),
           density.info = "none", # Remove density legend lines
           trace = "none",
-          # dendrogram = "row", 
-           colsep=1:nrow(o2matrix), # Add vertical grid lines
-          rowsep=1:nrow(o2matrix), # Add horizontal grid lines
-          sepcolor = "black",
+          # dendrogram = "row",
+          colsep=1:ncol(coverage_o2[,-c(1)]), # Add vertical grid lines
+          rowsep=1:nrow(coverage_o2[,-c(1)]), # Add horizontal grid lines
+          sepcolor = "darkgrey",
           col = viridis::viridis_pal(),
           cexRow = 1.5,
           cexCol = 1.5,
-          lwid=c(6, 6),
-          lhei = c(2,20), key=T, keysize = 5)
+          lwid=c(3, 20),
+          lhei = c(2,20), key=T, keysize =1,
+          ColSideColors = vec
+         )
+
+legend("bottomright",
+       legend=c("in silico", "in vitro tolerance"), 
+       fill=c("green", "red"))
+
+
+
 
 dev.off()
 
 
 ```
 
-# 3. correlation MBC/MIC H2O2 and ox. defense
-
-
 ```{r}
-coverage_h2o2<-join(h2o2_wide, coverage, by=("bacteria"))
-rownames(coverage_h2o2)<-coverage_h2o2[,1]
-
-coverage_h2o2<-drop_na(coverage_h2o2)
-
-
-
-coverage_h2o2[, c("MBC", "MIC")]<-log2(coverage_h2o2[, c("MBC", "MIC")])
-coverage_h2o2$MIC<-(coverage_h2o2$MIC-min(coverage_h2o2$MIC))/(max(coverage_h2o2$MIC)-min(coverage_h2o2$MIC))
-coverage_h2o2$MBC<-(coverage_h2o2$MBC-min(coverage_h2o2$MBC))/(max(coverage_h2o2$MBC)-min(coverage_h2o2$MBC))
 
 ```
-
-```{r}
-h2o2matrix<-as.matrix(coverage_h2o2[,-1])
-
-
-jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2.jpeg", width=1000, height=1000)
-
-
-heatmap.2(h2o2matrix[, c("MBC", "MIC", "catalase")], # data frame a matrix
-          marg = c(10,15),
-          density.info = "none", # Remove density legend lines
-          trace = "none",
-          # dendrogram = "row", 
-           colsep=1:nrow(o2matrix), # Add vertical grid lines
-          rowsep=1:nrow(o2matrix), # Add horizontal grid lines
-          sepcolor = "black",
-          col = viridis::viridis_pal(),
-          cexRow = 1.5,
-          cexCol = 1.5,
-          lwid=c(1, 6),
-          lhei = c(2,20), key=T, keysize = 5)
-
-dev.off()
-
-
-```
-
-
-
 
 
