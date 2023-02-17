@@ -135,44 +135,14 @@ for (i in 1:length(bacteria)) {
 ```
 
 
-# 3. Find the average MIC values
-
-```{r}
-#find MIC value where growth is bigger than 0.0336
-MIC_vector <- vector()
-for (i in 1:nrow(MIC_values_phyla)) { #vertical 
-  candidates <- vector()
-     for(j in 3:14) {#horizontal 
-       if (MIC_values_phyla[i,j]>0.0336) {#-> MIC_value_absolut)
-
-         candidates <- append(candidates, colnames(MIC_values_phyla)[j+1])
-         candidates <-as.numeric(candidates)
-       }
-     }
-  MIC_vector <- append(MIC_vector, max(candidates))
-}
-
-MBC_vector <- vector()
-for (i in 1:nrow(MBC_values_phyla)) { #vertical 
-  candidates <- vector()
-  for(j in 3:14) {#horizontal 
-    if (MBC_values_phyla[i,j]>0.0336) {#-> MIC_value_absolut)
-      
-      candidates <- append(candidates, colnames(MBC_values_phyla)[j+1])
-      candidates <-as.numeric(candidates)
-    }
-  }
-  MBC_vector <- append(MBC_vector, max(candidates))
-}
-
-```
-
-
-
 # 4. Get the MIC for individual repleciates
 ```{r}
 #########################################
 #define row names for the blank corrected 
+bacteria <- strsplit(bacteria, ".csv")
+bacteria <- as.character(bacteria)
+
+
 row_names<-matrix(0,length(bacteria)*6,1)
 position = 0
 for (i in 1:length(bacteria)) {
