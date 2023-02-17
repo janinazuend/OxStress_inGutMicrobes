@@ -139,42 +139,42 @@ setwd("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output")
 library(scales)
 
 bacteria_names<-unique(all_means$Bacteria)
-
-
-for (i in 1:length(bacteria_names)) {
-  # for (i in 1:1) {
-##create subset 
-    
-    
-    all_means%>%
-      subset(Bacteria %in% c(bacteria_names[i]))->bacteria_subset
-  
-  plot <-ggplot(bacteria_subset, aes(y=mean_control, x=mean_h2o2))+
-    geom_abline(intercept=0, slope=1, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
-    stat_poly_line(color="darkgrey", b_0.constant =T) +
-    geom_point(aes(colour=metabolite, shape=condition), size=3, alpha=0.5) +
-    geom_errorbar(aes(ymin=(mean_control - sd_control), ymax=(mean_control + sd_control), colour=metabolite, group=condition))+
-    geom_errorbarh(aes(xmin=mean_h2o2 - sd_h2o2, xmax=mean_h2o2 + sd_h2o2, colour=metabolite, group=condition))+
-    coord_fixed()+
-    #expand_limits(x=c(0.05, 1), y=c(0.05, 1))+
-    # geom_abline(intercept=0.0, slope=1.1111111, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
-    # geom_abline(intercept=-0.0, slope=0.9, color="darkgrey", size=0.75, alpha=0.5, linetype =3 )+
-    ggtitle(bacteria_names[i])+
-    labs(x=expression(H[2]*O[2]), y="control")+
-    stat_poly_eq(b_0.constant =T)+
-    scale_x_continuous( limits = c(-1, 1.1), labels = label_number(accuracy = 0.01)) +
-    scale_y_continuous( limits = c(-1, 1.1), labels = label_number(accuracy = 0.01))
-  show(plot)
-  
-  x<-paste0(bacteria_names[i], ".jpg")
-  
+# 
+# 
+# for (i in 1:length(bacteria_names)) {
+#   # for (i in 1:1) {
+# ##create subset 
+#     
+#     
+#     all_means%>%
+#       subset(Bacteria %in% c(bacteria_names[i]))->bacteria_subset
+#   
+#   plot <-ggplot(bacteria_subset, aes(y=mean_control, x=mean_h2o2))+
+#     geom_abline(intercept=0, slope=1, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
+#     stat_poly_line(color="darkgrey", b_0.constant =T) +
+#     geom_point(aes(colour=metabolite, shape=condition), size=3, alpha=0.5) +
+#     geom_errorbar(aes(ymin=(mean_control - sd_control), ymax=(mean_control + sd_control), colour=metabolite, group=condition))+
+#     geom_errorbarh(aes(xmin=mean_h2o2 - sd_h2o2, xmax=mean_h2o2 + sd_h2o2, colour=metabolite, group=condition))+
+#     coord_fixed()+
+#     #expand_limits(x=c(0.05, 1), y=c(0.05, 1))+
+#     # geom_abline(intercept=0.0, slope=1.1111111, color="darkgrey", size=0.75, alpha=0.5, linetype =3)+
+#     # geom_abline(intercept=-0.0, slope=0.9, color="darkgrey", size=0.75, alpha=0.5, linetype =3 )+
+#     ggtitle(bacteria_names[i])+
+#     labs(x=expression(H[2]*O[2]), y="control")+
+#     stat_poly_eq(b_0.constant =T)+
+#     scale_x_continuous( limits = c(-1, 1.1), labels = label_number(accuracy = 0.01)) +
+#     scale_y_continuous( limits = c(-1, 1.1), labels = label_number(accuracy = 0.01))
+#   show(plot)
+#   
+#   x<-paste0(bacteria_names[i], ".jpg")
+#   
   # ggsave(filename = x,   
   #        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/corr_H2O2", 
   #        width = 18,
   #        height = 15,
   #        units = c("cm"))
   # 
-  }
+  # }
 ```
 
 # 5. display absolute values
@@ -233,6 +233,10 @@ bacteria_pyla<-as.data.frame(bacteria_pyla)
 names(bacteria_pyla)<-c("Bacteria", "class")
 
 ###
+
+pho<-grep("Phocaei", bacteria_pyla$Bacteria)
+bacteria_pyla[pho, c(2)] ="Bacteroidia"
+
 bacteroidetes<-grep("Bac", bacteria_pyla$Bacteria)
 bacteria_pyla[bacteroidetes, c(2)] ="Bacteroidia"
 
@@ -271,7 +275,7 @@ bacteria_pyla[eu,2]="Clostridia"
 flavi<-grep("Flavo", bacteria_pyla$Bacteria)
 bacteria_pyla[flavi,2]="Clostridia"
 
-lacto<-grep("Lactobacillus", bacteria_pyla$Bacteria)
+lacto<-grep("Lacti", bacteria_pyla$Bacteria)
 bacteria_pyla[lacto,2]="Bacilli"
 
 subdo<-grep("Sub", bacteria_pyla$Bacteria)
@@ -482,7 +486,7 @@ ratio%>%
                          "Bacteroides fragilis",
                          "Bacteroides thetaiotaomicron" ,
                          "Bacteroides uniformis" ,
-                         "Bacteroides vulgatus" , 
+                         "Phocaeicola vulgatus" , 
                          "Bifidobacterium adolescentis"  , 
                          "Bifidobacterium longum" ,
                          "Blautia hansenii" ,
@@ -491,7 +495,7 @@ ratio%>%
                          "Enterococcus faecalis"  ,
                          "Escherichia coli" , 
                          "Flavonifractor sp.", 
-                         "Lactobacillus plantarum" , 
+                         "Lactiplantibacillus plantarum" , 
                          "Parabacteroides merdae"  ,
                          "Phascolarctobacterium faecium", 
                          "Ruminococcus gnavus",
@@ -504,10 +508,9 @@ ratio%>%
                          "Clostridium sporogenes",
                          "Collinsella aerofaciens" ,
                          "Bacteroides intestinalis",
-                         "Subdoligranulum variabile",
                          "Ruminococcus bromi",
                          "Marvinbryantia formatixigens",
-                         "Eubacterium hallii")) %>%
+                         "Anaerobutyricum hallii")) %>%
            subset(condition %in% c("NIC"))->sub_nic
 
 
