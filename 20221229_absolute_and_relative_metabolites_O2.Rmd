@@ -661,12 +661,12 @@ ratio_O2%>%
                          "Parabacterium_merdae"  ,
                          "Phascolarctobacterium_faecium", 
                          "Roseburia_intestinalis"   ,
-                         "Ruminococcus_gnavus" )) %>%
+                         "Ruminococcus_gnavus")) %>%
            subset(agar_condition %in% c("minimal agar (''MIC'')"))->sub_nic
 
 
 ratio_O2%>% 
-  subset(Bacteria %in% c("Bacteroides_faecis", "Bacteroides_ovatus", "Eubacterium_eligens", "Prevotella_copri", "Bacteroides_xylanisolvens", "Bacteroides_fragilis", "Clostridium_sporogenes", "Collinsella_aerofaciens"  )) %>%
+  subset(Bacteria %in% c("Bacteroides_faecis", "Bacteroides_ovatus", "Eubacterium_eligens", "Bacteroides_xylanisolvens", "Bacteroides_fragilis", "Clostridium_sporogenes", "Collinsella_aerofaciens",  "Prevotella_copri"   )) %>%
            subset(agar_condition %in% c("agar with highest growth"))->sub_nic_1
 
 
