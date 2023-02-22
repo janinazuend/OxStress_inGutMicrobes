@@ -351,7 +351,7 @@ rm(out)
 
 rm(shapi_out)
 rm(shapi)
-print(subset)
+
 try(
   subset %>%
   t_test(data= .,
@@ -552,9 +552,155 @@ ggplot(selectionn, aes(x=metabolite, y=Bacteria, fill=ratio))+
          width = 22,
          height = 20,
          units = c("cm"))
+```
+
+# 4. Calculate means of absolute values: to filter for metabolites that are of low concentration
+
+```{r}
+mean_metabolites_absolute <- aggregate(HPLC_absolute_long$concentration, list(HPLC_absolute_long$assay, HPLC_absolute_long$metabolite, HPLC_absolute_long$condition), FUN=mean)
+
+
+names(mean_metabolites_absolute)<-c("Bacteria", "metabolite", "condition", "mean_conc")
+
+mean_metabolites_absolute%>%
+  subset(condition %in% c("NIC"))->NIC_mean_metabolites_absolute
+names(NIC_mean_metabolites_absolute)[names(NIC_mean_metabolites_absolute) == "mean_conc"] <- "mean_conc_h2o2"
+##remove condition colum: otherwise we cannot merge the df's later
+
+mean_metabolites_absolute%>%
+  subset(condition %in% c("NIC-1"))->NIC_1_mean_metabolites_absolute
+names(NIC_1_mean_metabolites_absolute)[names(NIC_1_mean_metabolites_absolute) == "mean_conc"] <- "mean_conc_h2o2"
+##remove condition colum: otherwise we cannot merge the df's later
+
+
+mean_metabolites_absolute%>%
+  subset(condition %in% c("control"))->control_mean_metabolites_absolute
+names(control_mean_metabolites_absolute)[names(control_mean_metabolites_absolute) == "mean_conc"] <- "mean_conc_control"
+control_mean_metabolites_absolute <- control_mean_metabolites_absolute[, !colnames(control_mean_metabolites_absolute) %in% c("condition")]
+
+
+means_absolute_NIC<-left_join(control_mean_metabolites_absolute, NIC_mean_metabolites_absolute)
+means_absolute_NIC_1<-left_join(control_mean_metabolites_absolute, NIC_1_mean_metabolites_absolute)
+
+means_absolute<-rbind(means_absolute_NIC, means_absolute_NIC_1)
+```
+
+
+```{r}
+stats_absolute<-merge(ratio, means_absolute)
+
+stats_absolute$p_corrected_low_conc<-stats_absolute$p_corrected
+
+for (i in 1:nrow(stats_absolute)){
+  if (
+    !is.na(stats_absolute[i,"mean_conc_control"]) && 
+      !is.na(stats_absolute[i,"mean_conc_h2o2"]) &&
+      (
+        (stats_absolute[i,"mean_conc_control"] > -1 && 
+         stats_absolute[i,"mean_conc_control"] < 0 && 
+         stats_absolute[i,"mean_conc_h2o2"] > -1 && 
+         stats_absolute[i,"mean_conc_h2o2"] < 0) 
+        || 
+        (stats_absolute[i,"mean_conc_control"] > 0 && 
+         stats_absolute[i,"mean_conc_control"] < 1 &&
+         stats_absolute[i,"mean_conc_h2o2"] > 0 && 
+         stats_absolute[i,"mean_conc_h2o2"] < 1)
+        ||
+        (stats_absolute[i,"mean_conc_control"] < 0 && 
+         stats_absolute[i,"mean_conc_control"] > -1 &&
+         stats_absolute[i,"mean_conc_h2o2"] > 0 && 
+         stats_absolute[i,"mean_conc_h2o2"] < 1)
+        ||
+        (stats_absolute[i,"mean_conc_control"] > 0 && 
+         stats_absolute[i,"mean_conc_control"] < 1 &&
+         stats_absolute[i,"mean_conc_h2o2"] < 0 && 
+         stats_absolute[i,"mean_conc_h2o2"] > -1)
+      )
+    ) {
+    stats_absolute[i,"p_corrected_low_conc"] = "ns"
+}}
+
 
 ```
 
+
+```{r}
+stats_absolute%>%
+  subset(Bacteria %in% c("Anaerostipes caccae", 
+                         "Anaerostipes hadrus", 
+                         "Anaerotignum lactatifermentans",
+                         "Bacteroides caccae",
+                         "Bacteroides faecis",
+                         "Bacteroides fragilis",
+                         "Bacteroides thetaiotaomicron" ,
+                         "Bacteroides uniformis" ,
+                         "Phocaeicola vulgatus" , 
+                         "Bifidobacterium adolescentis"  , 
+                         "Bifidobacterium longum" ,
+                         "Blautia hansenii" ,
+                         "Blautia hydrogenotrophica",
+                         "Blautia obeum"  , "Blautia producta" ,
+                         "Enterococcus faecalis"  ,
+                         "Escherichia coli" , 
+                         "Flavonifractor sp.", 
+                         "Lactiplantibacillus plantarum" , 
+                         "Parabacteroides merdae"  ,
+                         "Phascolarctobacterium faecium", 
+                         "Ruminococcus gnavus",
+                         "Bacteroides faecis", 
+                         "Bacteroides ovatus", 
+                         "Eubacterium eligens",
+                         "Prevotella copri",
+                         "Bacteroides xylanisolvens",
+                         "Bacteroides fragilis",
+                         "Clostridium sporogenes",
+                         "Collinsella aerofaciens" ,
+                         "Bacteroides intestinalis",
+                         "Ruminococcus bromi",
+                         "Marvinbryantia formatixigens",
+                         "Anaerobutyricum hallii")) %>%
+           subset(condition %in% c("NIC"))->sub_nic
+
+
+stats_absolute%>% 
+  subset(Bacteria %in% c("Eubacterium limosum",
+                         "Roseburia intestinalis")) %>%
+           subset(condition %in% c("NIC-1"))->sub_nic_1
+
+
+selection<-rbind(sub_nic, sub_nic_1)
+#unique(ratio$Bacteria)
+
+```
+
+
+```{r}
+selection$p_corrected_low_conc[selection$p_corrected_low_conc=="ns"]<-NA
+
+selectionn<-selection[!is.na(selection$ratio),]
+
+max<-max(selectionn$ratio)
+min<-min(selectionn$ratio)
+
+ggplot(selectionn, aes(x=metabolite, y=Bacteria, fill=ratio))+
+  geom_tile()+
+  scale_fill_gradientn(colors = c("coral", "white", "cyan4"), na.value= "grey",values = rescale(c(min,0,max)))+
+  facet_grid(rows=vars(Class), space="free", scale="free")+
+  theme(strip.text.y = element_text(angle=0, size = 15),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
+        axis.text.y = element_text(size=15, face="italic"))+
+  labs(fill="Δrel. metabolites")+
+  ggtitle(expression(Metabolic~changes~as~a~response~to~H[2]*O[2]))+
+   geom_text(aes(label=p_corrected_low_conc))
+
+
+ ggsave(filename = "H2O2_heatplot_selected_low_conc.jpeg",   
+         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+         width = 22,
+         height = 20,
+         units = c("cm"))
+```
 
 
 
