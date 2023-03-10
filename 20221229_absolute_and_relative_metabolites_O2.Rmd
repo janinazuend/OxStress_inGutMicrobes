@@ -787,7 +787,6 @@ stats_absolute%>%
                          "Bifidobacterium_longum" ,
                          "Blautia_hansenii" ,
                          "Blautia_obeum"  , "Blautia_producta" , 
-                         "Coprococcus_sp" ,
                          "Enterococcus_faecalis"  ,
                          "Escherichia_coli" , 
                          "Eubacterium_limosum" ,

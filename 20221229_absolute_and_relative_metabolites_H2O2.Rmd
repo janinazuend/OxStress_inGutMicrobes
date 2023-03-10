@@ -655,10 +655,7 @@ stats_absolute%>%
                          "Bacteroides fragilis",
                          "Clostridium sporogenes",
                          "Collinsella aerofaciens" ,
-                         "Bacteroides intestinalis",
-                         "Ruminococcus bromi",
-                         "Marvinbryantia formatixigens",
-                         "Anaerobutyricum hallii")) %>%
+                         "Bacteroides intestinalis")) %>%
            subset(condition %in% c("NIC"))->sub_nic
 
 

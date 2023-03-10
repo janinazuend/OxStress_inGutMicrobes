@@ -25,6 +25,7 @@ library(tidyr)
 library(ggrepel)
 library(ggbreak)
 library(openxlsx)
+library(gplots)
 ```
 
 # 1. Load the data and calculate median MIC & MBC
@@ -114,29 +115,29 @@ coverage_o2$`MBC h2o2`<-(coverage_o2$`MBC h2o2`-min(coverage_o2$`MBC h2o2`))/(ma
 ```
 
 ```{r}
-o2matrix<-as.matrix(coverage_o2[,-c(1, 31, 32, 33, 34)])
+o2matrix<-as.matrix(coverage_o2[,-c(1,  32, 33, 34)])
 
-vec <- c(rep("green", 29), rep("red", 4))
+vec <- c(rep("green", 29), rep("red", 1))
 
 
 
 jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_mbc_h2o2.jpeg", width=1000, height=1000)
 
 
-heatmap.2(as.matrix(coverage_o2[,-c(1)]), # data frame a matrix
+heatmap.2(as.matrix(o2matrix[]), # data frame a matrix
           marg = c(27,20),
           density.info = "none", # Remove density legend lines
           trace = "none",
           # dendrogram = "row",
-          colsep=1:ncol(coverage_o2[,-c(1)]), # Add vertical grid lines
-          rowsep=1:nrow(coverage_o2[,-c(1)]), # Add horizontal grid lines
+          colsep=1:ncol(o2matrix), # Add vertical grid lines
+          rowsep=1:nrow(o2matrix), # Add horizontal grid lines
           sepcolor = "darkgrey",
           col = viridis::viridis_pal(),
           cexRow = 1.5,
           cexCol = 1.5,
           lwid=c(3, 20),
           lhei = c(2,20), key=T, keysize =1,
-          ColSideColors = vec
+          # ColSideColors = vec
          )
 
 legend("bottomright",
@@ -148,6 +149,46 @@ legend("bottomright",
 
 dev.off()
 
+
+```
+
+```{r}
+o2matrix<-as.matrix(coverage_o2[, c("glutathione peroxidase", "MBC oxygen")])
+
+
+
+
+jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/hat.jpeg", width=1000, height=1000)
+
+
+heatmap.2(as.matrix(o2matrix), # data frame a matrix
+          marg = c(27,20),
+          density.info = "none", # Remove density legend lines
+          trace = "none",
+          # dendrogram = "row",
+          colsep=1:ncol(coverage_o2[,-c(1)]), # Add vertical grid lines
+          rowsep=1:nrow(coverage_o2[,-c(1)]), # Add horizontal grid lines
+          sepcolor = "darkgrey",
+          col = viridis::viridis_pal(),
+          cexRow = 1.5,
+          cexCol = 1.5,
+          lwid=c(3, 20),
+          lhei = c(2,20), key=T, keysize =1
+         )
+
+legend("bottomright",
+       legend=c("in silico", "in vitro tolerance"), 
+       fill=c("green", "red"))
+
+
+
+
+dev.off()
+
+
+```
+
+```{r}
 
 ```
 
