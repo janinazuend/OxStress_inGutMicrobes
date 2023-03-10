@@ -230,6 +230,7 @@ for (i in 1:nrow(MIC_mod_av)) { #vertical
 }
 
 
+
 MBC_vector <- vector()
 for (i in 1:nrow(MBC_mod_av)) { #vertical 
   candidates <- vector()
@@ -244,6 +245,33 @@ for (i in 1:nrow(MBC_mod_av)) { #vertical
 }
 
 
+MIC_vector_full <- vector()
+for (i in 1:nrow(MIC_mod_av)) { #vertical 
+  candidates <- vector()
+     for(j in 3:14) {#horizontal 
+       if (!is.na(MIC_mod_av[i,j]) & MIC_mod_av[i,j]/MIC_mod_av[i, "max"]>0.5 & MIC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
+         candidates <- append(candidates, colnames(MIC_mod_av)[j])
+         candidates <-as.numeric(candidates)
+         # print((MIC_replicates_h2o2)[j,1])
+       }
+     }
+  MIC_vector_full <- append(MIC_vector_full, max(candidates))
+}
+
+
+MBC_vector_full <- vector()
+for (i in 1:nrow(MBC_mod_av)) { #vertical 
+  candidates <- vector()
+  for(j in 3:14) {#horizontal 
+    if (!is.na(MBC_mod_av[i,j]) & MBC_mod_av[i,j]/MBC_mod_av[i, "max"]>0.5 & MBC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
+      
+      candidates <- append(candidates, colnames(MBC_mod_av)[j])
+      candidates <-as.numeric(candidates)
+    }
+  }
+  MBC_vector_full <- append(MBC_vector_full, max(candidates))
+}
+
 
 ```
 
@@ -252,8 +280,9 @@ for (i in 1:nrow(MBC_mod_av)) { #vertical
 df_final_replicates <- data.frame(bacteria = MIC_mod_av$bacteria, 
                                   replicate = MIC_mod_av$replicate,
                                   MIC = as.numeric(MIC_vector), 
-                                  MBC = as.numeric(MBC_vector))
-
+                                  MBC = as.numeric(MBC_vector),
+                                  MIC_75 = as.numeric(MIC_vector_full),
+                                  MBC_75 = as.numeric(MBC_vector_full))
 
 
 order<-aggregate(df_final_replicates$MBC, by=list(df_final_replicates$bacteria), mean, na.rm=T)
@@ -262,15 +291,45 @@ colnames(order) <-c("bacteria", "order")
 df_final_replicates<-left_join(df_final_replicates, order)
 
 
-df_long<-gather(df_final_replicates, assay, value, "MIC":"MBC", factor_key = T)
+df_long<-gather(df_final_replicates[,c("bacteria", "replicate", "MIC", "MBC", "order")], assay, value, "MIC":"MBC", factor_key = T)
 
-df_long$value<-as.numeric(df_long$value)
-df_long$order<-as.numeric(df_long$order)
+df_long_75<-gather(df_final_replicates[,c("bacteria", "replicate", "MIC_75", "MBC_75", "order")], assay, value_75, "MIC_75":"MBC_75", factor_key = T)
+names(df_long_75)[names(df_long_75) == "MIC_75"] <- "MIC"
+
+df_long_75$assay <- recode_factor(df_long_75$assay, MIC_75 = "MIC", 
+                                MBC_75 = "MBC")
+
+df_long_both<-left_join(df_long, df_long_75)
+
+
 ```
 
 
 ## Go back to the heatplot with relative od values
 ```{r}
+# MBC_rel<-MBC_mod_av
+# MIC_rel<-MIC_mod_av
+# 
+# for (i in 1:nrow(MIC_rel)) { #vertical 
+#   for(j in 3:14) {#horizontal 
+#      MIC_rel[i,j] = MIC_rel[i,j]/MIC_rel[i, c("max")] 
+#   }}
+# 
+# for (i in 1:nrow(MBC_rel)) { #vertical 
+#   for(j in 3:14) {#horizontal 
+#      MBC_rel[i,j] = MBC_rel[i,j]/MBC_rel[i, c("max")] 
+#   }}
+# 
+# 
+# MIC_rel_long<-gather(MIC_rel, condition, OD, "1":"12", factor_key = T)
+# MIC_rel_long$assay<-c("MIC")
+# MBC_rel_long<-gather(MBC_rel, condition, OD, "1":"12", factor_key = T)
+# MBC_rel_long$assay<-c("MBC")
+# 
+# MBC_MIC_rel_long<-rbind(MIC_rel_long, MBC_rel_long)
+# MBC_MIC_rel_long<-left_join(MBC_MIC_rel_long, df_long_both)
+
+
 MBC_rel<-MBC_mod_av
 MIC_rel<-MIC_mod_av
 
@@ -285,34 +344,56 @@ for (i in 1:nrow(MBC_rel)) { #vertical
   }}
 
 
-MIC_rel_long<-gather(MIC_rel, condition, OD, "1":"12", factor_key = T)
+# MBC_relgrowth_value<-cbind(MBC_rel, df_final_replicates)
+# MIC_relgrowth_value<-cbind(MIC_rel, df_final_replicates)
+
+
+MIC_rel_long<-gather(MIC_rel, condition, OD, "1":"13", factor_key = T)
 MIC_rel_long$assay<-c("MIC")
-MBC_rel_long<-gather(MBC_rel, condition, OD, "1":"12", factor_key = T)
+MBC_rel_long<-gather(MBC_rel, condition, OD, "1":"13", factor_key = T)
 MBC_rel_long$assay<-c("MBC")
 
 MBC_MIC_rel_long<-rbind(MIC_rel_long, MBC_rel_long)
-MBC_MIC_rel_long<-left_join(MBC_MIC_rel_long, df_long)
+MBC_MIC_rel_long<-left_join(MBC_MIC_rel_long, df_long_both)
 ```
 
 
 ```{r}
-MBC_MIC_rel_long$value[MBC_MIC_rel_long$value <0.1]<-0
-MBC_MIC_rel_long$condition<-as.numeric(MBC_MIC_rel_long$condition)
+# MBC_MIC_rel_long$value[MBC_MIC_rel_long$value <0.1]<-0
+# MBC_MIC_rel_long$condition<-as.numeric(MBC_MIC_rel_long$condition)
+# 
+# for (i in 1:nrow(MBC_MIC_rel_long)){
+#   if (MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value")]) { 
+#     MBC_MIC_rel_long[i, c("label")] = MBC_MIC_rel_long[i, c("value")]}}
+# 
+# MBC_MIC_rel_long$label<-as.numeric(MBC_MIC_rel_long$label)
+
+MBC_MIC_rel_long$OD[MBC_MIC_rel_long$OD <0.1]<-0
+MBC_MIC_rel_long$condition<-as.numeric(paste(MBC_MIC_rel_long$condition))
+
 
 for (i in 1:nrow(MBC_MIC_rel_long)){
-  if (MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value")]) { 
+  if ( MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value")]) { 
     MBC_MIC_rel_long[i, c("label")] = MBC_MIC_rel_long[i, c("value")]}}
 
 MBC_MIC_rel_long$label<-as.numeric(MBC_MIC_rel_long$label)
+
+for (i in 1:nrow(MBC_MIC_rel_long)){
+  if ( MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value_75")]) { 
+    MBC_MIC_rel_long[i, c("label_75")] = MBC_MIC_rel_long[i, c("value_75")]}}
+
+MBC_MIC_rel_long$label_75<-as.numeric(MBC_MIC_rel_long$label_75)
+
+
+MBC_MIC_rel_long_label<-gather(MBC_MIC_rel_long, label_type, label_value, "label":"label_75")
 ```
 
 
 ```{r}
 
-MBC_MIC_rel_long$label<-MBC_MIC_rel_long$label+1
+MBC_MIC_rel_long_label$label_value<-MBC_MIC_rel_long_label$label_value+1
 
-
-MBC_MIC_rel_long%>%
+MBC_MIC_rel_long_label%>%
   subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
   drop_na(OD)->hoi
 
@@ -320,17 +401,17 @@ hoi%>%
   mutate(bacteria = fct_reorder(bacteria, hoi$order))%>%
   ggplot(aes(x = condition, y = assay, fill = OD)) + 
   geom_raster() +
-  # scale_fill_continuous(limits=c(0, 2), breaks = c(0,0.5, 1, 1.5, 2))+
-  labs(x=expression(paste("H"[2]*"O"[2]*" concentration")))+
+  scale_shape_manual(values = c(16, 1), labels=c("10%", "50%"))+
+scale_color_manual(values=c("coral2", "darkseagreen"))+
+  labs(x=expression(paste("Oxygenation")))+
   theme(text = element_text(size=15), 
         axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_blank(),
         axis.text.y=element_text(size=10),
         strip.text.y = element_text(angle = 0, face = "italic", hjust=0),
         strip.background = element_blank())+
-  facet_grid(rows =vars(bacteria), scales = "free_y", space = "free")+
-  geom_point(aes(x=label, y=assay, color=assay), alpha=0.5, position=position_jitterdodge(jitter.width = 0.3, jitter.height = 0.1))+
-  # geom_text(aes(label=label, color=assay))+
+  facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
+  geom_point(aes(x=label_value, color=assay, shape=label_type),  size=2.5, alpha=0.75, position=position_jitterdodge(jitter.width = 0.3, jitter.height = 0.1))+
   scale_x_continuous(labels=c("0 nM", 
                               "6.4 nM",  
                               "21 nM", 
@@ -343,18 +424,20 @@ hoi%>%
                               expression("710"~mu*M),  
                               "2.3 mM", "7.3 mM" , ">tested"), 
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12, 13))+
-  labs(fill = expression(relative~OD[600]), colour="")+
+  labs(fill = expression(relative~OD[600]), colour="", shape="Cut off value for growth")+
   ggtitle(expression(MIC~and~MBC~of~H[2]*O[2]))
 
 
 
 ggsave(filename = "MIC_MBC_h2o2_groeth.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width = 18,
+       width = 20,
        height = 30,
        units = c("cm"))
 
-
-
+```
+```{r}
+h2o2<-set_names(aggregate(hoi$value, by=list(hoi$bacteria, hoi$assay), FUN=mean), c("bacteria", "assay", "value_H2O2"))
+write.xlsx(h2o2, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.xlsx")
 ```
 
