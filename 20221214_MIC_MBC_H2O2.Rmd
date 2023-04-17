@@ -274,6 +274,81 @@ for (i in 1:nrow(MBC_mod_av)) { #vertical
 
 
 ```
+## Trial sig. testing
+
+```{r}
+i=1
+j=4
+
+df_pvalue<-matrix(0, nrow(MIC_replicates)/6 , 12)
+  
+row=1
+for (i in 1:(nrow(MIC_replicates)/6)) { #vertical 
+  
+  df_pvalue[i,1]<-MIC_replicates[row, 1]
+
+     for(j in 4:14){#horizontal 
+       
+       control<-MIC_replicates[c(row:(row+5)), c(3)]
+       test<-MIC_replicates[c(row:(row+5)), c(j)]
+       # print(test)
+       
+       my_data <- data.frame( 
+                group = rep(c("control", "test"), each = 6),
+                OD = c(control,  test)
+                )
+       res <- wilcox_test(my_data, OD ~ group, alternative = "greater")
+       
+       df_pvalue[i,c(j-2)]<-(res$p)
+       
+       
+     }
+  row=row+6
+  # print(row)
+  }
+
+
+
+
+
+df_pvalue_MBC<-matrix(0, nrow(MBC_replicates)/6 , 12)
+  
+row=1
+for (i in 1:(nrow(MBC_replicates)/6)) { #vertical 
+  
+  df_pvalue_MBC[i,1]<-MBC_replicates[row, 1]
+
+     for(j in 4:14){#horizontal 
+       
+       control<-MBC_replicates[c(row:(row+5)), c(3)]
+       test<-MBC_replicates[c(row:(row+5)), c(j)]
+       # print(test)
+       
+       my_data <- data.frame( 
+                group = rep(c("control", "test"), each = 6),
+                OD = c(control,  test)
+                )
+       res <- wilcox_test(my_data, OD ~ group, alternative = "greater")
+       
+       df_pvalue_MBC[i,c(j-2)]<-(res$p)
+       
+       
+     }
+  row=row+6
+  # print(row)
+}
+
+
+df_pvalue<-setNames(as.data.frame(df_pvalue), c("bacteria", 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
+df_pvalue_MBC<-setNames(as.data.frame(df_pvalue_MBC), c("bacteria", 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
+
+df_pvalue_MBC$assay<-"MBC"
+df_pvalue$assay<-"MIC"
+
+df_pvalue_both<-rbind(df_pvalue, df_pvalue_MBC)
+
+```
+
 
 ```{r}
 #assign MIC/MBC vectors to a data frame

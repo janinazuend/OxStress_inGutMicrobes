@@ -270,7 +270,7 @@ bacteria_pyla[, c("assay", "bacteria", "value_H2O2", "class")] %>%
   pivot_wider(names_from = assay, values_from = value_H2O2, values_fill = NA)->wide_H2O2
 
   ggplot(wide_H2O2, aes(x=MIC, y=MBC))+
-  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F)+
+  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F, conf.level=0.75)+
   # stat_poly_line()+
   geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
   # stat_poly_eq(aes(label=c(..rr.label..)), size=5)+
@@ -280,8 +280,8 @@ bacteria_pyla[, c("assay", "bacteria", "value_H2O2", "class")] %>%
   theme(axis.text.y= element_text(size = 16 ), 
         axis.title.y = element_text(size=20), 
         axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=16, angle=90),
-        legend.text = element_text(size = 16),
+        axis.text.x = element_text(size=15, angle=90),
+        legend.text = element_text(size = 15),
         legend.title = element_text(size= 20),
         plot.title = element_text(size=20),
         strip.text = element_text(size=20)
@@ -319,8 +319,12 @@ bacteria_pyla[, c("assay", "bacteria", "value_O2", "class")] %>%
   pivot_wider(names_from = assay, values_from = value_O2, values_fill = NA)->wide_O2
 
 
+
+
+
+
   ggplot(wide_O2, aes(x=MIC, y=MBC))+
-  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F)+
+  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F, level=0.75)+
   geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
   geom_jitter(aes(colour = class), width = 0.004, height = 0.004, size=3, alpha=0.5)+
   geom_text_repel(data=subset(wide_O2, MBC > MIC), aes(label=bacteria, colour=class), lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
@@ -334,8 +338,8 @@ bacteria_pyla[, c("assay", "bacteria", "value_O2", "class")] %>%
                               "549",
                               "1207",
                               "2656",  
-                              "5843",  ">tested"), 
-                     breaks=c( 1,2,3,4,5,6, 7,  8 ,9 ,10, 11, 12, 13), limits = c(1,13))+
+                              "5843"), 
+                     breaks=c( 2,3,4,5,6, 7,  8 ,9 ,10, 11, 12, 13), limits = c(2,13))+
     scale_y_continuous(labels=c("0","2.2", 
                               "4.8",  
                               "10.6", 
@@ -346,21 +350,21 @@ bacteria_pyla[, c("assay", "bacteria", "value_O2", "class")] %>%
                               "549",
                               "1207",
                               "2656",  
-                              "5843",  ">tested"), 
-                     breaks=c( 1,2,3,4,5,6, 7,  8 ,9 ,10, 11, 12, 13), limits = c(1,13))+
-  theme(axis.text.y= element_text(size = 16 ), 
+                              "5843"), 
+                     breaks=c( 2,3,4,5,6, 7,  8 ,9 ,10, 11, 12, 13))+
+  theme(axis.text.y= element_text(size = 15 ), 
         axis.title.y = element_text(size=20), 
         axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=16, angle=90),
-        legend.text = element_text(size = 16),
+        axis.text.x = element_text(size=15, angle=90),
+        legend.text = element_text(size = 15),
         legend.title = element_text(size= 20),
         plot.title = element_text(size=20),
         strip.text = element_text(size=20)
         )+
-  xlab("MIC")+
-  ylab("MBC")+
+  xlab("stress")+
+  ylab("post-stress")+
   guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
-  ggtitle(expression(Tolerance~to~O[2]*~(oxygenation~scale)))->p
+  ggtitle("Highest oxygenation level with visible growth")->p
   
   p
 
@@ -370,8 +374,8 @@ bacteria_pyla[, c("assay", "bacteria", "value_O2", "class")] %>%
   
 ggsave(filename = "O2_micvsmbc.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width =24.5,
-       height = 17,
+       width =20,
+       height = 14,
        units = c("cm"))
 
 ```
