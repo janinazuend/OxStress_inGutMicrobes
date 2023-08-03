@@ -33,12 +33,12 @@ library(scales)
 
 # 1. Read all the data into one df
 ```{r}
-setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
-bacteria <- list.files(path = "P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
+bacteria <- list.files(path = "P:/Shared_documents/Janina_Zuend/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
 ```
 ## aerobic and anaerobic values go next to each other in order to do correlation: blank correction
 ```{r}
-setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/02_hplc results/Single_bacteria_HPLC_blank_corrected - Copy")
 
 #########################################
 #blank correction

@@ -10,19 +10,20 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/tryptophan_enrichment", cho = TRUE, warning = FALSE, message = FALSE)
 
 # Install Packages:
-# install.packages("rlang")
-# install.packages("tidyr")
-# install.packages("ggbreak")
-library(dplyr)
-library(plyr)
+# # install.packages("rlang")
+# install.packages("tidyverse")
+# # install.packages("ggbreak")
+# # library(dplyr)
+# library(plyr)
+library(rstatix)
 library(tidyverse)
-library(ggplot2)
-library(tidyr)
-# install.packages("devtools")
-# devtools::install_github("slowkow/ggrepel")
-library(ggrepel)
-library(ggbreak)
-# install.packages("openxlsx")
+# library(ggplot2)
+# library(tidyr)
+# # install.packages("devtools")
+# # devtools::install_github("slowkow/ggrepel")
+# library(ggrepel)
+# library(ggbreak)
+# # install.packages("openxlsx")
 library(openxlsx)
 ```
 
@@ -32,8 +33,11 @@ library(openxlsx)
 #Load the data
 ########################################
 
-setwd("P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
-bacteria <- list.files(path = "P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
+# bacteria <- list.files(path = "P:/Shared_documents/Janina Z�nd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
+
+list.files(path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2/MIC")->bacteria
+bacteria <- subset(bacteria, !bacteria %in% c("Subdoligranulum variable.csv", "Anaerobutyricum hallii.csv", "Marvinbryantia formatixigens.csv", "Ruminococcus bromii.csv"))
 
 options(scipen=999)
 #########################################
@@ -41,23 +45,23 @@ options(scipen=999)
 ########################################
 
 #define empty matrices, no values added so far 
-MIC_values<- matrix(0, length(bacteria)*6, 12)
-MIC_average<- matrix(0, length(bacteria), 12)
+MIC_O2_values<- matrix(0, length(bacteria)*6, 12)
+MIC_O2_average<- matrix(0, length(bacteria), 12)
 
-MBC_values<- matrix(0, length(bacteria)*6, 12)
-MBC_average<- matrix(0, length(bacteria), 12)
+MBC_O2_values<- matrix(0, length(bacteria)*6, 12)
+MBC_O2_average<- matrix(0, length(bacteria), 12)
 
 
 
-#MIC, fill values into MIC, here OD corrected values, but not corrected with agar 
+#MIC_O2, fill values into MIC_O2, here OD corrected values, but not corrected with agar 
 row = 0
 for (l in 1:length(bacteria)) {
-  #generate MICwide format
-  MICwide = read.csv(bacteria[l], sep=";", header=F, check.names =F)
+  #generate MIC_O2wide format
+  MIC_O2wide = read.csv(bacteria[l], sep=";", header=F, check.names =F)
   #look for A indicating the area in the excel file with the data
 
   for (r in 35:42) {
-    if (MICwide[r,1]=="C") {
+    if (MIC_O2wide[r,1]=="C") {
       zeile = r
     }
   }
@@ -66,10 +70,10 @@ for (l in 1:length(bacteria)) {
     #x indicated the colum->'A' is in column 1 and the data next to it from column 2 on
     x = 1+i
     zeile_end = zeile+6
-    d = as.numeric(unlist(data.frame(MICwide[zeile:zeile_end, x])))
+    d = as.numeric(unlist(data.frame(MIC_O2wide[zeile:zeile_end, x])))
     for(j in 1:6){
       y = d[j]
-      MIC_values[row+j, i] = y
+      MIC_O2_values[row+j, i] = y
       }
   }
   
@@ -78,21 +82,21 @@ for (l in 1:length(bacteria)) {
   for(i in 1:12) {
     r1= row+1
     r2= row+6
-    MIC_average[l, i] = as.numeric(mean(MIC_values[r1:r2, i],  na.rm = TRUE))
+    MIC_O2_average[l, i] = as.numeric(mean(MIC_O2_values[r1:r2, i],  na.rm = TRUE))
   }
   
   row=row+6
   
 }  
 
-#MBC, fill values into MBC, here OD corrected values, but not corrected with agar 
+#MBC_O2, fill values into MBC_O2, here OD corrected values, but not corrected with agar 
 row = 0
 for (l in 1:length(bacteria)) {
-  #generate MICwide format
-  MICwide = read.csv(bacteria[l], sep=";", header=F, check.names =F)
+  #generate MIC_O2_O2wide format
+  MIC_O2wide = read.csv(bacteria[l], sep=";", header=F, check.names =F)
   #look for A indicating the area in the excel file with the data
   for (r in 49:56) {
-    if (MICwide[r,1]=="C") {
+    if (MIC_O2wide[r,1]=="C") {
       zeile = r
     }
   }
@@ -101,10 +105,10 @@ for (l in 1:length(bacteria)) {
     #x indicated the colum->'A' is in column 1 and the data next to it from column 2 on
     x = 1+i
     zeile_end = zeile+6
-    d = as.numeric(unlist(data.frame(MICwide[zeile:zeile_end, x])))
+    d = as.numeric(unlist(data.frame(MIC_O2wide[zeile:zeile_end, x])))
     for(j in 1:6){
       y = d[j]
-        MBC_values[row+j, i] = y
+        MBC_O2_values[row+j, i] = y
     }
   }
   
@@ -113,7 +117,7 @@ for (l in 1:length(bacteria)) {
   for(i in 1:12) {
     r1= row+1
     r2= row+6
-    MBC_average[l, i] = as.numeric(mean(MBC_values[r1:r2, i],  na.rm = TRUE))
+    MBC_O2_average[l, i] = as.numeric(mean(MBC_O2_values[r1:r2, i],  na.rm = TRUE))
   }
   
   row=row+6
@@ -142,106 +146,106 @@ for (i in 1:length(bacteria)) {
   position = position+6
 }
 
-MIC_replicates <-data.frame(row_names, MIC_values)
-colnames(MIC_replicates)<-list("bacteria", 1, 2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9 , 2385.2 , 5191.4, 11299.08 )
+MIC_O2_replicates <-data.frame(row_names, MIC_O2_values)
+colnames(MIC_O2_replicates)<-list("bacteria", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 , 11 , 12 )
 
-MBC_replicates <-data.frame(row_names, MBC_values)
-colnames(MBC_replicates)<-list("bacteria", 1, 2.2, 4.7, 10.3, 22.4, 48.85, 106.3, 231.4, 503.5, 1095.9, 2385.2, 5191.4, 11299.08 )
+MBC_O2_replicates <-data.frame(row_names, MBC_O2_values)
+colnames(MBC_O2_replicates)<-list("bacteria", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 , 11 , 12 )
 ```
 
 
 # 5. Export blanck corrected OD values for outlier correction
 ```{r}
-write.xlsx(MBC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates.xlsx")
-write.xlsx(MIC_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates.xlsx")
+write.xlsx(MBC_O2_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates.xlsx")
+write.xlsx(MIC_O2_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates.xlsx")
 
-MBC_replicates<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates_mod.xlsx")
-MIC_replicates<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates_mod.xlsx")
+MBC_O2_replicates<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates_mod.xlsx")
+MIC_O2_replicates<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates_mod.xlsx")
 ```
 
 
 ```{r}
 #get long format
-average_long<-gather(MIC_replicates, condition, OD, "1":"13", factor_key = T )
+average_long_O2<-gather(MIC_O2_replicates, condition, OD, "1":"13", factor_key = T )
 #take averages of the technical replicate
-average_long_tec<-set_names(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), colnames(average_long))
+average_long_tec_O2<-set_names(aggregate(average_long_O2$OD, list(average_long_O2$bacteria, average_long_O2$replicate, average_long_O2$condition), FUN=mean, na.rm=TRUE), colnames(average_long_O2))
 #get average per condition -> to get max
-average<-set_names(aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE), c("bacteria", "condition" ,"average"))
+average_O2<-set_names(aggregate(average_long_tec_O2$OD, list(average_long_tec_O2$bacteria, average_long_tec_O2$condition), FUN=mean, na.rm=TRUE), c("bacteria", "condition" ,"average"))
 # find max
-max_mic<-set_names(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
+max_mic_O2<-set_names(aggregate(average_O2$average, by = list(average_O2$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
 
-MIC_replicates_wide<-pivot_wider(average_long_tec, names_from = condition , values_from = OD)
+MIC_replicates_wide_O2<-pivot_wider(average_long_tec_O2, names_from = condition , values_from = OD)
 
-average_long<-gather(MBC_replicates, condition, OD, "1":"13", factor_key = T )
-average_long_tec<-set_names(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), colnames(average_long))
-average<-aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE)
-names(average)<-c("bacteria", "condition" ,"average")
-max_mbc<-set_names(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
+average_long_O2<-gather(MBC_O2_replicates, condition, OD, "1":"13", factor_key = T )
+average_long_tec_O2<-set_names(aggregate(average_long_O2$OD, list(average_long_O2$bacteria, average_long_O2$replicate, average_long_O2$condition), FUN=mean, na.rm=TRUE), colnames(average_long_O2))
+average_O2<-aggregate(average_long_tec_O2$OD, list(average_long_tec_O2$bacteria, average_long_tec_O2$condition), FUN=mean, na.rm=TRUE)
+names(average_O2)<-c("bacteria", "condition" ,"average")
+max_mbc_O2<-set_names(aggregate(average_O2$average, by = list(average_O2$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
 
-MBC_replicates_wide<-pivot_wider(average_long_tec, names_from = condition , values_from = OD)
+MBC_replicates_wide_O2<-pivot_wider(average_long_tec_O2, names_from = condition , values_from = OD)
 
-MIC_mod_av<-left_join(MIC_replicates_wide, max_mic)
-MBC_mod_av<-left_join(MBC_replicates_wide, max_mbc)
-
-
+MIC_mod_av_O2<-left_join(MIC_replicates_wide_O2, max_mic_O2)
+MBC_mod_av_O2<-left_join(MBC_replicates_wide_O2, max_mbc_O2)
 
 
-MIC_vector <- vector()
-for (i in 1:nrow(MIC_mod_av)) { #vertical 
+
+
+MIC_vector_O2 <- vector()
+for (i in 1:nrow(MIC_mod_av_O2)) { #vertical 
   candidates <- vector()
      for(j in 3:14) {#horizontal 
-       if (!is.na(MIC_mod_av[i,j]) & MIC_mod_av[i,j]/MIC_mod_av[i, "max"]>0.1 & MIC_mod_av[i,j]>0.03449526) {#-> MIC_value_absolut)
+       if (!is.na(MIC_mod_av_O2[i,j]) & MIC_mod_av_O2[i,j]/MIC_mod_av_O2[i, "max"]>0.1 & MIC_mod_av_O2[i,j]>0.03449526) {#-> MIC_value_absolut)
 
-         candidates <- append(candidates, colnames(MIC_mod_av)[j])
+         candidates <- append(candidates, colnames(MIC_mod_av_O2)[j])
          candidates <-as.numeric(candidates)
        }
      }
-  MIC_vector <- append(MIC_vector, max(candidates))
+  MIC_vector_O2 <- append(MIC_vector_O2, max(candidates))
 }
 
 # trial to see if results make sense to set limit at 10% of the growth of the control
 # | MBC_mod_av[i,j]/MBC_mod_av[i, 14]>0.10
 
-MBC_vector <- vector()
-for (i in 1:nrow(MBC_mod_av)) { #vertical 
+MBC_vector_O2 <- vector()
+for (i in 1:nrow(MBC_mod_av_O2)) { #vertical 
   candidates <- vector()
   for(j in 3:14) {#horizontal 
-    if (!is.na(MBC_mod_av[i,j]) & MBC_mod_av[i,j]/MBC_mod_av[i, "max"]>0.1 & MBC_mod_av[i,j]>0.03392658) {#-> MIC_value_absolut)
+    if (!is.na(MBC_mod_av_O2[i,j]) & MBC_mod_av_O2[i,j]/MBC_mod_av_O2[i, "max"]>0.1 & MBC_mod_av_O2[i,j]>0.03392658) {#-> MIC_value_absolut)
       
-      candidates <- append(candidates, colnames(MBC_mod_av)[j])
+      candidates <- append(candidates, colnames(MBC_mod_av_O2)[j])
       candidates <-as.numeric(candidates)
     }
   }
-  MBC_vector <- append(MBC_vector, max(candidates))
+  MBC_vector_O2 <- append(MBC_vector_O2, max(candidates))
 }
 
-MIC_vector_full <- vector()
-for (i in 1:nrow(MIC_mod_av)) { #vertical 
+MIC_vector_full_O2 <- vector()
+for (i in 1:nrow(MIC_mod_av_O2)) { #vertical 
   candidates <- vector()
      for(j in 3:14) {#horizontal 
-       if (!is.na(MIC_mod_av[i,j]) & MIC_mod_av[i,j]/MIC_mod_av[i, "max"]>0.5 & MIC_mod_av[i,j]>0.03449526) {#-> MIC_value_absolut)
+       if (!is.na(MIC_mod_av_O2[i,j]) & MIC_mod_av_O2[i,j]/MIC_mod_av_O2[i, "max"]>0.5 & MIC_mod_av_O2[i,j]>0.03449526) {#-> MIC_value_absolut)
 
-         candidates <- append(candidates, colnames(MIC_mod_av)[j])
+         candidates <- append(candidates, colnames(MIC_mod_av_O2)[j])
          candidates <-as.numeric(candidates)
        }
      }
-  MIC_vector_full <- append(MIC_vector_full, max(candidates))
+  MIC_vector_full_O2 <- append(MIC_vector_full_O2, max(candidates))
 }
 
 # trial to see if results make sense to set limit at 10% of the growth of the control
 # | MBC_mod_av[i,j]/MBC_mod_av[i, 14]>0.10
 
-MBC_vector_full <- vector()
-for (i in 1:nrow(MBC_mod_av)) { #vertical 
+MBC_vector_full_O2 <- vector()
+for (i in 1:nrow(MBC_mod_av_O2)) { #vertical 
   candidates <- vector()
   for(j in 3:14) {#horizontal 
-    if (!is.na(MBC_mod_av[i,j]) & MBC_mod_av[i,j]/MBC_mod_av[i, "max"]>0.5 & MBC_mod_av[i,j]>0.03392658 ) {#-> MIC_value_absolut)
+    if (!is.na(MBC_mod_av_O2[i,j]) & MBC_mod_av_O2[i,j]/MBC_mod_av_O2[i, "max"]>0.5 & MBC_mod_av_O2[i,j]>0.03392658 ) {#-> MIC_value_absolut)
       
-      candidates <- append(candidates, colnames(MBC_mod_av)[j])
+      candidates <- append(candidates, colnames(MBC_mod_av_O2)[j])
       candidates <-as.numeric(candidates)
     }
   }
-  MBC_vector_full <- append(MBC_vector_full, max(candidates))
+  MBC_vector_full_O2 <- append(MBC_vector_full_O2, max(candidates))
 }
 ```
 ## Trial sig. testing
@@ -250,132 +254,156 @@ for (i in 1:nrow(MBC_mod_av)) { #vertical
 i=1
 j=4
 
-df_pvalue<-matrix(0, nrow(MIC_replicates)/6 , 12)
+bact<-(unique(MIC_mod_av_O2$bacteria))
+
+df_pvalue_O2<-matrix(0, length(unique(MIC_mod_av_O2$bacteria)) , 12)
   
 row=1
-for (i in 1:(nrow(MIC_replicates)/6)) { #vertical 
+for (i in 1:(length(unique(MIC_mod_av_O2$bacteria)))) { #vertical 
   
-  df_pvalue[i,1]<-MIC_replicates[row, 1]
+  df_pvalue_O2[i,1]<-bact[i]
+  
+  MIC_mod_av_O2 %>%
+  subset(bacteria %in% bact[i])->sub
 
      for(j in 4:14){#horizontal 
        
-       control<-MIC_replicates[c(row:(row+5)), c(3)]
-       test<-MIC_replicates[c(row:(row+5)), c(j)]
+       control<-setNames(sub[c(row:(row+2)), c(3)], c("control"))
+       test<-setNames(sub[c(row:(row+2)), c(j)], c("test"))
        # print(test)
        
-       my_data <- data.frame( 
-                group = rep(c("control", "test"), each = 6),
-                OD = c(control,  test)
-                )
-       res <- wilcox_test(my_data, OD ~ group, alternative = "greater")
+     cbind(control, test)->mydata
+     
+     mydata%>%
+       gather( group, OD, "control":"test") %>%
+       t_test( OD ~ group, alternative = "greater") -> res
+
        
-       df_pvalue[i,c(j-2)]<-(res$p)
+       
+       df_pvalue_O2[i,c(j-2)]<-(res$p)
        
        
      }
-  row=row+6
-  # print(row)
+  df_pvalue_O2[i, 1]<-bact[i]
   }
 
 
 
 
 
-df_pvalue_MBC<-matrix(0, nrow(MBC_replicates)/6 , 12)
+df_pvalue_MBC_O2<-matrix(0, length(unique(MBC_mod_av_O2$bacteria)) , 12)
   
 row=1
-for (i in 1:(nrow(MBC_replicates)/6)) { #vertical 
+for (i in 1:(length(unique(MBC_mod_av_O2$bacteria)))) { #vertical 
   
-  df_pvalue_MBC[i,1]<-MBC_replicates[row, 1]
+  df_pvalue_MBC_O2[i,1]<-bact[i]
+  
+  MBC_mod_av_O2 %>%
+  subset(bacteria %in% bact[i])->sub
 
      for(j in 4:14){#horizontal 
        
-       control<-MBC_replicates[c(row:(row+5)), c(3)]
-       test<-MBC_replicates[c(row:(row+5)), c(j)]
+       control<-setNames(sub[c(row:(row+2)), c(3)], c("control"))
+       test<-setNames(sub[c(row:(row+2)), c(j)], c("test"))
        # print(test)
        
-       my_data <- data.frame( 
-                group = rep(c("control", "test"), each = 6),
-                OD = c(control,  test)
-                )
-       res <- wilcox_test(my_data, OD ~ group, alternative = "greater")
+     cbind(control, test)->mydata
+     
+     mydata%>%
+       gather( group, OD, "control":"test") %>%
+       t_test( OD ~ group, alternative = "greater") -> res
+
        
-       df_pvalue_MBC[i,c(j-2)]<-(res$p)
+       
+       df_pvalue_MBC_O2[i,c(j-2)]<-(res$p)
        
        
      }
-  row=row+6
-  # print(row)
-}
+  df_pvalue_MBC_O2[i, 1]<-bact[i]
+  }
 
 
-df_pvalue<-setNames(as.data.frame(df_pvalue), c("bacteria", 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
-df_pvalue_MBC<-setNames(as.data.frame(df_pvalue_MBC), c("bacteria", 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
+df_pvalue_O2<-setNames(as.data.frame(df_pvalue_O2), c("bacteria", 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
+df_pvalue_MBC_O2<-setNames(as.data.frame(df_pvalue_MBC_O2), c("bacteria", 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))
 
-df_pvalue_MBC$assay<-"MBC"
-df_pvalue$assay<-"MIC"
+df_pvalue_MBC_O2$assay<-"MBC"
+df_pvalue_O2$assay<-"MIC"
 
-df_pvalue_both<-rbind(df_pvalue, df_pvalue_MBC)
+df_pvalue_both_O2<-rbind(df_pvalue_O2, df_pvalue_MBC_O2)
 
 ```
 
+
+
 ```{r}
+df_pvalue_both_O2%>%
+  gather(condition, p_value, ("2":"12"))->p_long_O2
 
-df_pvalue_both%>%
-  gather(condition, p_value, ("2":"12"))->p_long
-
-p_long$p_value<-as.numeric(p_long$p_value)
+p_long_O2$p_value<-as.numeric(p_long_O2$p_value)
 
 
-for (i in 1:nrow(p_long)){
-if(p_long[i,c("p_value")]<0.01){
-  p_long[i,c("significance")]<-"*"
+for (i in 1:nrow(p_long_O2)){
+if(p_long_O2[i,c("p_value")]<0.01){
+  p_long_O2[i,c("significance")]<-"*"
 }}
 
 ```
 
 
 ```{r}
-#assign vectors with MIC/MBCs to daf
+#assign vectors with MIC/MBCs to df
+df_final_replicates_O2 <- data.frame(bacteria = MIC_mod_av_O2$bacteria, 
+                                  replicate = MIC_mod_av_O2$replicate,
+                                  MIC = as.numeric(MIC_vector_O2), 
+                                  MBC = as.numeric(MBC_vector_O2),
+                                  MIC_75 =as.numeric(MIC_vector_full_O2),
+                                  MBC_75 =as.numeric(MBC_vector_full_O2))
 
-df_final_replicates <- data.frame(bacteria = MIC_mod_av$bacteria, 
-                                  replicate = MIC_mod_av$replicate,
-                                  MIC = as.numeric(MIC_vector), 
-                                  MBC = as.numeric(MBC_vector),
-                                  MIC_75 =as.numeric(MIC_vector_full),
-                                  MBC_75 =as.numeric(MBC_vector_full))
 
+order_O2<-aggregate(df_final_replicates_O2$MBC_75, by=list(df_final_replicates_O2$bacteria), mean)
+colnames(order_O2) <-c("bacteria", "order")
 
-order<-aggregate(df_final_replicates$MBC_75, by=list(df_final_replicates$bacteria), mean)
-colnames(order) <-c("bacteria", "order")
+df_final_replicates_O2<-left_join(df_final_replicates_O2, order_O2)
 
-df_final_replicates<-left_join(df_final_replicates, order)
+df_long_O2<-gather(df_final_replicates_O2[,c("bacteria", "replicate", "MIC", "MBC", "order")], assay, value, "MIC":"MBC", factor_key = T)
 
-df_long<-gather(df_final_replicates[,c("bacteria", "replicate", "MIC", "MBC", "order")], assay, value, "MIC":"MBC", factor_key = T)
+df_long_75_O2<-gather(df_final_replicates_O2[,c("bacteria", "replicate", "MIC_75", "MBC_75", "order")], assay, value_75, "MIC_75":"MBC_75", factor_key = T)
+names(df_long_75_O2)[names(df_long_75_O2) == "MIC_75"] <- "MIC"
 
-df_long_75<-gather(df_final_replicates[,c("bacteria", "replicate", "MIC_75", "MBC_75", "order")], assay, value_75, "MIC_75":"MBC_75", factor_key = T)
-names(df_long_75)[names(df_long_75) == "MIC_75"] <- "MIC"
-
-df_long_75$assay <- recode_factor(df_long_75$assay, MIC_75 = "MIC", 
+df_long_75_O2$assay <- recode_factor(df_long_75_O2$assay, MIC_75 = "MIC", 
                                 MBC_75 = "MBC")
 
-df_long_both<-left_join(df_long, df_long_75)
+df_long_both_O2<-left_join(df_long_O2, df_long_75_O2)
+
+
+
+
+```
+```{r}
+quantile(df_final_replicates_O2$MIC)
+
+quantile(df_final_replicates_O2$MBC)
+
+ggplot(df_final_replicates_O2, aes(x=MIC))+
+  geom_boxplot()
+  # geom_point(aes(colour=bacteria))
 
 ```
 
+
 ## Go back to the heatplot with relative od values
 ```{r}
-MBC_rel<-MBC_mod_av
-MIC_rel<-MIC_mod_av
+MBC_rel_O2<-MBC_mod_av_O2
+MIC_rel_O2<-MIC_mod_av_O2
 
-for (i in 1:nrow(MIC_rel)) { #vertical 
+for (i in 1:nrow(MIC_rel_O2)) { #vertical 
   for(j in 3:14) {#horizontal 
-     MIC_rel[i,j] = MIC_rel[i,j]/MIC_rel[i, c("max")] 
+     MIC_rel_O2[i,j] = MIC_rel_O2[i,j]/MIC_rel_O2[i, c("max")] 
   }}
 
-for (i in 1:nrow(MBC_rel)) { #vertical 
+for (i in 1:nrow(MBC_rel_O2)) { #vertical 
   for(j in 3:14) {#horizontal 
-     MBC_rel[i,j] = MBC_rel[i,j]/MBC_rel[i, c("max")] 
+     MBC_rel_O2[i,j] = MBC_rel_O2[i,j]/MBC_rel_O2[i, c("max")] 
   }}
 
 
@@ -383,51 +411,53 @@ for (i in 1:nrow(MBC_rel)) { #vertical
 # MIC_relgrowth_value<-cbind(MIC_rel, df_final_replicates)
 
 
-MIC_rel_long<-gather(MIC_rel, condition, OD, "1":"13", factor_key = T)
-MIC_rel_long$assay<-c("MIC")
-MBC_rel_long<-gather(MBC_rel, condition, OD, "1":"13", factor_key = T)
-MBC_rel_long$assay<-c("MBC")
+MIC_rel_long_O2<-gather(MIC_rel_O2, condition, OD, "1":"13", factor_key = T)
+MIC_rel_long_O2$assay<-c("MIC")
+MBC_rel_long_O2<-gather(MBC_rel_O2, condition, OD, "1":"13", factor_key = T)
+MBC_rel_long_O2$assay<-c("MBC")
 
-MBC_MIC_rel_long<-rbind(MIC_rel_long, MBC_rel_long)
-MBC_MIC_rel_long<-left_join(MBC_MIC_rel_long, df_long_both)
+MBC_MIC_rel_long_O2<-rbind(MIC_rel_long_O2, MBC_rel_long_O2)
+MBC_MIC_rel_long_O2<-left_join(MBC_MIC_rel_long_O2, df_long_both_O2)
 
 ```
 
 
 ```{r}
-MBC_MIC_rel_long$OD[MBC_MIC_rel_long$OD <0.1]<-0
-MBC_MIC_rel_long$condition<-as.numeric(paste(MBC_MIC_rel_long$condition))
+MBC_MIC_rel_long_O2$OD[MBC_MIC_rel_long_O2$OD <0.1]<-0
+MBC_MIC_rel_long_O2$condition<-as.numeric(paste(MBC_MIC_rel_long_O2$condition))
 
 
-for (i in 1:nrow(MBC_MIC_rel_long)){
-  if ( MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value")]) { 
-    MBC_MIC_rel_long[i, c("label")] = MBC_MIC_rel_long[i, c("value")]}}
+for (i in 1:nrow(MBC_MIC_rel_long_O2)){
+  if ( MBC_MIC_rel_long_O2[i, c("condition")] == MBC_MIC_rel_long_O2[i, c("value")]) { 
+    MBC_MIC_rel_long_O2[i, c("label")] = MBC_MIC_rel_long_O2[i, c("value")]}}
 
-MBC_MIC_rel_long$label<-as.numeric(MBC_MIC_rel_long$label)
+MBC_MIC_rel_long_O2$label<-as.numeric(MBC_MIC_rel_long_O2$label)
 
-for (i in 1:nrow(MBC_MIC_rel_long)){
-  if ( MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value_75")]) { 
-    MBC_MIC_rel_long[i, c("label_75")] = MBC_MIC_rel_long[i, c("value_75")]}}
+for (i in 1:nrow(MBC_MIC_rel_long_O2)){
+  if ( MBC_MIC_rel_long_O2[i, c("condition")] == MBC_MIC_rel_long_O2[i, c("value_75")]) { 
+    MBC_MIC_rel_long_O2[i, c("label_75")] = MBC_MIC_rel_long_O2[i, c("value_75")]}}
 
-MBC_MIC_rel_long$label_75<-as.numeric(MBC_MIC_rel_long$label_75)
+MBC_MIC_rel_long_O2$label_75<-as.numeric(MBC_MIC_rel_long_O2$label_75)
 
 
-MBC_MIC_rel_long_label<-gather(MBC_MIC_rel_long, label_type, label_value, "label":"label_75")
+MBC_MIC_rel_long_label_O2<-gather(MBC_MIC_rel_long_O2, label_type, label_value, "label":"label_75")
 ```
 
 
 ```{r}
 
+MBC_MIC_rel_long_label_O2$label_value<-MBC_MIC_rel_long_label_O2$label_value+1
+
+MBC_MIC_rel_long_label_O2$OD[MBC_MIC_rel_long_label_O2$condition == 13]<-NA
 
 
-MBC_MIC_rel_long_label$OD[MBC_MIC_rel_long_label$condition == 13]<-NA
-
-
-MBC_MIC_rel_long_label%>%
+MBC_MIC_rel_long_label_O2%>%
   subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
   drop_na(OD)->hoi
+p_long_O2$condition<-as.numeric(p_long_O2$condition)
+hoihoi<-left_join(hoi, p_long_O2)
 
-hoihoi<-join(hoi, p_long)
+
 
 
 hoihoi%>%
@@ -480,7 +510,7 @@ show(p)
 
 
 ggsave(filename = "MIC_MBC_o2_groeth.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
        width = 22,
        height = 30,
        units = c("cm"))
@@ -489,6 +519,64 @@ ggsave(filename = "MIC_MBC_o2_groeth.jpeg",
 
 ```
 
+```{r}
+hoihoi%>%
+  subset(label_type %in% "label")->hoihoi
+hoihoi$assay<-factor(hoihoi$assay, levels=c("MIC", "MBC"))
+hoihoi <- hoihoi %>%
+    mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens"))
+
+hoihoi%>%
+  mutate(bacteria = fct_reorder(bacteria, hoihoi$order))%>%
+  ggplot(aes(x = condition, y = assay, fill = OD)) + 
+  geom_raster() +
+  scale_fill_steps(breaks = c(0,0.25,0.5, 0.75, 1))+
+  labs(x=expression(paste("Oxygenation")))+
+  theme(text = element_text(size=15), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
+        axis.title.y= element_blank(),
+        axis.text.y=element_text(size=15),
+        strip.text.y = element_text(angle = 0, face = "italic", hjust=0),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "bottom",
+        legend.text = element_text(size = 15, vjust=0.8, angle=90, hjust=0.8),
+        legend.title = element_text(size= 15, vjust=1),
+        plot.title = element_text(size=20, hjust=0.25),
+        strip.text = element_text(size=15), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
+  scale_x_continuous(labels=c("0",
+                              "2.2", 
+                              "4.8",  
+                              "10.6", 
+                              "23.4", 
+                              "51.5", 
+                              "113",  
+                              "249",
+                              "549",
+                              "1207",
+                              "2656",  
+                              "5843"), 
+                     breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
+  scale_y_discrete(labels = c('MIC' = 'stress', 'MBC' = 'post-stress'), limits=rev)+
+  labs(fill = expression(relative~OD[600]), colour="")+
+  ggtitle(expression(Growth~capability~with~different~oxygenation))->p
+
+show(p)
+
+
+
+
+ggsave(filename = "MIC_MBC_o2_growth_only.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 17,
+       height = 35,
+       units = c("cm"))
+
+```
 
 # 6. Export MIC/MBC values
 ```{r}
