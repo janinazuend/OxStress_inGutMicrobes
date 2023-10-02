@@ -16,476 +16,321 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 # install.packages("ggbreak")
 
 
-library(tidyverse)
-library(ggplot2)
-library(tidyr)
-# install.packages("devtools")
-# devtools::install_github("slowkow/ggrepel")
-library(ggrepel)
-library(ggbreak)
-library(openxlsx)
+ # library(tidyverse)
+# library(ggplot2)
+# library(tidyr)
+# # install.packages("devtools")
+# # devtools::install_github("slowkow/ggrepel")
+# library(ggrepel)
+# library(ggbreak)
+# library(openxlsx)
 ```
 
 # 1. Load the data and calculate median MIC & MBC
 ```{r}
-h2o2 = read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.xlsx")
-o2 = read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2.xlsx")
-
-
-
-h2o2$value_H2O2<-as.numeric(h2o2$value_H2O2)+1
-o2$value_O2<-as.numeric(o2$value_O2+1)
-
-joined<- left_join(h2o2, o2, by=c("bacteria", "assay"))
-```
-
-
-
-# 3. Generate a df with names & phyla or class
-
-```{r}
-#########################################
-#Assign phyla to species name
-########################################
-
-bacteria_pyla<-joined
-bacteria_pyla$phyla<-0
-
-###
-
-parabac<-grep("Phocaei", joined$bacteria)
-bacteria_pyla[parabac,5]="Bacteroidetes"
-
-
-
-bacteroidetes<-grep("Bac", joined$bacteria)
-bacteria_pyla[bacteroidetes, c(5)] ="Bacteroidetes"
-
-pre<-grep("Pre", joined$bacteria)
-bacteria_pyla[pre,5]="Bacteroidetes"
-
-parabac<-grep("Parabac", joined$bacteria)
-
-bacteria_pyla[parabac,5]="Bacteroidetes"
-
-
-blaut<-grep("Blaut", joined$bacteria)
-bacteria_pyla[blaut,5]="Firmicutes"
-
-rumi<-grep("Rumi", joined$bacteria)
-bacteria_pyla[rumi,5]="Firmicutes"
-
-rose<-grep("Rose", joined$bacteria)
-bacteria_pyla[rose,5]="Firmicutes"
-
-clo<-grep("Clo", joined$bacteria)
-bacteria_pyla[clo,5]="Firmicutes"
-
-Faec<-grep("Faecalibacterium", joined$bacteria)
-
-bacteria_pyla[Faec,5]="Firmicutes"
-
-flavi<-grep("Flavi", joined$bacteria)
-bacteria_pyla[flavi,5]="Firmicutes"
-
-copr<-grep("Copro", joined$bacteria)
-bacteria_pyla[copr,5]="Firmicutes"
-
-eu<-grep("Eu", joined$bacteria)
-bacteria_pyla[eu,5]="Firmicutes"
-
-flavi<-grep("Flavo", joined$bacteria)
-bacteria_pyla[flavi,5]="Firmicutes"
-
-lacto<-grep("Lacti", joined$bacteria)
-bacteria_pyla[lacto,5]="Firmicutes"
-
-subdo<-grep("Sub", joined$bacteria)
-bacteria_pyla[subdo,5]="Firmicutes"
-
-bif<-grep("Bif", joined$bacteria)
-bacteria_pyla[bif,5]="Actinbacteria"
-
-colin<-grep("Collin", joined$bacteria)
-bacteria_pyla[colin,5]="Actinobacteria"
-
-akk<-grep("Akk", joined$bacteria)
-bacteria_pyla[akk,5]="Verrucumicrobia"
-
-anaero<-grep("Ana", joined$bacteria)
-bacteria_pyla[anaero,5]="Firmicutes"
-
-anaro<-grep("Ana", joined$bacteria)
-bacteria_pyla[anaro,5]="Firmicutes"
-
-marvin<-grep("Marvin", joined$bacteria)
-bacteria_pyla[marvin,5]="Firmicutes"
-
-phasc<-grep("Phasco", joined$bacteria)
-bacteria_pyla[phasc,5]="Firmicutes"
-
-entero<-grep("Entero", joined$bacteria)
-bacteria_pyla[entero,5]="Firmicutes"
-
-esch<-grep("Esch", joined$bacteria)
-bacteria_pyla[esch,5]="Proteobacteria"
-#########################
-
-bacteria_pyla
-
+h2o2 = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_h2O2_difference.csv", sep=";", header=T, check.names =F)
+o2 = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2_difference.csv", sep=";", header=T, check.names =F)
 ```
 
 ```{r}
-#########################################
-#Assign class to species name
-########################################
+h2o2 <- left_join(h2o2, data.frame(MIC = c(1,2,3,4,5,6,7,8,9,10,11,12), 
+                                  concentration_MIC = c(0, 
+                                                    0.0064, 
+                                                    0.021,
+                                                    0.066 ,
+                                                    2.2,
+                                                    6.8,  
+                                                    21,
+                                                    69,
+                                                    222,
+                                                    710,
+                                                    2300, 
+                                                    7300)))
 
-
-bacteria_pyla$class<-0
-
-###
-bacteroidetes<-grep("Bac", joined$bacteria)
-bacteria_pyla[bacteroidetes, c(6)] ="Bacteroidia"
-
-pho<-grep("Phoc", joined$bacteria)
-bacteria_pyla[pho,6]="Bacteroidetes"
-
-pre<-grep("Prevo", joined$bacteria)
-bacteria_pyla[pre,6]="Bacteroidia"
-
-parabac<-grep("Parabac", joined$bacteria)
-
-bacteria_pyla[parabac,6]="Bacteroidia"
-
-blaut<-grep("Blaut", joined$bacteria)
-bacteria_pyla[blaut,6]="Clostridia"
-
-rumi<-grep("Rumi", joined$bacteria)
-bacteria_pyla[rumi,6]="Clostridia"
-
-rose<-grep("Rose", joined$bacteria)
-bacteria_pyla[rose,6]="Clostridia"
-
-clo<-grep("Clo", joined$bacteria)
-bacteria_pyla[clo,6]="Clostridia"
-
-Faec<-grep("Faecalibacterium", joined$bacteria)
-
-bacteria_pyla[Faec,6]="Clostridia"
-
-flavi<-grep("Flavi", joined$bacteria)
-bacteria_pyla[flavi,6]="Clostridia"
-
-copr<-grep("Copro", joined$bacteria)
-bacteria_pyla[copr,6]="Clostridia"
-
-eu<-grep("Eu", joined$bacteria)
-bacteria_pyla[eu,6]="Clostridia"
-
-flavi<-grep("Flavo", joined$bacteria)
-bacteria_pyla[flavi,6]="Clostridia"
-
-lacto<-grep("Lacti", joined$bacteria)
-bacteria_pyla[lacto,6]="Bacilli"
-
-subdo<-grep("Sub", joined$bacteria)
-bacteria_pyla[subdo,6]="Clostridia"
-
-bif<-grep("Bif", joined$bacteria)
-bacteria_pyla[bif,6]="Actinomycetia"
-
-colin<-grep("Collin", joined$bacteria)
-bacteria_pyla[colin,6]="Coriobacteriia"
-
-akk<-grep("Akk", joined$bacteria)
-bacteria_pyla[akk,6]="Verrucomicrobiae"
-
-anaero<-grep("Ana", joined$bacteria)
-bacteria_pyla[anaero,6]="Clostridia"
+h2o2 <- left_join(h2o2, data.frame(MBC = c(1,2,3,4,5,6,7,8,9,10,11,12), 
+                                  concentration_MBC = c(0, 
+                                                    0.0064, 
+                                                    0.021,
+                                                    0.066 ,
+                                                    2.2,
+                                                    6.8,  
+                                                    21,
+                                                    69,
+                                                    222,
+                                                    710,
+                                                    2300, 
+                                                    7300)))
 
 
 
-marvin<-grep("Marvin", joined$bacteria)
-bacteria_pyla[marvin,6]="Clostridia"
 
-phasc<-grep("Phasco", joined$bacteria)
-bacteria_pyla[phasc,6]="Negativicutes"
-
-entero<-grep("Entero", joined$bacteria)
-bacteria_pyla[entero,6]="Bacilli"
-
-esch<-grep("Esch", joined$bacteria)
-bacteria_pyla[esch,6]="Gammaproteobacteria"
-#########################
+o2 <- left_join(o2, data.frame(MIC = c(1,2,3,4,5,6,7,8,9,10,11,12), 
+                                  concentration_MIC = c(1.5, 
+                                                    1.28, 
+                                                    1.08,
+                                                    0.92 ,
+                                                    0.78,
+                                                    0.67,  
+                                                    0.57,
+                                                   0.48,
+                                                    0.41,
+                                                    0.35,
+                                                    0.3, 
+                                                    0)))
+o2 <- left_join(o2, data.frame(MBC = c(1,2,3,4,5,6,7,8,9,10,11,12), 
+                                  concentration_MBC = c(1.5, 
+                                                    1.28, 
+                                                    1.08,
+                                                    0.92 ,
+                                                    0.78,
+                                                    0.67,  
+                                                    0.57,
+                                                   0.48,
+                                                    0.41,
+                                                    0.35,
+                                                    0.3, 
+                                                    0)))
 ```
-# 4. Correlation MIC and MBC coloured by class
-```{r}
-library(ggpmisc)
 
-# bacteria_pyla$assay<-factor(bacteria_pyla$assay, levels=c("MIC", "MBC"))
-# 
-# 
-# ggplot(bacteria_pyla, aes(x=value_H2O2, y=value_O2))+
-#   stat_ellipse(aes(group=class, fill=class, colour=class), geom="polygon", alpha=0.2, show.legend = F)+
-#   stat_poly_line(aes(group=assay))+
-#   stat_poly_eq(aes(group=assay, label=c(..rr.label..)), size=5)+
-#   geom_point(aes(colour=class), alpha=0.6)+
-#   # scale_colour_manual(values=c("goldenrod2","cyan6"))+
-#   geom_text_repel(aes(label=bacteria, colour=class),lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
-#   facet_grid(cols=vars(assay))+
-#   scale_y_log10()+
-#   scale_x_log10()+
-#   theme(axis.text.y= element_text(size = 16 ), 
-#         axis.title.y = element_text(size=20), 
-#         axis.title.x = element_text(size=20),
-#         axis.text.x = element_text(size=16),
-#         legend.text = element_text(size = 16),
-#         legend.title = element_text(size= 20),
-#         plot.title = element_text(size=20),
-#         strip.text = element_text(size=20)
-#         )+
-#   xlab(expression(H[2]*O[2]*~ concentration~(mu*M)))+
-#   ylab("Oxygenation scale")+
-#   guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
-#   ggtitle(expression(Tolerance~to~O[2]*~vs.~H[2]*O[2]))
-#  
-#   
-# ggsave(filename = "O2_H2O2.jpeg", 
-#        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-#        width =43,
-#        height = 27,
-       # units = c("cm"))
-
-```
-#5. Correlation plots for H2O2 and O2 individually
 
 ```{r}
-bacteria_pyla$assay<-as.character(bacteria_pyla$assay)
-bacteria_pyla$assay<-as.character(bacteria_pyla$assay)
-bacteria_pyla$value_H2O2<-as.integer(bacteria_pyla$value_H2O2)
+o2$stress<-"O2"
+h2o2$stress<-"H2O2"
+
+all<-rbind(o2, h2o2)
+
+all[all== "Eubacterium eligens"]  = "Lachnospira eligens"
 
 
+all$diff_conc<-all$concentration_MBC - all$concentration_MIC
+```
 
-bacteria_pyla[, c("assay", "bacteria", "value_H2O2", "class")] %>%
-  pivot_wider(names_from = assay, values_from = value_H2O2, values_fill = NA)->wide_H2O2
+#get taxonomy
+```{r}
+taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
+tax<-left_join(all, taxonomy)
 
-  ggplot(wide_H2O2, aes(x=MIC, y=MBC))+
-  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F, conf.level=0.75)+
-  # stat_poly_line()+
-  geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
-  # stat_poly_eq(aes(label=c(..rr.label..)), size=5)+
-  geom_jitter(aes(colour = class), width = 0.04, height = 0.04, size=3, alpha=0.5)+
-  # scale_colour_manual(values=c("goldenrod2","cyan6"))+
-  geom_text_repel(data=subset(wide_H2O2, MBC > MIC), aes(label=bacteria, colour=class), lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
-  theme(axis.text.y= element_text(size = 16 ), 
-        axis.title.y = element_text(size=20), 
+```
+```{r}
+gather(tax, condition, value, "concentration_MBC":"concentration_MIC")->heat
+
+heat$condition<-factor(heat$condition, levels=c("concentration_MIC", "concentration_MBC"))
+
+heat<-left_join(heat, setNames(aggregate(heat$value, by=list(heat$bacteria), FUN=median), c("bacteria", "median")))
+diff<-left_join(tax, setNames(aggregate(tax$diff_conc, by=list(tax$bacteria, tax$stress), FUN=median), c("bacteria", "stress","median_diff")))
+
+names<-list("H2O2"=expression(H[2]*O[2]))
+
+facet_labeller <- function(variable,value){
+  return(names[value])
+}
+
+
+diff%>%
+  subset(stress %in% c("H2O2"))->sub
+
+
+sub<-left_join(sub, setNames(aggregate(sub$MIC, by=list(sub$bacteria), mean), c("bacteria", "order")))
+
+sub$diff_conc<-sub$diff_conc/1000
+
+sub%>%
+  mutate(bacteria = fct_reorder(bacteria, sub$diff_conc))%>%
+ggplot(aes(y=bacteria, x=diff_conc))+
+  geom_boxplot(outlier.shape=NA, )+
+  geom_jitter(width = 0.01, alpha=0.5, aes(colour=Family))+
+  facet_grid(cols=vars(stress), scales="free", labeller= facet_labeller)+
+  geom_vline(xintercept = 0, linetype="dashed")+
+  theme(text = element_text(size=15), 
         axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15, angle=90),
+        axis.text.x = element_text(size=15),
+        axis.title.y= element_blank(),
+        axis.text.y=element_text(size=15),
+        strip.text = element_blank(),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
         legend.text = element_text(size = 15),
-        legend.title = element_text(size= 20),
+        legend.title = element_text(size= 15),
+        plot.title = element_text(size=20, hjust=0.5),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ggtitle("Difference in lethal and growth-inhibiting levels")+
+  labs(colour = "Family")+
+  xlab(expression(??H[2]*O[2]*~"[mM]"))+scale_x_continuous(breaks=c(-2, 0, 2))+
+  facet_grid(rows=vars(Family), scales="free", space="free")
+
+ggsave(filename = "diff_h2o2.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 20,
+       height = 22,
+       units = c("cm"))
+
+names<-list("O2"=expression(O[2]))
+
+facet_labeller <- function(variable,value){
+  return(names[value])
+}
+diff%>%
+  subset(stress %in% c("O2"))->sub
+
+sub<-left_join(sub, setNames(aggregate(sub$MIC, by=list(sub$bacteria), mean), c("bacteria", "order")))
+
+
+sub%>%
+mutate(bacteria = fct_reorder(bacteria, desc(sub$diff_conc)))%>%
+ggplot(aes(y=bacteria, x=diff_conc))+
+  geom_boxplot(outlier.shape=NA)+
+  geom_jitter(width = 0.01, alpha=0.5, aes(colour=Family))+
+   facet_grid(cols=vars(stress), scales="free", labeller = facet_labeller)+
+  geom_vline(xintercept = 0, linetype="dashed")+
+  theme(text = element_text(size=15), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=15),
+        axis.title.y= element_blank(),
+        axis.text.y=element_text(size=15),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15),
+        plot.title = element_text(size=20, hjust=0.5),
+        strip.text = element_blank(), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ggtitle("Difference in lethal and growth-inhibiting levels")+
+  labs(colour = "Family")+
+  xlab(expression(??Agar~"[???]"))+
+  scale_x_reverse()+
+  facet_grid(rows=vars(Family), scales="free", space="free")
+
+ggsave(filename = "diff_o2.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 20,
+       height = 22,
+       units = c("cm"))
+
+
+
+
+```
+
+
+
+```{r}
+names<-list("H2O2"=expression(H[2]*O[2]))
+
+facet_labeller <- function(variable,value){
+  return(names[value])}
+
+heat%>%
+  subset(stress %in% c("H2O2"))->sub
+
+sub$value<-sub$value/1000
+
+sub%>%
+  mutate(Genus = fct_reorder(Genus, sub$median))%>%
+  subset(!condition %in% "diff")%>%
+  ggplot(aes(y=Genus, x=value))+
+  geom_boxplot(aes(fill=condition), outlier.shape = NA)+
+  geom_point(aes(colour=bacteria, group=condition), position = position_jitterdodge(0.1), alpha=0.7)+
+   facet_grid(cols=vars(stress), scales="free", labeller = facet_labeller)+
+  scale_fill_manual(values = c("coral", "steelblue3"), name="Condition", labels=c("Stress", "Post-stress"))+ scale_x_log10(breaks=0,0.5,5)+
+  theme(text = element_text(size=15), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=15),
+        axis.title.y= element_blank(),
+        axis.text.y=element_text(size=15),
+        strip.text.y = element_text(face = "italic"),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size= 15),
         plot.title = element_text(size=20),
-        strip.text = element_text(size=20)
-        )+
-    scale_x_continuous(labels=c(expression("6.8"~mu*M),  
-                              expression("21"~mu*M),
-                              expression("69"~mu*M),
-                              expression("222"~mu*M),
-                              expression("710"~mu*M),  
-                              "2.3 mM", "7.3 mM" , ">tested"), 
-                     breaks=c( 6, 7,  8 ,9 ,10, 11, 12, 13), limits = c(6,13))+
-    scale_y_continuous(labels=c(expression("6.8"~mu*M),  
-                              expression("21"~mu*M),
-                              expression("69"~mu*M),
-                              expression("222"~mu*M),
-                              expression("710"~mu*M),  
-                              "2.3 mM", "7.3 mM" , ">tested"), 
-                     breaks=c( 6, 7,  8 ,9 ,10, 11, 12, 13), limits = c(6,13))+
-  xlab("MIC")+
-  ylab("MBC")+
-  guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
-  ggtitle(expression(Tolerance~to~H[2]*O[2]*~ (mu*M)))->p
-  p
- 
-  
-ggsave(filename = "H2O2_micvsmbc.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width =24.5,
+        strip.text = element_text(size=20), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ggtitle("Stress- vs. post-stress tolerance")+
+  labs(colour = "Species")
+ggsave(filename = "H2O2.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 22,
        height = 17,
        units = c("cm"))
 
 
+names<-list("O2"=expression(O[2]))
 
-bacteria_pyla[, c("assay", "bacteria", "value_O2", "class")] %>%
-  pivot_wider(names_from = assay, values_from = value_O2, values_fill = NA)->wide_O2
+facet_labeller <- function(variable,value){
+  return(names[value])
+}
 
+heat%>%
+  subset(stress %in% c("O2"))->sub
 
+sub$value<-sub$value/1000
 
-
-
-
-  ggplot(wide_O2, aes(x=MIC, y=MBC))+
-  stat_ellipse(aes(group=class, fill=class), geom="polygon", alpha=0.2, show.legend = F, level=0.75)+
-  geom_abline(slope=1, colour= "darkgrey", size=1, linetype="dashed")+
-  geom_jitter(aes(colour = class), width = 0.004, height = 0.004, size=3, alpha=0.5)+
-  geom_text_repel(data=subset(wide_O2, MBC > MIC), aes(label=bacteria, colour=class), lineheight= 3,  fontface = 'bold.italic', size=4, point.padding = unit(0.01, "lines"), force= 1, max.overlaps = 1000000, min.segment.length = 0)+
-  scale_x_continuous(labels=c("0","2.2", 
-                              "4.8",  
-                              "10.6", 
-                              "23.4", 
-                              "51.5", 
-                              "113",  
-                              "249",
-                              "549",
-                              "1207",
-                              "2656",  
-                              "5843"), 
-                     breaks=c( 2,3,4,5,6, 7,  8 ,9 ,10, 11, 12, 13), limits = c(2,13))+
-    scale_y_continuous(labels=c("0","2.2", 
-                              "4.8",  
-                              "10.6", 
-                              "23.4", 
-                              "51.5", 
-                              "113",  
-                              "249",
-                              "549",
-                              "1207",
-                              "2656",  
-                              "5843"), 
-                     breaks=c( 2,3,4,5,6, 7,  8 ,9 ,10, 11, 12, 13))+
-  theme(axis.text.y= element_text(size = 15 ), 
-        axis.title.y = element_text(size=20), 
+sub%>%
+  mutate(Genus = fct_reorder(Genus, sub$median))%>%
+  subset(!condition %in% "diff")%>%
+  ggplot(aes(y=Genus, x=value))+
+  geom_boxplot(aes(fill=condition), outlier.shape = NA)+
+  geom_point(aes(colour=bacteria, group=condition), position = position_jitterdodge(0.1), alpha=0.7)+
+   facet_grid(cols=vars(stress), scales="free", labeller = facet_labeller)+
+  scale_fill_manual(values = c("coral", "steelblue3"), name="Condition", labels=c("Stress", "Post-stress"))+
+  theme(text = element_text(size=15), 
         axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15, angle=90),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 20),
+        axis.text.x = element_text(size=15),
+        axis.title.y= element_blank(),
+        axis.text.y=element_text(size=15),
+        strip.text.y = element_text(face = "italic"),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size= 15),
         plot.title = element_text(size=20),
-        strip.text = element_text(size=20)
-        )+
-  xlab("stress")+
-  ylab("post-stress")+
-  guides(colour=guide_legend(title="Class"), fill=guide_legend(position="none"))+
-  ggtitle("Highest oxygenation level with visible growth")->p
-  
-  p
-
-
-
- 
-  
-ggsave(filename = "O2_micvsmbc.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width =20,
-       height = 14,
+        strip.text = element_text(size=20), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ggtitle("Stress- vs. post-stress tolerance")+
+  labs(colour = "Species")
+ggsave(filename = "O2.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 22,
+       height = 17,
        units = c("cm"))
-
 ```
 
 
-```{r}
-x<-expression(MBC~H[2]*O[2])
-names(wide_O2)<-c("bacteria", "class", "MBC oxygen", "MIC oxygen")
-names(wide_H2O2)<-c("bacteria", "class", "MBC h2o2",  "MIC h2o2")
-
-
-
-
-
-corr<-as.data.frame(left_join(wide_O2, wide_H2O2))
-rownames(corr)<-NULL
-rownames(corr)<-corr$bacteria
-
-
-
-h2o2matrix<-as.matrix(corr[,-c(1,2)])
-matrix_log<-log(h2o2matrix)
-
-jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/heat_h2o2vso2.jpeg", width=1000, height=1000)
-
-heatmap.2(scale(matrix_log), # data frame a matrix
-          marg = c(10,15),
-          density.info = "none", # Remove density legend lines
-          trace = "none",
-          # dendrogram = "row", 
-           colsep=1:nrow(h2o2matrix), # Add vertical grid lines
-          rowsep=1:nrow(h2o2matrix), # Add horizontal grid lines
-          sepcolor = "black",
-          col = viridis::viridis_pal(),
-          cexRow = 1.5,
-          cexCol = 1.5,
-          lwid=c(1, 4),
-          lhei = c(2,20), key=T, keysize = 5)
-
-dev.off()
-
-```
+#In silico
 ```{r}
 coverage = read.csv(file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/final_coverage.csv", sep=";", header=T, check.names =F)
 names(coverage)[2]<-"bacteria"
+coverage<-coverage[,-1]
+```
+
+
+```{r}
+all$multi<-all$diff*all$MIC
+
+
+scale0to1 <- function(x){(x-min(x))/(max(x)-min(x))}
+
+all[, c("MBC", "MIC", "diff", "multi")]<-scale0to1(all[, c("MBC", "MIC", "diff", "multi")])
+
+
+
+coverage_growth<-left_join(all, coverage)
 ```
 
 ```{r}
-coverage%>%
-  select(-c("organism_name"))%>%
-  subset(bacteria %in% c("Bacteroides caccae",
-                         "Bacteroides thetaiotaomicron" ,
-                         "Bacteroides uniformis" ,
-                         "Phocaeicola vulgatus" , 
-                        "Bacteroides faecis", 
-                        "Bacteroides ovatus", 
-                      "Bacteroides fragilis", 
-                      "Parabacterium merdae"  ,
-                      "Bacteroides xylanisolvens"))%>%
-  group_by(bacteria)%>%
-  summarize_all(mean)%>%
-  as.data.frame()->coverage_bacteroides
+coverage_growth%>%
+  subset(stress %in% "O2")%>%
+  gather(enzyme, coverage, "MBC":"ferredoxin")%>%
+  subset(enzyme %in% c("superoxide dismutase", "diff", "MIC", "multi"))->sub
 
-corr%>%
-  select(-c("class"))%>%
-  subset(bacteria %in% c("Bacteroides caccae",
-                         "Bacteroides thetaiotaomicron" ,
-                         "Bacteroides uniformis" ,
-                         "Phocaeicola vulgatus" , 
-                        "Bacteroides faecis", 
-                        "Bacteroides ovatus", 
-                      "Bacteroides fragilis", 
-                      "Parabacterium merdae"  ,
-                      "Bacteroides xylanisolvens"))->corr_bacteroides
+sub$coverage<-as.numeric(sub$coverage)
 
-
-bacteroides<-left_join(coverage_bacteroides, corr_bacteroides)
-
-bacteroides$`MIC oxygen`<-(bacteroides$`MIC oxygen`-min(bacteroides$`MIC oxygen`))/(max(bacteroides$`MIC oxygen`)-min(bacteroides$`MIC oxygen`))
-bacteroides$`MIC h2o2`<-(bacteroides$`MIC h2o2`-min(bacteroides$`MIC h2o2`))/(max(bacteroides$`MIC h2o2`)-min(bacteroides$`MIC h2o2`))
-bacteroides$`MBC oxygen`<-(bacteroides$`MBC oxygen`-min(bacteroides$`MBC oxygen`))/(max(bacteroides$`MBC oxygen`)-min(bacteroides$`MBC oxygen`))
-bacteroides$`MBC h2o2`<-(bacteroides$`MBC h2o2`-min(bacteroides$`MBC h2o2`))/(max(bacteroides$`MBC h2o2`)-min(bacteroides$`MBC h2o2`))
-
+sub%>%
+  ggplot(aes(y=bacteria, fill=coverage, x=enzyme))+
+  geom_tile()
 ```
 
-```{r}
-rownames(bacteroides)<-bacteroides[,1]
-bacteroides<-bacteroides[,-1]
-
-mean_matrix<-as.matrix(bacteroides)
-
-```
-
-```{r}
-jpeg("C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/defense_bacteroides.jpeg", width=1000, height=1000)
-
-heatmap.2(mean_matrix, # data frame a matrix
-          marg = c(30,20),
-          density.info = "none", # Remove density legend lines
-          trace = "none",
-          # dendrogram = "row", 
-           colsep=1:nrow(h2o2matrix), # Add vertical grid lines
-          rowsep=1:nrow(h2o2matrix), # Add horizontal grid lines
-          sepcolor = "black",
-          col = viridis::viridis_pal(),
-          cexRow = 1.5,
-          cexCol = 1.5,
-          lwid=c(1, 10),
-          lhei = c(1,10), key=T, keysize = 5)
-
-dev.off()
-
-```
