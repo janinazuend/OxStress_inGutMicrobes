@@ -15,15 +15,15 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 # install.packages("ggbreak")
 # unload("dplyr")
 # unload("mia")
-# library(tidyverse)
+library(tidyverse)
 # library(ggplot2)
 # library(tidyr)
 # install.packages("devtools")
 # devtools::install_github("slowkow/ggrepel")
 # library(ggrepel)
 # library(ggbreak)
-# library(openxlsx)
-# library(rstatix)
+ library(openxlsx)
+ library(rstatix)
 ```
 
 ##Load the Data
@@ -194,30 +194,32 @@ MIC_mod<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_H2O2_
 #get long format
 average_long<-gather(MIC_mod, condition, OD, "1":"13", factor_key = T )
 #take averages of the technical replicate
-average_long_tec<-set_names(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), colnames(average_long))
+average_long_tec<-setNames(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), colnames(average_long))
 #get average per condition -> to get max
-average<-set_names(aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE), c("bacteria", "condition" ,"average"))
+average<-setNames(aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE), c("bacteria", "condition" ,"average"))
 # find max
-max_mic<-set_names(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
+max_mic<-setNames(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
 #after getting the average per replicate, get wide table again
 MIC_replicates_wide<-pivot_wider(average_long_tec, names_from = condition , values_from = OD)
 
 
 #same for MBC
 average_long<-gather(MBC_mod, condition, OD, "1":"13", factor_key = T )
-average_long_tec<-set_names(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), colnames(average_long))
+average_long_tec<-setNames(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), colnames(average_long))
 average<-aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE)
 names(average)<-c("bacteria", "condition" ,"average")
-max_mbc<-set_names(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
+max_mbc<-setNames(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
 #after getting the average per replicate, get wide table again
 MBC_replicates_wide<-pivot_wider(average_long_tec, names_from = condition , values_from = OD)
-
 
 MIC_mod_av<-left_join(MIC_replicates_wide, max_mic)
 MBC_mod_av<-left_join(MBC_replicates_wide, max_mbc)
 ```
 
 ```{r}
+# 
+# MBC_mod_av%>%
+#   subset(bacteria %in% "Bacteroides xylanisolvens")
 
 ## GET MIC - as a function of MAX ##
 MIC_vector <- vector()
@@ -372,7 +374,7 @@ df_final_replicates <- data.frame(bacteria = MIC_mod_av$bacteria,
                                   MBC_75 = as.numeric(MBC_vector_full))
 
 
-order<-aggregate(df_final_replicates$MBC, by=list(df_final_replicates$bacteria), mean, na.rm=T)
+order<-aggregate(df_final_replicates$MIC, by=list(df_final_replicates$bacteria), mean, na.rm=T)
 colnames(order) <-c("bacteria", "order")
 df_final_replicates<-left_join(df_final_replicates, order)
 
@@ -391,6 +393,10 @@ df_long_both<-left_join(df_long, df_long_75)
 
 
 median(df_final_replicates$MBC)
+
+
+df_final_replicates%>%
+  subset(bacteria %in% "Bacteroides xylanisolvens")
 
 ```
 
@@ -425,7 +431,7 @@ MBC_MIC_rel_long<-left_join(MBC_MIC_rel_long, df_long_both)
 
 ```{r}
 
-MBC_MIC_rel_long$OD[MBC_MIC_rel_long$OD <0.1]<-0
+# MBC_MIC_rel_long$OD[MBC_MIC_rel_long$OD <0.1]<-0
 MBC_MIC_rel_long$condition<-as.numeric(paste(MBC_MIC_rel_long$condition))
 
 
@@ -453,6 +459,10 @@ MBC_MIC_rel_long_label$label_value<-MBC_MIC_rel_long_label$label_value+1
 MBC_MIC_rel_long_label%>%
   subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
   drop_na(OD)->hoi
+
+
+MBC_MIC_rel_long_label%>%
+  subset(bacteria %in% "Bacteroides xylanisolvens" & condition %in% 10)
 
 hoi%>%
   mutate(bacteria = fct_reorder(bacteria, hoi$order))%>%
@@ -501,26 +511,33 @@ hoi <- hoi %>%
   subset(!condition %in% 13)%>%
     mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens"))
 
+
+
+
 hoi%>%
-  mutate(bacteria = fct_reorder(bacteria, hoi$order))%>%
-  ggplot(aes(x = condition, y = assay, fill = OD)) + 
+  subset(assay %in% "MIC")->sub
+
+sub$OD<-sub$OD*100
+
+sub%>%
+  mutate(bacteria = fct_reorder(bacteria, sub$order))%>%
+  ggplot(aes(x = condition, y = bacteria, fill = OD)) + 
   geom_raster() +
-  labs(x=expression(paste(H[2]*O)))+
+  labs(x=expression(paste(H[2]*O[2])))+
   theme(text = element_text(size=15), 
-        axis.title.x = element_text(size=20),
+        axis.title.x = element_text(size=20, vjust=-0.8),
         axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_blank(),
         axis.text.y=element_text(size=15),
-        strip.text.y = element_text(angle = 0, face = "italic", hjust=0),
+        strip.text.y = element_blank(),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15, vjust=0),
-        legend.title = element_text(size= 15, vjust=1),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15),
         plot.title = element_text(size=20, hjust=0.25),
         strip.text = element_text(size=15), 
         panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA),
-        legend.position = "bottom")+
+        panel.border=element_rect(fill=NA))+
   facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
   scale_x_continuous(labels=c("0 nM", 
                               "6.4 nM",  
@@ -534,25 +551,40 @@ hoi%>%
                               expression("710"~mu*M),  
                               "2.3 mM", "7.3 mM" ), 
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
-  labs(fill = expression(relative~OD[600]))+
+  labs(fill = expression(relative~OD[600]~'[%]'))+
   ggtitle(expression(Growth~capability~upon~H[2]*O[2]-spike))+
-  scale_fill_steps(breaks = c(0,0.25,0.5, 0.75, 1))+
-  scale_y_discrete(labels = c('MIC' = 'stress', 'MBC' = 'post-stress'), limits=rev)
+  scale_fill_steps(breaks = c(10,50,75))+
+  scale_y_discrete(labels = c('MIC' = 'stress', 'MBC' = 'post-stress'), limits=rev)->p
 
-
+show(p+ theme(legend.position = "none"))
 
 ggsave(filename = "MIC_MBC_h2o2_growth_only.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 17,
-       height = 35,
+       width = 14,
+       height = 23.25,
        units = c("cm"))
+
+
+show(p)
+
+ggsave(filename = "legend.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 14,
+       height = 25.9,
+       units = c("cm"))
+
 
 ```
 
 ```{r}
-h2o2<-set_names(aggregate(hoi$value, by=list(hoi$bacteria, hoi$assay), FUN=mean), c("bacteria", "assay", "value_H2O2"))
+h2o2<-setNames(aggregate(hoi$value, by=list(hoi$bacteria, hoi$assay, hoi$replicate), FUN=mean), c("bacteria", "assay", "replicate", "value_H2O2"))
 write.xlsx(h2o2, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.xlsx")
 ```
 
-
+# Calculate Differences - MIC/MBC
+```{r}
+h2o2_wide<-pivot_wider(h2o2, names_from = assay, values_from= value_H2O2)
+h2o2_wide$diff <- h2o2_wide$MBC - h2o2_wide$MIC
+write.xlsx(h2o2_wide, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_h2O2_difference.xlsx")
+```
 
