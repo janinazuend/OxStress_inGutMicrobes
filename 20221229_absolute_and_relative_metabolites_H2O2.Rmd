@@ -13,21 +13,21 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 # install.packages("tidyr")
 # install.packages("ggbreak")
 
-library(ggpmisc)
-library(tidyverse)
-library(ggplot2)
-library(tidyr)
+# library(ggpmisc)
+# library(tidyverse)
+# library(ggplot2)
+# library(tidyr)
 # install.packages("devtools")
 # devtools::install_github("slowkow/ggrepel")
-library(ggrepel)
-library(ggbreak)
-library(openxlsx)
-library(readxl)
-library(ggh4x)
-library(ggpubr)
-library(ggpubr)
-library(rstatix)
-library(dplyr)
+# library(ggrepel)
+# library(ggbreak)
+# library(openxlsx)
+# library(readxl)
+# library(ggh4x)
+# library(ggpubr)
+# library(ggpubr)
+# library(rstatix)
+# library(dplyr)
 ```
 
 # 1. Read all the data into one df
@@ -82,7 +82,7 @@ HPLC_relative_long <-  gather(HPLC_values_relative_wide, metabolite, concentrati
 
 ```{r}
 #calculate means & sd
-mean_metabolites <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$assay, HPLC_relative_long$condition, HPLC_relative_long$metabolite), FUN=mean)
+mean_metabolites <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$assay, HPLC_relative_long$condition, HPLC_relative_long$metabolite), FUN=mean, na.rm=T)
 sdv <- aggregate(HPLC_relative_long$concentration, list(HPLC_relative_long$assay, HPLC_relative_long$condition, HPLC_relative_long$metabolite), FUN=sd)
 
 names(mean_metabolites)<-c("Bacteria",  "condition", "metabolite",  "mean_conc")
@@ -490,7 +490,7 @@ ratio%>%
                          "Bifidobacterium adolescentis"  , 
                          "Bifidobacterium longum" ,
                          "Blautia hansenii" ,
-                         "Blautia hydrogenotrophica",
+                         
                          "Blautia obeum"  , "Blautia producta" ,
                          "Enterococcus faecalis"  ,
                          "Escherichia coli" , 
@@ -516,7 +516,7 @@ ratio%>%
 
 ratio%>% 
   subset(Bacteria %in% c("Eubacterium limosum",
-                         "Roseburia intestinalis")) %>%
+                         "Roseburia intestinalis", "Blautia hydrogenotrophica", "Faecalibacterium prausnitzii")) %>%
            subset(condition %in% c("NIC-1"))->sub_nic_1
 
 
@@ -542,7 +542,7 @@ ggplot(selectionn, aes(x=metabolite, y=Bacteria, fill=ratio))+
         axis.title = element_blank(),
         axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
         axis.text.y = element_text(size=15, face="italic"))+
-  labs(fill="Δrel. metabolites")+
+  labs(fill="?? Metabolite fraction")+
   ggtitle(expression(Metabolic~changes~as~a~response~to~H[2]*O[2]))+
    geom_text(aes(label=p_corrected))
 
@@ -638,7 +638,7 @@ stats_absolute%>%
                          "Bifidobacterium adolescentis"  , 
                          "Bifidobacterium longum" ,
                          "Blautia hansenii" ,
-                         "Blautia hydrogenotrophica",
+                        
                          "Blautia obeum"  , "Blautia producta" ,
                          "Enterococcus faecalis"  ,
                          "Escherichia coli" , 
@@ -661,7 +661,7 @@ stats_absolute%>%
 
 stats_absolute%>% 
   subset(Bacteria %in% c("Eubacterium limosum",
-                         "Roseburia intestinalis")) %>%
+                         "Roseburia intestinalis", "Blautia hydrogenotrophica", "Faecalibacterium prausnitzii")) %>%
            subset(condition %in% c("NIC-1"))->sub_nic_1
 
 
@@ -676,24 +676,29 @@ selection$p_corrected_low_conc[selection$p_corrected_low_conc=="ns"]<-NA
 
 selectionn<-selection[!is.na(selection$ratio),]
 
+
+
+selectionn$ratio <- selectionn$ratio*100
 max<-max(selectionn$ratio)
 min<-min(selectionn$ratio)
-
 ggplot(selectionn, aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
   scale_fill_gradientn(colors = c("coral", "white", "cyan4"), na.value= "grey",values = rescale(c(min,0,max)))+
   facet_grid(rows=vars(Class), space="free", scale="free")+
   theme(strip.text.y = element_text(angle=0, size = 15),
         axis.title = element_blank(),
+        plot.title = element_text(size=20),
         axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
-        axis.text.y = element_text(size=15, face="italic"))+
-  labs(fill="Δrel. metabolites")+
+        axis.text.y = element_text(size=15, face="italic"), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  labs(fill="??Metabolite fraction [%]")+
   ggtitle(expression(Metabolic~changes~as~a~response~to~H[2]*O[2]))+
    geom_text(aes(label=p_corrected_low_conc))
 
 
  ggsave(filename = "H2O2_heatplot_selected_low_conc.jpeg",   
-         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
          width = 22,
          height = 20,
          units = c("cm"))

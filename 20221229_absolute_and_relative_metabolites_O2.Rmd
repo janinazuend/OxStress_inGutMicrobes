@@ -12,23 +12,23 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 # install.packages("rlang")
 # install.packages("tidyr")
 # install.packages("ggbreak")
-
-library(ggpmisc)
-library(tidyverse)
-library(ggplot2)
-library(tidyr)
-# install.packages("devtools")
-# devtools::install_github("slowkow/ggrepel")
-library(ggrepel)
-library(ggbreak)
-library(openxlsx)
-library(readxl)
-library(ggh4x)
-library(ggpubr)
-library(ggpubr)
-library(rstatix)
-library(dplyr)
-library(scales)
+# 
+# library(ggpmisc)
+# library(tidyverse)
+# library(ggplot2)
+# library(tidyr)
+# # install.packages("devtools")
+# # devtools::install_github("slowkow/ggrepel")
+# library(ggrepel)
+# library(ggbreak)
+# library(openxlsx)
+# library(readxl)
+# library(ggh4x)
+# library(ggpubr)
+# library(ggpubr)
+# library(rstatix)
+# library(dplyr)
+# library(scales)
 ```
 
 # 1. Read all the data into one df
@@ -813,6 +813,7 @@ selection$p_corrected_low_conc[selection$p_corrected_low_conc=="ns"]<-NA
 
 selection$Bacteria <- gsub("_", " ", selection$Bacteria)
 
+selection$ratio <- selection$ratio *100
 max<-max(selection$ratio)
 min<-min(selection$ratio)
 
@@ -822,14 +823,17 @@ ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
   facet_grid(rows=vars(Class), space="free", scale="free")+
     theme(strip.text.y = element_text(angle=0, size = 15),
         axis.title = element_blank(),
+        plot.title = element_text(size=20),
         axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
-        axis.text.y = element_text(size=15 , face="italic"))+
-  labs(fill="Δrel. metabolites")+
+        axis.text.y = element_text(size=15 , face="italic"), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  labs(fill="??Metabolite fraction [%]")+
   ggtitle(expression(Metabolic~changes~as~a~response~to~O[2]))+
   geom_text(aes(label=p_corrected_low_conc))
 
 ggsave(filename = "O2_heatplot_selection_lowconc.jpeg",   
-         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
+         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
          width = 22,
          height = 20,
          units = c("cm"))
