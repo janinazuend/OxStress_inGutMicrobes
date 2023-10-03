@@ -485,13 +485,13 @@ hoihoi <- hoihoi %>%
     mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens"))
 
 hoihoi%>%
-  subset(assay %in% "MIC")->sub
+  subset(assay %in% c("MIC", "MBC"))->sub
 
 sub$OD<-sub$OD*100
 
 sub%>%
   mutate(bacteria = fct_reorder(bacteria, sub$order))%>%
-  ggplot(aes(x = condition, y = bacteria, fill = OD)) + 
+  ggplot(aes(x = condition, y = assay, fill = OD)) + 
   geom_raster() +
   scale_fill_steps(breaks = c(10, 50, 75))+
   labs(x=c("Agar [???]"))+
@@ -500,7 +500,7 @@ sub%>%
         axis.text.x = element_text(size=15, angle = 90, vjust= 0.5),
         axis.title.y= element_blank(),
         axis.text.y=element_text(size=15),
-        strip.text.y = element_blank(),
+        strip.text.y = element_text(size=15, angle=0, face="italic", hjust=0),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
         legend.position = "bottom",
@@ -508,7 +508,6 @@ sub%>%
         # legend.text = element_text(size = 15),
         legend.title = element_text(size= 15, vjust=1),
         plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
   facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
@@ -525,9 +524,9 @@ sub%>%
                                                     "0.3", 
                                                     "0"), 
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
-  scale_y_discrete(labels = c('MIC' = 'stress', 'MBC' = 'post-stress'), limits=rev)+
+  scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
   labs(fill = expression(relative~OD[600]), colour="")+
-  ggtitle(expression(Growth~capability~with~different~oxygenation))->p
+  ggtitle(expression(Growth~capability~under~oxygenation))->p
 
 show(p+theme(legend.position = "none"))
 
@@ -536,8 +535,8 @@ show(p+theme(legend.position = "none"))
 
 ggsave(filename = "MIC_MBC_o2_growth_only.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 14,
-       height = 22.3,
+       width = 17,
+       height = 39,
        units = c("cm"))
 
 ```

@@ -515,13 +515,13 @@ hoi <- hoi %>%
 
 
 hoi%>%
-  subset(assay %in% "MIC")->sub
+  subset(assay %in% c("MIC", "MBC"))->sub
 
 sub$OD<-sub$OD*100
 
 sub%>%
   mutate(bacteria = fct_reorder(bacteria, sub$order))%>%
-  ggplot(aes(x = condition, y = bacteria, fill = OD)) + 
+  ggplot(aes(x = condition, y = assay, fill = OD)) + 
   geom_raster() +
   labs(x=expression(paste(H[2]*O[2])))+
   theme(text = element_text(size=15), 
@@ -529,13 +529,12 @@ sub%>%
         axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_blank(),
         axis.text.y=element_text(size=15),
-        strip.text.y = element_blank(),
+        strip.text.y = element_text(angle=0, size=15, hjust = 0, face="italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
         legend.text = element_text(size = 15),
         legend.title = element_text(size= 15),
         plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
   facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
@@ -554,14 +553,14 @@ sub%>%
   labs(fill = expression(relative~OD[600]~'[%]'))+
   ggtitle(expression(Growth~capability~upon~H[2]*O[2]-spike))+
   scale_fill_steps(breaks = c(10,50,75))+
-  scale_y_discrete(labels = c('MIC' = 'stress', 'MBC' = 'post-stress'), limits=rev)->p
+  scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)->p
 
 show(p+ theme(legend.position = "none"))
 
 ggsave(filename = "MIC_MBC_h2o2_growth_only.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 14,
-       height = 23.25,
+       width = 17,
+       height = 40,
        units = c("cm"))
 
 
