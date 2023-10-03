@@ -9,6 +9,7 @@ date: '2022-12-15'
 .libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative stress", cho = TRUE, warning = FALSE, message = FALSE)
+setwd("C:/Users/zuendj/Desktop/03_data R/oxidative stress")
 
 # Install Packages:
 # install.packages("rlang")
@@ -111,12 +112,14 @@ taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_p
 tax<-left_join(all, taxonomy)
 
 ```
+##Difference
+
 ```{r}
 gather(tax, condition, value, "concentration_MBC":"concentration_MIC")->heat
 
 heat$condition<-factor(heat$condition, levels=c("concentration_MIC", "concentration_MBC"))
 
-heat<-left_join(heat, setNames(aggregate(heat$value, by=list(heat$bacteria), FUN=median), c("bacteria", "median")))
+heat<-left_join(heat, setNames(aggregate(heat$value, by=list(heat$bacteria, heat$stress), FUN=median), c("bacteria", "stress","median")))
 diff<-left_join(tax, setNames(aggregate(tax$diff_conc, by=list(tax$bacteria, tax$stress), FUN=median), c("bacteria", "stress","median_diff")))
 
 names<-list("H2O2"=expression(H[2]*O[2]))
@@ -214,7 +217,7 @@ ggsave(filename = "diff_o2.jpeg",
 ```
 
 
-
+##MIC H2O2
 ```{r}
 names<-list("H2O2"=expression(H[2]*O[2]))
 
@@ -222,81 +225,171 @@ facet_labeller <- function(variable,value){
   return(names[value])}
 
 heat%>%
-  subset(stress %in% c("H2O2"))->sub
-
-sub$value<-sub$value/1000
-
-sub%>%
-  mutate(Genus = fct_reorder(Genus, sub$median))%>%
-  subset(!condition %in% "diff")%>%
-  ggplot(aes(y=Genus, x=value))+
-  geom_boxplot(aes(fill=condition), outlier.shape = NA)+
-  geom_point(aes(colour=bacteria, group=condition), position = position_jitterdodge(0.1), alpha=0.7)+
-   facet_grid(cols=vars(stress), scales="free", labeller = facet_labeller)+
-  scale_fill_manual(values = c("coral", "steelblue3"), name="Condition", labels=c("Stress", "Post-stress"))+ scale_x_log10(breaks=0,0.5,5)+
+  subset(stress %in% c("H2O2"))%>%
+  subset(!condition %in% c("diff", "concentration_MBC"))%>%
+  mutate(Family = fct_reorder(Family, value))%>%
+  mutate(bacteria = fct_reorder(bacteria, value, .desc =T))%>%
+  ggplot(aes(y=bacteria, x=value))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(aes(colour=Family, group=condition), position = position_jitterdodge(0.5), alpha=0.7)+
+  facet_grid(rows=vars(Family), scales="free", space="free")+ 
+  scale_x_log10(breaks=0,0.5,5)+
   theme(text = element_text(size=15), 
         axis.title.x = element_text(size=20),
         axis.text.x = element_text(size=15),
         axis.title.y= element_blank(),
         axis.text.y=element_text(size=15),
-        strip.text.y = element_text(face = "italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
         legend.text = element_text(size = 10),
         legend.title = element_text(size= 15),
         plot.title = element_text(size=20),
-        strip.text = element_text(size=20), 
+        strip.text = element_blank(), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
-  ggtitle("Stress- vs. post-stress tolerance")+
+  ggtitle("MIC-H2O2")+
   labs(colour = "Species")
+
 ggsave(filename = "H2O2.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 22,
-       height = 17,
+       width = 17,
+       height = 20,
        units = c("cm"))
 
+```
 
+
+##MIC H2O2
+```{r}
 names<-list("O2"=expression(O[2]))
 
 facet_labeller <- function(variable,value){
-  return(names[value])
-}
+  return(names[value])}
 
 heat%>%
-  subset(stress %in% c("O2"))->sub
-
-sub$value<-sub$value/1000
-
-sub%>%
-  mutate(Genus = fct_reorder(Genus, sub$median))%>%
-  subset(!condition %in% "diff")%>%
-  ggplot(aes(y=Genus, x=value))+
-  geom_boxplot(aes(fill=condition), outlier.shape = NA)+
-  geom_point(aes(colour=bacteria, group=condition), position = position_jitterdodge(0.1), alpha=0.7)+
-   facet_grid(cols=vars(stress), scales="free", labeller = facet_labeller)+
-  scale_fill_manual(values = c("coral", "steelblue3"), name="Condition", labels=c("Stress", "Post-stress"))+
+  subset(stress %in% c("O2"))%>%
+  subset(!condition %in% c("diff", "concentration_MBC"))%>%
+  mutate(Family = fct_reorder(Family, value))%>%
+  mutate(bacteria = fct_reorder(bacteria, value, .desc =T))%>%
+  ggplot(aes(y=bacteria, x=value))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(aes(colour=Family, group=condition), position = position_jitterdodge(0.5), alpha=0.7)+
+  facet_grid(rows=vars(Family), scales="free", space="free")+ 
+  scale_x_log10(breaks=0,0.5,5)+
   theme(text = element_text(size=15), 
         axis.title.x = element_text(size=20),
         axis.text.x = element_text(size=15),
         axis.title.y= element_blank(),
         axis.text.y=element_text(size=15),
-        strip.text.y = element_text(face = "italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
         legend.text = element_text(size = 10),
         legend.title = element_text(size= 15),
         plot.title = element_text(size=20),
-        strip.text = element_text(size=20), 
+        strip.text = element_blank(), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
-  ggtitle("Stress- vs. post-stress tolerance")+
+  ggtitle("MIC-H2O2")+
   labs(colour = "Species")
+
 ggsave(filename = "O2.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 22,
-       height = 17,
+       width = 17,
+       height = 20,
        units = c("cm"))
+
+```
+
+##averages family level
+```{r}
+metrics=mean
+
+left_join(setNames(aggregate(heat$MIC, by=list(heat$stress, heat$bacteria), FUN=median), c("stress", "bacteria", "MIC")), 
+          setNames(aggregate(heat$MBC, by=list(heat$stress, heat$bacteria), FUN=median), c("stress", "bacteria", "MBC"))) %>%
+  mutate (diff = MBC-MIC)%>%
+  gather(assay, value, "MIC":"MBC")-> mean
+
+left_join(setNames(aggregate(heat$MIC, by=list(heat$stress, heat$bacteria), FUN=sd), c("stress", "bacteria", "MIC")), 
+          setNames(aggregate(heat$MBC, by=list(heat$stress, heat$bacteria), FUN=sd), c("stress", "bacteria", "MBC"))) %>%
+  gather(assay, sd, "MIC":"MBC")-> sd
+
+
+
+```
+
+
+
+##mic vs mbc 
+```{r}
+stress_cond<-c("O2", "H2O2")
+
+for (i in 1:length(stress_cond)){
+
+
+  if (stress_cond[i] == "O2") {
+    breaks_cond <-c(2, 5, 9 , 12) 
+    labels_cond <- c("1.28" ,"0.78",  "0.41", "0")
+     y_axis <-c("Post - Agar[???]")
+    x_axis <-c("Stress - Agar[???]")
+    filter=5
+  } else if (stress_cond[i] == "H2O2") {
+    breaks_cond <- c(7,8,9,10,11)
+    labels_cond <- c( 21, 69,222, 710, 2300)
+   y_axis <-expression(Post~-H[2]*O[2]*~"["*mu*"M]")
+    x_axis <-expression(Stress~-H[2]*O[2]*~"["*mu*"M]")
+    filter=0
+  }
+  
+
+
+
+left_join(mean, sd)%>%
+  left_join(., taxonomy)%>%
+  subset(stress %in% stress_cond[i])%>%
+  pivot_wider(names_from = assay, values_from = c(value, sd))->sub
+
+sub%>%
+  ggplot(aes(x=value_MIC, y=value_MBC))+
+  stat_ellipse(aes(fill=Family), geom="polygon", alpha=0.2, show.legend = F)+
+    geom_jitter(aes(colour=Genus), width=0.05, height = 0.05, size=3, alpha=0.8)+
+   theme(text = element_text(size=15), 
+        axis.title.x = element_text(size=20),
+        axis.text.x = element_text(size=15),
+        axis.title.y= element_text(size=20),
+        axis.text.y=element_text(size=15),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20),
+        strip.text = element_blank(), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  geom_abline(intercept = 0, slope=1, linetype=2, alpha=0.7, size =1, colour="darkgrey")+
+    xlab(x_axis)+
+   scale_x_continuous(labels=labels_cond , breaks= breaks_cond)+
+  scale_y_continuous(labels=labels_cond , breaks= breaks_cond)+
+    ylab(y_axis)+
+  geom_text_repel(data = subset(sub, diff > filter), aes(label=bacteria, colour=Genus), max.overlaps = Inf , fontface="italic",                                      segment.ncp = 2)+
+  ggtitle("Stress vs. Post growth")->p
+
+
+
+
+
+show(p)
+
+ggsave(filename = paste0(stress_cond[i], "mic_mbc.jpeg"), 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 20,
+       height = 14,
+       units = c("cm"))}
+
+
+234.2/40*14
+234.2/40*20
+
+
 ```
 
 
@@ -333,4 +426,6 @@ sub%>%
   ggplot(aes(y=bacteria, fill=coverage, x=enzyme))+
   geom_tile()
 ```
+
+
 
