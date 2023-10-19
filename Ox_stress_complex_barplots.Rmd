@@ -35,29 +35,29 @@ knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_
 #   repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
 # )
 # devtools::install_github("tidyverse/tidyverse")
-  # library(tidyverse)
-  #  library(openxlsx)
+ library(tidyverse)
+ library(openxlsx)
 # # install.packages("ggalluvial")
 # library(ggalluvial)
- # library(ggh4x)
+ library(ggh4x)
 # library(GUniFrac)
- # library(rstatix)
+  # library(rstatix)
 # library(tinytex)
 # library(rmarkdown)
 # library(rlang) 
-# library(tidyverse)
-# library(microViz)
+ # library(tidyverse)
+ library(microViz)
 # library(dplyr)
 # library(mgcv)
 # library(ape)
-# library(phyloseq)
+ # library(phyloseq)
 # library(speedyseq)
 # library(DESeq2)
  # library(plyr)
 # library(fs)
 # library(devtools)
 # library(pairwiseAdonis)
-# library(ggpubr)
+ # library(ggpubr)
 
 # install.packages("dplyr")
 # install.packages("data.table")
@@ -82,6 +82,8 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 #get metadata file: load this function
 sample.data.frame <- function(ps) {
   return(as(phyloseq::sample_data(ps), "data.frame"))}
+
+
 ```
 
 ## 1. Get the phyloseq object 
@@ -155,6 +157,12 @@ ps_strain_filt%>%
                     sample.size = 2900
                     # sample.size = 5000
                     ) -> phyloseq_rare
+
+
+
+
+df<-lib$df
+
 ```
 #Fix tax table
 ```{r}
@@ -165,8 +173,45 @@ tax_table(phyloseq_rare)[noNA][,"Species"] = paste(tax_table(phyloseq_rare)[noNA
 phyloseq_rare%>%
   tax_fix()->phyloseq_rare
 
+
+noNA = !is.na(tax_table(ps_strain_filt)[,"Genus"]) & !is.na(tax_table(ps_strain_filt)[,"Species"])
+tax_table(ps_strain_filt)[noNA][,"Species"] = paste(tax_table(ps_strain_filt)[noNA][,"Genus"], tax_table(ps_strain_filt)[noNA][,"Species"])
+ps_strain_filt%>%
+  tax_fix()->ps_strain_filt
+
 ```
 
+```{r}
+myPal <- tax_palette(
+  data = phyloseq_rare, rank = "Family", n = 10, pal = "greenArmytage",
+  add = c(Other = "white")
+)
+
+
+myPal["Lachnospiraceae"] <- "lightblue"
+myPal["Bacteroidaceae"] <- "steelblue"
+myPal["Enterobacteriaceae"] <- "yellowgreen"
+myPal["Prevotellaceae"] <- "forestgreen"
+myPal["Ruminococcaceae"] <- "lightpink1"
+
+myPal["Bifidobacteriaceae"] <- "red3"
+myPal["Oscillospiraceae"] <- "sienna1"
+myPal["Streptococcaceae"] <- "orange"
+myPal["Sutterellaceae"] <- "khaki1"
+myPal["Erysipelatoclostridiaceae"] <- "orchid4"
+myPal["Erysipelotrichaceae"] <- "orchid2"
+myPal["Christensenellaceae"] <- "orchid3"
+myPal["Tannerellaceae"] <- "lightpink3"
+myPal["Coriobacteriaceae"] <- "sienna"
+myPal["Enterococcaceae"] <- "red4"
+myPal["Veillonellaceae"] <- "lightblue3"
+myPal["Other"] <- "lightgrey"
+myPal["Peptostreptococcaceae"] <- "khaki3"
+myPal["Clostridiaceae"]<-"khaki"
+myPal["Lactobacillaceae"]<-"darkseagreen2"
+myPal["Akkermansiaceae"]<-"darkseagreen4"
+
+```
 
 #### compoistion feces ####
 ```{r}
@@ -209,7 +254,7 @@ ggsave(filename = "bar_feces.jpeg",
 # composition of pre-cultures
 ```{r}
 phyloseq_rare%>%
-  subset_samples(time %in% "pre-stress")%>%
+  subset_samples(time %in% c("pre-stress", "feces"))%>%
   ps_arrange(time)%>%
       microViz::comp_barplot(
     tax_level = "Family",
@@ -223,7 +268,7 @@ phyloseq_rare%>%
     xlab( "")-> p_hist
 
 p_hist + 
-  # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
+  # facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
   theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
         axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
         axis.text.y= element_text(size = 20), 
@@ -240,7 +285,7 @@ p_hist
 
 ggsave(filename = "bar_pre-cultures.jpeg",
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
-       width = 24,
+       width = 40,
        height = 14,
        units = c("cm"))
 ```
@@ -249,113 +294,73 @@ ggsave(filename = "bar_pre-cultures.jpeg",
 #### Taxa bar plots ####
 ##Family level -H2O2
 ```{r}
-
-donors_loop<-c("D1","D2", "D3", "D4", "D5", "D6", "D7", "D8")
-stress_level_cond<-c("control", "low", "median", "high")
-
-
-myPal <- tax_palette(
-  data = phylo_bar, rank = "Family", n = 10, pal = "greenArmytage",
-  add = c(Other = "white")
-)
-
-
-myPal["Lachnospiraceae"] <- "lightblue"
-myPal["Bacteroidaceae"] <- "steelblue"
-myPal["Enterobacteriaceae"] <- "yellowgreen"
-myPal["Prevotellaceae"] <- "forestgreen"
-myPal["Ruminococcaceae"] <- "lightpink1"
-
-myPal["Bifidobacteriaceae"] <- "red3"
-myPal["Oscillospiraceae"] <- "sienna1"
-myPal["Streptococcaceae"] <- "orange"
-myPal["Sutterellaceae"] <- "khaki1"
-myPal["Erysipelatoclostridiaceae"] <- "orchid4"
-myPal["Erysipelotrichaceae"] <- "orchid2"
-myPal["Christensenellaceae"] <- "orchid3"
-myPal["Tannerellaceae"] <- "lightpink3"
-myPal["Coriobacteriaceae"] <- "sienna"
-myPal["Enterococcaceae"] <- "red4"
-myPal["Veillonellaceae"] <- "lightblue3"
-myPal["Other"] <- "lightgrey"
-myPal["Peptostreptococcaceae"] <- "khaki3"
-myPal["Clostridiaceae"]<-"khaki"
-myPal["Lactobacillaceae"]<-"darkseagreen2"
-myPal["Akkermansiaceae"]<-"darkseagreen4"
-
-
-# tax_palette_plot(myPal)
-
-
-
-
-phyloseq_rare%>%
-  subset_samples(time %in% c("feces", "pre-stress" , "stress", "post_stress_1", "post_stress_2" ))->phyloseq_bar
-
-phyloseq_bar%>%
-  sample.data.frame()->meta
-
-
-
-meta%>%
-  mutate(stress_level = ifelse(time == "pre-stress", "pre", stress_level))%>%
-  mutate(time= factor(time, levels=c("feces", "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta
-                                            
-
-
-
-
-#update the metadata file
-sample_data(phyloseq_bar)<-meta
-
-
-
-for (i in 1:length(donors_loop)){
-  for (j in 1:length(stress_level_cond)){
-
-phyloseq_bar%>% 
-    subset_samples(donor_name %in% c(donors_loop[i]))%>%
-     subset_samples(stress %in% c("H2O2","control", "feces"))%>%
-      subset_samples(stress_level %in% c(stress_level_cond[j],"pre", "feces"))%>%
-     ps_arrange(time)%>%
-      microViz::comp_barplot(
-    tax_level = "Family",
-    label = "time",
-    tax_order = sum, 
-    sample_order = "default",
-    n_taxa = 10,
-    bar_width = 0.9,
-    tax_transform_for_plot = "compositional",
-      palette= myPal) +
-    ylab("Proportion") + 
-    xlab( "")-> p_hist
-
- 
-p_hist + 
-  # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
-  theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
-        axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
-        axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_text(size=20),
-        legend.text = element_text(size = 15, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) + 
-  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+ 
-  ggtitle(paste(donors_loop[i], "-", stress_level_cond[j],  " stress")) -> p_hist
-
-p_hist
-
-
-
-x<-paste0(donors_loop[i],stress_level_cond[j],"H2O2_stress_box.jpeg")
-ggsave(filename = x,
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/H2O2_bar",
-       width = 14,
-       height = 14,
-       units = c("cm"))
-
-}}
+# 
+# donors_loop<-c("D1","D2", "D3", "D4", "D5", "D6", "D7", "D8")
+# stress_level_cond<-c("control", "low", "median", "high")
+# 
+# # tax_palette_plot(myPal)
+# 
+# phyloseq_rare%>%
+#   subset_samples(time %in% c("feces", "pre-stress" , "stress", "post_stress_1", "post_stress_2" ))->phyloseq_bar
+# 
+# phyloseq_bar%>%
+#   sample.data.frame()->meta
+# 
+# meta%>%
+#   mutate(stress_level = ifelse(time == "pre-stress", "pre", stress_level))%>%
+#   mutate(time= factor(time, levels=c("feces", "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta
+#                                           
+# #update the metadata file
+# sample_data(phyloseq_bar)<-meta
+# 
+# 
+# 
+# for (i in 1:length(donors_loop)){
+#   for (j in 1:length(stress_level_cond)){
+# 
+# phyloseq_bar%>% 
+#     subset_samples(donor_name %in% c(donors_loop[i]))%>%
+#      subset_samples(stress %in% c("H2O2","control", "feces"))%>%
+#       subset_samples(stress_level %in% c(stress_level_cond[j],"pre", "feces"))%>%
+#      ps_arrange(time)%>%
+#       microViz::comp_barplot(
+#     tax_level = "Family",
+#     label = "time",
+#     tax_order = sum, 
+#     sample_order = "default",
+#     n_taxa = 10,
+#     bar_width = 0.9,
+#     tax_transform_for_plot = "compositional",
+#       palette= myPal) +
+#     ylab("Proportion") + 
+#     xlab( "")-> p_hist
+# 
+#  
+# p_hist + 
+#   # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
+#   theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
+#         axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
+#         axis.text.y= element_text(size = 20), 
+#         axis.title.y = element_text(size=20), 
+#         axis.title.x = element_text(size=20),
+#         legend.text = element_text(size = 15, vjust=1, hjust=0),
+#         legend.title = element_text(size= 20),
+#         plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) + 
+#   scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+ 
+#   ggtitle(paste(donors_loop[i], "-", stress_level_cond[j],  " stress")) -> p_hist
+# 
+# p_hist
+# 
+# 
+# 
+# x<-paste0(donors_loop[i],stress_level_cond[j],"H2O2_stress_box.jpeg")
+# ggsave(filename = x,
+#        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/H2O2_bar",
+#        width = 14,
+#        height = 14,
+#        units = c("cm"))
+# 
+# }}
 ```
 
 ##Strain level H2O2
@@ -379,7 +384,7 @@ phyloseq_bar%>%
 meta%>%
   mutate(stress_level = ifelse(time == "pre-stress", "pre", stress_level))%>%
   mutate(time= factor(time, levels=c("feces", "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta
-                                            
+
 
 
 
@@ -392,35 +397,35 @@ sample_data(phyloseq_bar)<-meta
 for (i in 1:length(donors_loop)){
   for (j in 1:length(stress_level_cond)){
 
-phyloseq_bar%>% 
+phyloseq_bar%>%
     subset_samples(donor_name %in% c(donors_loop[i]))%>%
      subset_samples(stress %in% c("H2O2","control", "feces"))%>%
       subset_samples(stress_level %in% c(stress_level_cond[j],"pre", "feces"))%>%
      ps_arrange(time)%>%
       microViz::comp_barplot(
-    tax_level = "Strain",
+    tax_level = "Genus",
     label = "time",
-    tax_order = sum, 
+    tax_order = sum,
     sample_order = "default",
-    n_taxa = 10,
+    n_taxa = 20,
     bar_width = 0.9,
     tax_transform_for_plot = "compositional"
       ) +
-    ylab("Proportion") + 
+    ylab("Proportion") +
     xlab( "")-> p_hist
 
- 
-p_hist + 
+
+p_hist +
   # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
   theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
         axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
-        axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
+        axis.text.y= element_text(size = 20),
+        axis.title.y = element_text(size=20),
         axis.title.x = element_text(size=20),
         legend.text = element_text(size = 15, vjust=1, hjust=0),
         legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) + 
-  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+ 
+        plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
   ggtitle(paste(donors_loop[i], "-", stress_level_cond[j],  " stress")) -> p_hist
 
 p_hist
@@ -438,240 +443,173 @@ ggsave(filename = x,
 
 
 ```
-
 ##Family level -O2
-
 ```{r}
 
-donors_loop<-c("D1","D2", "D3", "D4", "D5", "D6", "D7", "D8")
-stress_level_cond<-c("control", "low", "median", "high", "max")
-
-
-phyloseq_rare%>%
-  subset_samples(time %in% c("feces", "pre-stress" , "stress", "post_stress_1", "post_stress_2" ))->phyloseq_bar
-
-phyloseq_bar%>%
-  sample.data.frame()->meta
-
-
-
-meta%>%
-  mutate(stress_level = ifelse(time == "pre-stress", "pre", stress_level))%>%
-  mutate(time= factor(time, levels=c("feces", "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta
-                                            
-#update the metadata file
-sample_data(phyloseq_bar)<-meta
-
-
-
-for (i in 1:length(donors_loop)){
-  for (j in 1:length(stress_level_cond)){
-
-phyloseq_bar%>% 
-    subset_samples(donor_name %in% c(donors_loop[i]))%>%
-     subset_samples(stress %in% c("O2","control", "feces"))%>%
-      subset_samples(stress_level %in% c(stress_level_cond[j],"pre", "feces"))%>%
-      subset_samples(incubation %in% "aerobe" | (stress_level %in% c("pre", "feces")))%>%
-     ps_arrange(time)%>%
-      microViz::comp_barplot(
-    tax_level = "Family",
-    label = "time",
-    tax_order = sum, 
-    sample_order = "default",
-    n_taxa = 10,
-    bar_width = 0.9,
-    tax_transform_for_plot = "compositional",
-      palette= myPal) +
-    ylab("Proportion") + 
-    xlab( "")-> p_hist
-
- 
-p_hist + 
-  # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
-  theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
-        axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
-        axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_text(size=20),
-        legend.text = element_text(size = 15, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) + 
-  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+ 
-  ggtitle(paste(donors_loop[i], "-", stress_level_cond[j],  " stress")) -> p_hist
-
-p_hist
-
-
-
-x<-paste0(donors_loop[i],stress_level_cond[j],"H2O2_stress_box.jpeg")
-ggsave(filename = x,
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2_bar/aerobe",
-       width = 14,
-       height = 14,
-       units = c("cm"))
-
-}}
+# donors_loop<-c("D1","D2", "D3", "D4", "D5", "D6", "D7", "D8")
+# stress_level_cond<-c("control", "low", "median", "high", "max")
+# 
+# 
+# phyloseq_rare%>%
+#   subset_samples(time %in% c("feces", "pre-stress" , "stress", "post_stress_1", "post_stress_2" ))->phyloseq_bar
+# 
+# phyloseq_bar%>%
+#   sample.data.frame()->meta
+# 
+# 
+# 
+# meta%>%
+#   mutate(stress_level = ifelse(time == "pre-stress", "pre", stress_level))%>%
+#   mutate(time= factor(time, levels=c("feces", "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta
+#                                             
+# #update the metadata file
+# sample_data(phyloseq_bar)<-meta
+# 
+# 
+# 
+# for (i in 1:length(donors_loop)){
+#   for (j in 1:length(stress_level_cond)){
+# 
+# phyloseq_bar%>% 
+#     subset_samples(donor_name %in% c(donors_loop[i]))%>%
+#      subset_samples(stress %in% c("O2","control", "feces"))%>%
+#       subset_samples(stress_level %in% c(stress_level_cond[j],"pre", "feces"))%>%
+#       subset_samples(incubation %in% "aerobe" | (stress_level %in% c("pre", "feces")))%>%
+#      ps_arrange(time)%>%
+#       microViz::comp_barplot(
+#     tax_level = "Family",
+#     label = "time",
+#     tax_order = sum, 
+#     sample_order = "default",
+#     n_taxa = 10,
+#     bar_width = 0.9,
+#     tax_transform_for_plot = "compositional",
+#       palette= myPal) +
+#     ylab("Proportion") + 
+#     xlab( "")-> p_hist
+# 
+#  
+# p_hist + 
+#   # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
+#   theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
+#         axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
+#         axis.text.y= element_text(size = 20), 
+#         axis.title.y = element_text(size=20), 
+#         axis.title.x = element_text(size=20),
+#         legend.text = element_text(size = 15, vjust=1, hjust=0),
+#         legend.title = element_text(size= 20),
+#         plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) + 
+#   scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+ 
+#   ggtitle(paste(donors_loop[i], "-", stress_level_cond[j],  " stress")) -> p_hist
+# 
+# p_hist
+# 
+# 
+# 
+# x<-paste0(donors_loop[i],stress_level_cond[j],"H2O2_stress_box.jpeg")
+# ggsave(filename = x,
+#        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2_bar/aerobe",
+#        width = 14,
+#        height = 14,
+#        units = c("cm"))
+# 
+# }}
 ```
 
-
 ```{r}
-
-donors_loop<-c("D1","D2", "D3", "D4", "D5", "D6", "D7", "D8")
-stress_level_cond<-c("control", "low", "median", "high", "max")
-
-
-phyloseq_rare%>%
-  subset_samples(time %in% c("feces", "pre-stress" , "stress", "post_stress_1", "post_stress_2" ))->phyloseq_bar
-
-phyloseq_bar%>%
-  sample.data.frame()->meta
-
-
-
-meta%>%
-  mutate(stress_level = ifelse(time == "pre-stress", "pre", stress_level))%>%
-  mutate(time= factor(time, levels=c("feces", "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta
-                                            
-#update the metadata file
-sample_data(phyloseq_bar)<-meta
-
-
-
-for (i in 1:length(donors_loop)){
-  for (j in 1:length(stress_level_cond)){
-
-phyloseq_bar%>% 
-    subset_samples(donor_name %in% c(donors_loop[i]))%>%
-     subset_samples(stress %in% c("O2","control", "feces"))%>%
-      subset_samples(stress_level %in% c(stress_level_cond[j],"pre", "feces"))%>%
-      subset_samples(incubation %in% "anaerobe" | (stress_level %in% c("pre", "feces")))%>%
-     ps_arrange(time)%>%
-      microViz::comp_barplot(
-    tax_level = "Family",
-    label = "time",
-    tax_order = sum, 
-    sample_order = "default",
-    n_taxa = 10,
-    bar_width = 0.9,
-    tax_transform_for_plot = "compositional",
-      palette= myPal) +
-    ylab("Proportion") + 
-    xlab( "")-> p_hist
-
- 
-p_hist + 
-  # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
-  theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
-        axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
-        axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_text(size=20),
-        legend.text = element_text(size = 15, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) + 
-  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+ 
-  ggtitle(paste(donors_loop[i], "-", stress_level_cond[j],  " stress")) -> p_hist
-
-p_hist
-
-
-
-x<-paste0(donors_loop[i],stress_level_cond[j],"H2O2_stress_box.jpeg")
-ggsave(filename = x,
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2_bar/anaerobe",
-       width = 14,
-       height = 14,
-       units = c("cm"))
-
-}}
+# 
+# donors_loop<-c("D1","D2", "D3", "D4", "D5", "D6", "D7", "D8")
+# stress_level_cond<-c("control", "low", "median", "high", "max")
+# 
+# 
+# phyloseq_rare%>%
+#   subset_samples(time %in% c("feces", "pre-stress" , "stress", "post_stress_1", "post_stress_2" ))->phyloseq_bar
+# 
+# phyloseq_bar%>%
+#   sample.data.frame()->meta
+# 
+# 
+# 
+# meta%>%
+#   mutate(stress_level = ifelse(time == "pre-stress", "pre", stress_level))%>%
+#   mutate(time= factor(time, levels=c("feces", "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta
+#                                             
+# #update the metadata file
+# sample_data(phyloseq_bar)<-meta
+# 
+# 
+# 
+# for (i in 1:length(donors_loop)){
+#   for (j in 1:length(stress_level_cond)){
+# 
+# phyloseq_bar%>% 
+#     subset_samples(donor_name %in% c(donors_loop[i]))%>%
+#      subset_samples(stress %in% c("O2","control", "feces"))%>%
+#       subset_samples(stress_level %in% c(stress_level_cond[j],"pre", "feces"))%>%
+#       subset_samples(incubation %in% "anaerobe" | (stress_level %in% c("pre", "feces")))%>%
+#      ps_arrange(time)%>%
+#       microViz::comp_barplot(
+#     tax_level = "Family",
+#     label = "time",
+#     tax_order = sum, 
+#     sample_order = "default",
+#     n_taxa = 10,
+#     bar_width = 0.9,
+#     tax_transform_for_plot = "compositional",
+#       palette= myPal) +
+#     ylab("Proportion") + 
+#     xlab( "")-> p_hist
+# 
+#  
+# p_hist + 
+#   # facet_grid(cols=vars(stress_level), drop = TRUE, scales = "free_x", space="free")+
+#   theme(axis.text.x = element_text(size=20, angle=90, vjust=0.2, hjust=1, margin=margin(-8,0,0,0)),
+#         axis.ticks.x = element_blank(),strip.text = element_text(size  = 20),
+#         axis.text.y= element_text(size = 20), 
+#         axis.title.y = element_text(size=20), 
+#         axis.title.x = element_text(size=20),
+#         legend.text = element_text(size = 15, vjust=1, hjust=0),
+#         legend.title = element_text(size= 20),
+#         plot.title = element_text(size=20), panel.spacing = unit(0.2, "cm")) + 
+#   scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+ 
+#   ggtitle(paste(donors_loop[i], "-", stress_level_cond[j],  " stress")) -> p_hist
+# 
+# p_hist
+# 
+# 
+# 
+# x<-paste0(donors_loop[i],stress_level_cond[j],"H2O2_stress_box.jpeg")
+# ggsave(filename = x,
+#        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2_bar/anaerobe",
+#        width = 14,
+#        height = 14,
+#        units = c("cm"))
+# 
+# }}
 ```
 
-
-##line plots 
-
+### what are the main Families?
 ```{r}
-tax_level ="Family"
-
-
-phyloseq_bar%>%
-  physeq_glom_rename(taxrank = tax_level, 
+ps_strain_filt%>%
+  physeq_glom_rename(taxrank = "Family", 
                      speedyseq = T)%>%
    microbiome::transform("clr") %>% 
-   psmelt()->df_abund 
-  
-  
-  
-left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=mean), c("time", "stress_level", "stress", tax_level, "abund")),
-            setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=sd), c("time", "stress_level", "stress",tax_level, "sd")))->means
+  subset_samples(stress %in% "control" | (stress %in% "O2" & incubation %in% "anaerobe") | (stress %in% "H2O2" & stress_level %in% "control"))%>%
+   psmelt()->df_abund
 
-
-means %>%
-  subset(!time %in% c("pre-stress", "feces"))->no
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "control")->ctrl
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "low")->low
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "median")->median
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "high")->high
-
-combined_df <- do.call(rbind, list(no, ctrl, low, median, high))
-
-combined_phylum<-left_join(combined_df, as.data.frame(tax_table(phylo_bar))[, c("Phylum", "Family")])
-
-
-setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Family), FUN=mean), c("Family", "abund"))%>%
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$Family), FUN=mean), c("Family", "abund"))%>%
   subset(abund > 1)->filter
 
-
-combined_phylum%>%
-  subset(stress %in% c("H2O2", "control"))%>%
-  subset(Phylum %in% c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria"))%>%
-  # filter(abund > 0 )%>%
-  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high")))%>%
-  subset(Family %in% c(filter$Family))%>%
-  ggplot(aes(x=time, y=abund))+
-  geom_hline(yintercept=0, linetype=2)+
-  geom_line(aes(colour=.data[[tax_level]], group=.data[[tax_level]]))+
-  geom_ribbon(aes(ymin = abund - sd, ymax = abund + sd, fill=.data[[tax_level]], group=.data[[tax_level]]),
-              alpha = 0.3)+
-  facet_grid(cols=vars(stress_level), rows = vars(Phylum))+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_text(size=15),
-        axis.text.y=element_text(size=15),
-        strip.text.y = element_text(),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  ylab("Clr-abundance")
-
-ggsave(filename = paste( "Phylum_level_H2O2.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
-       width = 20,
-       height = 20,
-       units = c("cm"))
 ```
 
+##line plots 
+##h2o2
 ```{r}
 tax_level ="Family"
 
 
-phyloseq_bar%>%
+ps_strain_filt %>%
+  subset_samples(!donor_name %in% "D1")%>%
   physeq_glom_rename(taxrank = tax_level, 
                      speedyseq = T)%>%
    microbiome::transform("clr") %>% 
@@ -679,8 +617,16 @@ phyloseq_bar%>%
   
   
   
-left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=mean), c("time", "stress_level", "stress", tax_level, "abund")),
-            setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=sd), c("time", "stress_level", "stress",tax_level, "sd")))->means
+calculate_q1 <- function(x) {
+  return(quantile(x, 0.25))
+}
+calculate_q3 <- function(x) {
+  return(quantile(x, 0.75))
+}
+
+left_join(left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q1), c("time", "stress_level", "stress",tax_level,"incubation", "q3" )), 
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q3), c("time", "stress_level", "stress",tax_level,"incubation", "q1" ))),
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=median), c("time", "stress_level", "stress", tax_level,"incubation", "abund")))->means
 
 
 # add the pre-stress cond for all 
@@ -728,55 +674,66 @@ combined_df %>%
 combined_df_control <- do.call(rbind, list(no, low, median, high))
 
 
-combined_phylum<-left_join(combined_df_control, as.data.frame(tax_table(phylo_bar))[, c("Phylum", "Family")])
+combined_phylum<-left_join(combined_df_control, as.data.frame(tax_table(ps_strain_filt))[, c("Phylum", "Family")])
+
+# 
+# setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Family), FUN=mean), c("Family", "abund"))%>%
+#   subset(abund > 1)->filter
 
 
-setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Family), FUN=mean), c("Family", "abund"))%>%
-  subset(abund > 1)->filter
-
+# setNames(aggregate(df_abund$Abundance, by=list(df_abund$Family), FUN=mean), c("Family", "abund"))%>%
+#   subset(abund > 0)->filter
 
 combined_phylum%>%
   subset(stress %in% c("H2O2", "control"))%>%
   subset(Phylum %in% c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria"))%>%
   # filter(abund > 0 )%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
   mutate(stress_level = factor(stress_level, levels=c( "low", "median", "high")))%>%
   subset(Family %in% c(filter$Family))%>%
   ggplot(aes(x=time, y=abund))+
-  geom_hline(yintercept=0, linetype=2)+
-  geom_line(aes(colour=incubation, group=incubation))+
-  geom_ribbon(aes(ymin = abund - sd, ymax = abund + sd, fill=incubation, group=incubation),
+  # geom_hline(yintercept=0, linetype=2)+
+  geom_line(aes(colour=incubation, group=incubation), size=2)+
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill=incubation, group=incubation),
               alpha = 0.3)+
   facet_grid(cols=vars(stress_level), rows = vars(Family), scale="free")+
-  theme(text = element_text(size=15), 
+  theme(text = element_text(size=20), 
         axis.title.x = element_blank(),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_text(size=15),
-        axis.text.y=element_text(size=15),
-        strip.text.y = element_text(angle=0),
+        axis.text.x = element_text(size=20, angle = 90, vjust= 0, hjust=0),
+        axis.title.y= element_text(size=20),
+        axis.text.y=element_text(size=20),
+        strip.text.y = element_text(angle=0, hjust=0,  vjust=1, face="italic" ),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size= 20),
         plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
+        strip.text = element_text(size=20), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
-  ylab("Clr-abundance")
+  scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
+  scale_colour_manual(values=c("lightpink3","skyblue3"), labels=c("Stress", "Control"), name="Condition")+
+  ylab("Clr-abundance")+
+   scale_x_discrete(labels=c("Pre", "Stress", "Post 1", "Post 2"))+
+  ggtitle("Clr-abundance of most abundant Families")
 
 ggsave(filename = paste( "Family_level_H2O2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
-       width = 20,
-       height = 25,
+       width = 26,
+       height = 20,
        units = c("cm"))
+
+46/25*26
+
 ```
 
-# O2
-
+# O2: family
 ```{r}
 tax_level ="Family"
 
 
-phyloseq_bar%>%
+ps_strain_filt%>%
+   subset_samples(!donor_name %in% c("D1"))%>%
   physeq_glom_rename(taxrank = tax_level, 
                      speedyseq = T)%>%
    microbiome::transform("clr") %>% 
@@ -784,8 +741,20 @@ phyloseq_bar%>%
   
   
   
-left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=mean), c("time", "stress_level", "stress", tax_level,"incubation", "abund")),
-            setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=sd), c("time", "stress_level", "stress",tax_level,"incubation", "sd")))->means
+# left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=mean), c("time", "stress_level", "stress", tax_level,"incubation", "abund")),
+#             setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=sd), c("time", "stress_level", "stress",tax_level,"incubation", "sd")))->means
+
+
+calculate_q1 <- function(x) {
+  return(quantile(x, 0.25))
+}
+calculate_q3 <- function(x) {
+  return(quantile(x, 0.75))
+}
+
+left_join(left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q1), c("time", "stress_level", "stress",tax_level,"incubation", "q3" )), 
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q3), c("time", "stress_level", "stress",tax_level,"incubation", "q1" ))),
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=median), c("time", "stress_level", "stress", tax_level,"incubation", "abund")))->means
 
 
 means %>%
@@ -829,23 +798,24 @@ means %>%
 
 combined_df <- do.call(rbind, list(no, ctrl, low, median, high, max, ctrl_a, low_a, median_a, high_a, max_a))
 
-combined_phylum<-left_join(combined_df, as.data.frame(tax_table(phylo_bar))[, c("Phylum", "Family")])
+combined_phylum<-left_join(combined_df, as.data.frame(tax_table(ps_strain_filt))[, c("Phylum", "Family")])
 
 
-setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Family), FUN=mean), c("Family", "abund"))%>%
-  subset(abund > 1)->filter
+# setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Family), FUN=mean), c("Family", "abund"))%>%
+#   subset(abund > 1)->filter
 
 
 combined_phylum%>%
   subset(stress %in% c("O2", "control"))%>%
   subset(Phylum %in% c("Actinobacteriota", "Bacteroidota", "Firmicutes", "Proteobacteria"))%>%
-  # filter(abund > 0 )%>%
+ # filter(abund > 0 )%>%
   mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
   subset(Family %in% c(filter$Family))%>%
   ggplot(aes(x=time, y=abund))+
-  geom_hline(yintercept=0)+
+  # geom_hline(yintercept=0)+
   geom_line(aes(colour=incubation, group=incubation))+
-  geom_ribbon(aes(ymin = abund - sd, ymax = abund + sd, fill=incubation, group=incubation),
+  geom_ribbon(aes(ymin =q3, ymax = q1, fill=incubation, group=incubation),
               alpha = 0.3)+
   facet_grid(cols=vars(stress_level), rows = vars(Family), scale="free")+
   theme(text = element_text(size=15), 
@@ -853,7 +823,7 @@ combined_phylum%>%
         axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_text(size=15),
         axis.text.y=element_text(size=15),
-        strip.text.y = element_text(angle=0),
+        strip.text.y = element_text(angle=0, face="italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
         legend.text = element_text(size = 15),
@@ -862,250 +832,340 @@ combined_phylum%>%
         strip.text = element_text(size=15), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
+  scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
+  scale_colour_manual(values=c("lightpink3","skyblue3"), labels=c("Stress", "Control"))+
   ylab("Clr-abundance")
+
 
 
 ggsave(filename = paste( "Family_level_O2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
-       width = 20,
-       height = 25,
-       units = c("cm"))
-```
-#on Genus level: pure culture data
-
-```{r}
-tax_level ="Genus"
-
-
-phyloseq_bar%>%
-  physeq_glom_rename(taxrank = tax_level, 
-                     speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
-   psmelt()->df_abund 
-  
-  
-  
-left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=mean), c("time", "stress_level", "stress", tax_level, "abund")),
-            setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=sd), c("time", "stress_level", "stress",tax_level, "sd")))->means
-
-
-# add the pre-stress cond for all 
-#####
-means %>%
-  subset(!time %in% c("pre-stress", "feces"))->no
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "control")->ctrl
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "low")->low
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "median")->median
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "high")->high
-
-combined_df <- do.call(rbind, list(no, ctrl, low, median, high))
-######
-
-# add control for all stress level
-###
-
-combined_df%>%
-  subset(!stress_level %in% c("control"))%>%
-   mutate(incubation = "stress")->no
-
-combined_df %>%
-  subset(stress_level %in% "control")%>%
-  mutate(stress_level = "low", incubation = "control")->low
-
-combined_df %>%
-  subset(stress_level %in% "control")%>%
-  mutate(stress_level = "median", incubation = "control")->median
-
-combined_df %>%
-  subset(stress_level %in% "control")%>%
-  mutate(stress_level = "high", incubation = "control")->high
-
-combined_df_control <- do.call(rbind, list(no, low, median, high))
-
-
-combined_phylum<-left_join(combined_df_control, as.data.frame(tax_table(phylo_bar))[, c("Genus", "Family")])
-
-# 
-setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Genus), FUN=mean), c("Genus", "abund"))%>%
-  subset(abund > 0)->filter_2
-
-
-filter<-c("Anaerostipes", "Anaerotignum", "Bacteroides", "Bifidobacterium", "Blautia", "Clostridium", "Collinsella", "Enterococcus", "Escherichia-Shigella", "Lachnospira", "Eubacterium", "Faecalibacterium", "Lactiplantibacillus", "Parabacteroides", "Phascolarctobacterium", "Phocaeicola", "Prevotella", "Roseburia", "Ruminococcus", "Agathobacter", "Fusicatenibacter")
-
-
-combined_phylum%>%
-  subset(stress %in% c("H2O2", "control"))%>%
-  # filter(abund > 0 )%>%
-  mutate(stress_level = factor(stress_level, levels=c( "low", "median", "high")))%>%
-  subset(Genus %in% filter)%>%
-  # subset(Genus %in% filter_2)%>%
-  ggplot(aes(x=time, y=abund))+
-  geom_hline(yintercept=0, linetype=2)+
-  geom_line(aes(colour=incubation, group=incubation))+
-  geom_ribbon(aes(ymin = abund - sd, ymax = abund + sd, fill=incubation, group=incubation),
-              alpha = 0.3)+
-  facet_grid(cols=vars(stress_level), rows = vars(Genus), scale="free")+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_text(size=15),
-        axis.text.y=element_text(size=15),
-        strip.text.y = element_text(angle=0),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  ylab("Clr-abundance")
-
-ggsave(filename = paste( "pure_culture_H2O2.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
-       width = 20,
+       width = 26,
        height = 25,
        units = c("cm"))
 ```
 
-#on Genus level: pure culture data - H2O2
+```{r}
+combined_phylum%>%
+  subset(stress %in% c("O2", "control"))%>%
+ mutate(stress_level = ifelse(stress_level == "control", "minimal", stress_level))%>%
+   # subset(Family %in% c( "Lachnospiraceae"))%>%
+  subset(Family %in% c( "Bacteroidaceae", "Lachnospiraceae", "Enterobacteriaceae"))%>%
+  # subset(stress_level %in% "max")%>%
+  mutate(stress_level = factor(stress_level, levels=c("minimal", "low", "median", "high", "max")))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+ # filter(abund > 0 )%>%
+  mutate(Family  = fct_reorder(Family, abund, .desc = T))%>%
+  subset(Family %in% c(filter$Family))%>%
+  ggplot(aes(x=time, y=abund))+
+  # geom_hline(yintercept=0)+
+  geom_line(aes(colour=incubation, group=incubation), size=2)+
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill=incubation, group=incubation),
+              alpha = 0.3)+
+  facet_grid( cols = vars(stress_level), rows=vars(Family), scale="free")+
+  theme(text = element_text(size=20), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
+        axis.title.y= element_text(size=20),
+        axis.text.y=element_text(size=20),
+        strip.text.x = element_text(size=20),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20, hjust=0.25),
+        strip.text.y = element_text(size=20, face="italic", hjust=0, angle=0, vjust=1), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ylab("Clr-abundance")+
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
+  scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
+  scale_colour_manual(values=c("lightpink3","skyblue3"), labels=c("Stress", "Control"))+
+  scale_x_discrete(labels=c('pre-stress' = "Pre", 'stress' = "Stress", 'post_stress_1' = "Post 1", 'post_stress_2' = "Post 2" ))+
+  scale_y_continuous(breaks = c(3,3.5, 4,4.5, 5, 5.5))+
+labs(colour="Condition")+
+  ggtitle("Clr-abundances of most abundant Families ")
+
+
+ggsave(filename = paste( "Family_level_O2_max.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 28,
+       height = 13,
+       units = c("cm"))
+
+
+
+```
 
 ```{r}
-tax_level ="Species"
-
-
-phyloseq_bar%>%
-  physeq_glom_rename(taxrank = tax_level, 
-                     speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
-   psmelt()->df_abund 
-  
-  
-  
-left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=mean), c("time", "stress_level", "stress", tax_level, "abund")),
-            setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]]), FUN=sd), c("time", "stress_level", "stress",tax_level, "sd")))->means
-
-
-# add the pre-stress cond for all 
-#####
-means %>%
-  subset(!time %in% c("pre-stress", "feces"))->no
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "control")->ctrl
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "low")->low
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "median")->median
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "high")->high
-
-combined_df <- do.call(rbind, list(no, ctrl, low, median, high))
-######
-
-# add control for all stress level
-###
-
-combined_df%>%
-  subset(!stress_level %in% c("control"))%>%
-   mutate(incubation = "stress")->no
-
-combined_df %>%
-  subset(stress_level %in% "control")%>%
-  mutate(stress_level = "low", incubation = "control")->low
-
-combined_df %>%
-  subset(stress_level %in% "control")%>%
-  mutate(stress_level = "median", incubation = "control")->median
-
-combined_df %>%
-  subset(stress_level %in% "control")%>%
-  mutate(stress_level = "high", incubation = "control")->high
-
-combined_df_control <- do.call(rbind, list(no, low, median, high))
-
-
-combined_phylum<-left_join(combined_df_control, as.data.frame(tax_table(phyloseq_rare))[, c("Genus", "Species")])
-
-# 
-setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Species), FUN=mean), c("Species", "abund"))%>%
-  subset(abund > 0)->filter_2
-
-
-filter<-c("Anaerostipes", "Anaerotignum", "Bacteroides", "Bifidobacterium", "Blautia", "Clostridium", "Collinsella", "Enterococcus", "Escherichia-Shigella", "Lachnospira", "Eubacterium", "Faecalibacterium", "Lactiplantibacillus", "Parabacteroides", "Phascolarctobacterium", "Phocaeicola", "Prevotella", "Roseburia", "Ruminococcus", "Agathobacter", "Fusicatenibacter")
-
-
 combined_phylum%>%
-  subset(stress %in% c("H2O2", "control"))%>%
-  # filter(abund > 0 )%>%
-  mutate(stress_level = factor(stress_level, levels=c( "low", "median", "high")))%>%
-  subset(Species %in% filter_2$Species)%>%
-  subset(Genus %in% filter)%>%
-  
+  subset(stress %in% c("O2", "control"))%>%
+   # subset(Family %in% c( "Lachnospiraceae"))%>%
+  subset(Family %in% c(  "Enterobacteriaceae"))%>%
+  # subset(stress_level %in% "max")%>%
+   mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+ # filter(abund > 0 )%>%
+  mutate(Family  = fct_reorder(Family, abund, .desc = T))%>%
+  subset(Family %in% c(filter$Family))%>%
   ggplot(aes(x=time, y=abund))+
-  geom_hline(yintercept=0, linetype=2)+
-  geom_line(aes(colour=incubation, group=incubation))+
-  geom_ribbon(aes(ymin = abund - sd, ymax = abund + sd, fill=incubation, group=incubation),
+  # geom_hline(yintercept=0)+
+  geom_line(aes(colour=incubation, group=incubation), size=2)+
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill=incubation, group=incubation),
               alpha = 0.3)+
-  facet_grid(cols=vars(stress_level), rows = vars(Species), scale="free")+
-  theme(text = element_text(size=15), 
+  facet_grid( cols = vars(stress_level), scale="free")+
+  theme(text = element_text(size=20), 
         axis.title.x = element_blank(),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_text(size=15),
-        axis.text.y=element_text(size=15),
+        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
+        axis.title.y= element_text(size=20),
+        axis.text.y=element_text(size=20),
         strip.text.y = element_text(angle=0),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size= 20),
         plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
+        strip.text = element_text(size=20, face="italic"), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
-  ylab("Clr-abundance")
+  ylab("Clr-abundance")+
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
+  scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
+  scale_colour_manual(values=c("lightpink3","skyblue3"), labels=c("Stress", "Control"))+
+  scale_x_discrete(labels=c('pre-stress' = "Pre", 'stress' = "Stress", 'post_stress_1' = "Post 1", 'post_stress_2' = "Post 2" ))+
+labs(colour="Condition")+
+  ggtitle("Enterobacteriaceae clr-abundances")
 
-ggsave(filename = paste( "bacteroides_H2O2.jpeg"),
+
+ggsave(filename = paste( "Entero_O2_max.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
-       width = 20,
-       height = 80,
+       width = 25,
+       height = 10,
        units = c("cm"))
 ```
 
 
-#on Genus level: pure culture data
-
+###On Genus level: pure culture data: H2O2
 ```{r}
 tax_level ="Genus"
 
 
-phyloseq_bar%>%
-  # subset_samples(!donor_name %in% c("D3", "D5"))%>%
+ps_strain_filt%>%
+  subset_samples(!donor_name %in% "D1")%>%
   physeq_glom_rename(taxrank = tax_level, 
                      speedyseq = T)%>%
    microbiome::transform("clr") %>% 
    psmelt()->df_abund 
   
  
+calculate_q1 <- function(x) {
+  return(quantile(x, 0.25))
+}
+calculate_q3 <- function(x) {
+  return(quantile(x, 0.75))
+}
+
+left_join(left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q1), c("time", "stress_level", "stress",tax_level,"incubation", "q3" )), 
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q3), c("time", "stress_level", "stress",tax_level,"incubation", "q1" ))),
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=median), c("time", "stress_level", "stress", tax_level,"incubation", "abund")))->means
+
+
+# add the pre-stress cond for all 
+#####
+means %>%
+  subset(!time %in% c("pre-stress", "feces"))->no
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "control")->ctrl
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "low")->low
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "median")->median
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "high")->high
+combined_df <- do.call(rbind, list(no, ctrl, low, median, high))
+######
+
+# add control for all stress level
+###
+
+combined_df%>%
+  subset(!stress_level %in% c("control"))%>%
+   mutate(incubation = "stress")->no
+combined_df %>%
+  subset(stress_level %in% "control")%>%
+  mutate(stress_level = "low", incubation = "control")->low
+combined_df %>%
+  subset(stress_level %in% "control")%>%
+  mutate(stress_level = "median", incubation = "control")->median
+combined_df %>%
+  subset(stress_level %in% "control")%>%
+  mutate(stress_level = "high", incubation = "control")->high
+combined_df_control <- do.call(rbind, list(no, low, median, high))
+
+# x<-as.data.frame(tax_table(ps_strain_filt))[, c("Genus", "Family")]
+# combined_phylum<-left_join(combined_df_control,x )
+#  
+# setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Genus), FUN=mean), c("Genus", "abund"))%>%
+#   subset(abund > 0)->filter_2
+
+filter_decreased<-c("Bacteroides","Fusicatenibacter","Anaerostipes","Dorea","Blautia","Agathobacter","Faecalibacterium","Lachnoclostridium","Lachnospiraceae UCG-004","Lachnospiraceae Family" , "[Eubacterium] hallii group" ,"Parabacteroides",   "Lachnospiraceae ND3007 group")
+
+length(filter_decreased)
+length(filter_increased)
+
+filter_increased<-c("Escherichia-Shigella","Enterococcus","Bifidobacterium","Enterococcaceae Family","Lactobacillales Order")
+
+combined_df_control%>%
+  subset(stress %in% c("H2O2", "control"))%>%
+  # filter(abund > 0 )%>%
+  mutate(stress_level = factor(stress_level, levels=c( "low", "median", "high")))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+  subset(Genus %in% filter_decreased)->sub
+
+setNames(aggregate(sub$abund, by=list(sub$Genus, sub$stress, sub$time), FUN=mean), c("Genus", "stress", "time","mean_abund"))%>%
+  subset(stress %in% "control" & time %in% "pre-stress")->order
+
+left_join(combined_df_control %>% subset(Genus %in% filter_decreased), order[,c("Genus", "mean_abund")])%>%
+  subset(stress %in% c("H2O2", "control"))%>%
+  # filter(abund > 0 )%>%
+  mutate(stress_level = factor(stress_level, levels=c( "low", "median", "high")))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+  # subset(Genus %in% filter_increased)%>%
+  mutate(Genus = reorder(Genus, abund, decreasing = T))%>%
+  ggplot(aes(x=time, y=abund))+
+  geom_line(aes(colour=incubation, group=incubation))+
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill=incubation, group=incubation),
+              alpha = 0.3)+
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=0.5) +
+   geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
+             color = "grey", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_2')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.5) +
+  facet_grid(cols=vars(stress_level), rows = vars(Genus), scale="free")+
+  theme(text = element_text(size=15),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
+        axis.title.y= element_text(size=15),
+        axis.text.y=element_text(size=15),
+        strip.text.y = element_text(angle=0, hjust=0, face="italic"),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15),
+        plot.title = element_text(size=20, hjust=0.25),
+        strip.text = element_text(size=15),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ylab("Clr-abundance")+
+   scale_fill_manual(values=c( "skyblue3", "lightpink3"), guide="none")+
+  scale_colour_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"), name="Condition")+
+  scale_x_discrete(labels=c('pre-stress' = "Pre", 'stress' = "Stress", 'post_stress_1' = "Post 1", 'post_stress_2' = "Post 2" ))
+
+
+ggsave(filename = paste( "pure_culture_H2O2_decreased.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 24,
+       height = 32,
+       units = c("cm"))
+
+146/25*32
+146/25*24
+
+14*2.26
+```
+
+```{r}
+tax_level ="Genus"
+
+
+ps_strain_filt%>%
+  # subset_samples(!donor_name %in% "D1")%>%
+  physeq_glom_rename(taxrank = tax_level, 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+   psmelt()%>%
+   subset(Genus %in% c("Streptococcus", "Bifidobacterium", "Enterococcus", "Enterococcaceae Family", "Escherichia-Shigella", "Lactobacillales Order"))%>%
+  # subset(Genus %in% "Butyricicoccus")%>%
+  subset(stress_level %in% c("high", "control"))%>%
+  subset(stress %in% c("H2O2", "control") & incubation %in% "anaerobe")->df_abund 
+
+
+
+rbind(df_abund[,c("Abundance", "stress_level", "time", "Genus",  "donor_name")], df_abund[,c("Abundance", "stress_level", "time", "Genus",  "donor_name")]%>%
+   subset(time %in% "pre-stress" )%>%
+  mutate(stress_level="high"))%>%
+  pivot_wider(values_from = Abundance, names_from = stress_level)%>%
+  mutate(diff= high-control)%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+  # subset(Genus %in% "Bifidobacterium")%>%
+  ggplot(aes(x=time, y=diff))+
+  geom_line(aes(colour=donor_name, group=donor_name), size=1, alpha=0.8)+
+  facet_grid(cols=vars(Genus), scales="free", space="free")+
+  theme(text = element_text(size=15),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
+        axis.title.y= element_text(size=15),
+        axis.text.y=element_text(size=12),
+        strip.text.y = element_text(angle=0, hjust=0, face="italic"),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15),
+        plot.title = element_text(size=20, hjust=0.25),
+        strip.text = element_text(size=15),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+   geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=0.5) +
+  scale_x_discrete(labels=c('pre-stress' = "Pre", 'stress' = "Stress", 'post_stress_1' = "Post 1", 'post_stress_2' = "Post 2" ))+
+  labs(colour="Donor")+
+  ylab("Clr-difference (high stress vs. control)")
+
+ggsave(filename = paste( "increase_H2O2_box.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 40,
+       height = 10,
+       units = c("cm"))
   
-left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=mean), c("time", "stress_level", "stress", tax_level,"incubation", "abund")),
-            setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=sd), c("time", "stress_level", "stress",tax_level,"incubation", "sd")))->means
+```
+
+
+#on Genus level: pure culture data - O2
+
+```{r}
+tax_level ="Genus"
+
+
+ps_strain_filt%>%
+   subset_samples(!donor_name %in% c("D1"))%>%
+  physeq_glom_rename(taxrank = tax_level, 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+   psmelt()->df_abund 
+  
+  
+  
+# left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=mean), c("time", "stress_level", "stress", tax_level,"incubation", "abund")),
+#             setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=sd), c("time", "stress_level", "stress",tax_level,"incubation", "sd")))->means
+
+
+calculate_q1 <- function(x) {
+  return(quantile(x, 0.25))
+}
+calculate_q3 <- function(x) {
+  return(quantile(x, 0.75))
+}
+
+left_join(left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q1), c("time", "stress_level", "stress",tax_level,"incubation", "q3" )), 
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q3), c("time", "stress_level", "stress",tax_level,"incubation", "q1" ))),
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=median), c("time", "stress_level", "stress", tax_level,"incubation", "abund")))->means
 
 
 means %>%
@@ -1149,50 +1209,62 @@ means %>%
 
 combined_df <- do.call(rbind, list(no, ctrl, low, median, high, max, ctrl_a, low_a, median_a, high_a, max_a))
 
-
-combined_phylum<-left_join(combined_df, as.data.frame(tax_table(phyloseq_rare))[, c("Genus", "Family")])
-
-# 
-setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Genus), FUN=mean), c("Genus", "abund"))%>%
-  subset(abund > 0)->filter_2
+# combined_phylum<-left_join(combined_df, as.data.frame(tax_table(ps_strain_filt))[, c("Phylum", "Family")])
 
 
-filter<-c("Anaerostipes", "Anaerotignum", "Bacteroides", "Bifidobacterium", "Blautia", "Clostridium", "Collinsella", "Enterococcus", "Escherichia-Shigella", "Lachnospira", "Eubacterium", "Faecalibacterium", "Lactiplantibacillus", "Parabacteroides", "Phascolarctobacterium", "Phocaeicola", "Prevotella", "Roseburia", "Ruminococcus", "Agathobacter", "Fusicatenibacter")
+# setNames(aggregate(combined_phylum$abund, by=list(combined_phylum$Family), FUN=mean), c("Family", "abund"))%>%
+#   subset(abund > 1)->filter
+filter <- c("Escherichia-Shigella","Anaerostipes","Blautia","Lachnospira" , "Lachnospiraceae UCG-004", "Butyricicoccus", "Bacteroides")
 
 
-combined_phylum%>%
+filter_2<- c("Faecalibacterium", "Roseburia", "Eubacterium", "Anaerostipes", "Bifidobacterium", "Parabacteroides", "Agathobacter", "Fusicatenibacter", "Anaerogotignum", "Clostridium", "Colinsella", "Enterococcus", "Lactiplantibacillus", "Phascolarctobacterium", "Prevotella", "Ruminococcus")
+
+combined_df%>%
   subset(stress %in% c("O2", "control"))%>%
-  # filter(abund > 0 )%>%
-  mutate(stress_level = factor(stress_level, levels=c( "control", "low", "median", "high", "max")))%>%
-  subset(Genus %in% filter_2$Genus)%>%
-  subset(Genus %in% filter)%>%
-  
+  subset(Genus %in% c(filter_2))%>%
+ # filter(abund > 0 )%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+   mutate(Genus = reorder(Genus, abund, decreasing = T))%>%
   ggplot(aes(x=time, y=abund))+
-  geom_hline(yintercept=0, linetype=2)+
+  # geom_hline(yintercept=0)+
   geom_line(aes(colour=incubation, group=incubation))+
-  geom_ribbon(aes(ymin = abund - sd, ymax = abund + sd, fill=incubation, group=incubation),
+  geom_ribbon(aes(ymin =q3, ymax = q1, fill=incubation, group=incubation),
               alpha = 0.3)+
   facet_grid(cols=vars(stress_level), rows = vars(Genus), scale="free")+
   theme(text = element_text(size=15), 
         axis.title.x = element_blank(),
         axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_text(size=15),
-        axis.text.y=element_text(size=15),
-        strip.text.y = element_text(angle=0),
+        axis.text.y=element_text(size=12),
+        strip.text.y = element_text(angle=0, face="italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
         legend.text = element_text(size = 15),
         legend.title = element_text(size= 15),
         plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
+        strip.text = element_text(size=15, hjust=0), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
-  ylab("Clr-abundance")
+  scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
+  scale_colour_manual(values=c("lightpink3","skyblue3"), labels=c("Stress", "Control"))+
+  ylab("Clr-abundance") +
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
+             color = "grey", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_2')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.5) +
+  scale_x_discrete(labels=c('pre-stress' = "Pre", 'stress' = "Stress", 'post_stress_1' = "Post 1", 'post_stress_2' = "Post 2" ))+
+  labs(colour="Condition")+
+  ylab("Clr-difference")
 
-ggsave(filename = paste( "bacteroides_O2.jpeg"),
+ggsave(filename = paste( "increase_O2_box.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
-       width = 20,
-       height = 30,
+       width = 30,
+       height = 17,
        units = c("cm"))
 ```
 
