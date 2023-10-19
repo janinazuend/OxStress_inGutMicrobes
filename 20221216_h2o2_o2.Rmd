@@ -328,13 +328,13 @@ for (i in 1:length(stress_cond)){
 
   if (stress_cond[i] == "O2") {
     breaks_cond <-c(2, 5, 9 , 12) 
-    labels_cond <- c("1.28" ,"0.78",  "0.41", "0")
+    labels_cond <- c("1.08" ,"0.67",  "0.35", "<tested")
      y_axis <-c("Post - Agar[???]")
     x_axis <-c("Stress - Agar[???]")
     filter=5
   } else if (stress_cond[i] == "H2O2") {
     breaks_cond <- c(7,8,9,10,11)
-    labels_cond <- c( 21, 69,222, 710, 2300)
+    labels_cond <- c( 69, 22,710, 2300, 7300)
    y_axis <-expression(Post~-H[2]*O[2]*~"["*mu*"M]")
     x_axis <-expression(Stress~-H[2]*O[2]*~"["*mu*"M]")
     filter=0
@@ -350,7 +350,7 @@ left_join(mean, sd)%>%
 
 sub%>%
   ggplot(aes(x=value_MIC, y=value_MBC))+
-  stat_ellipse(aes(fill=Family), geom="polygon", alpha=0.2, show.legend = F)+
+  stat_ellipse(aes(fill=Family), geom="polygon", alpha=0.2)+
     geom_jitter(aes(colour=Genus), width=0.05, height = 0.05, size=3, alpha=0.8)+
    theme(text = element_text(size=15), 
         axis.title.x = element_text(size=20),
@@ -370,7 +370,7 @@ sub%>%
    scale_x_continuous(labels=labels_cond , breaks= breaks_cond)+
   scale_y_continuous(labels=labels_cond , breaks= breaks_cond)+
     ylab(y_axis)+
-  geom_text_repel(data = subset(sub, diff > filter), aes(label=bacteria, colour=Genus), max.overlaps = Inf , fontface="italic",                                      segment.ncp = 2)+
+  # geom_text_repel(data = subset(sub, diff > filter), aes(label=bacteria, colour=Genus), max.overlaps = Inf , fontface="italic",                                      segment.ncp = 2)+
   ggtitle("Stress vs. Post growth")->p
 
 
@@ -385,11 +385,8 @@ ggsave(filename = paste0(stress_cond[i], "mic_mbc.jpeg"),
        height = 14,
        units = c("cm"))}
 
-
 234.2/40*14
 234.2/40*20
-
-
 ```
 
 

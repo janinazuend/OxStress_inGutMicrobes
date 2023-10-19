@@ -68,10 +68,9 @@ names(coverage)[2]<-"bacteria"
 ```{r}
 coverage<-coverage[,-1]
 
-coverage%>%
-  group_by(bacteria)%>%
-  summarize_all(mean)%>%
-  as.data.frame()->coverage_mean
+
+
+
 rownames(coverage_mean)<-coverage_mean[,1]
 coverage_mean<-coverage_mean[,-1]
 

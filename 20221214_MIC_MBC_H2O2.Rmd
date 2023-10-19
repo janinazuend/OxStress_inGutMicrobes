@@ -575,6 +575,66 @@ ggsave(filename = "legend.jpeg",
 
 ```
 
+
+
+```{r}
+taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
+tax<-left_join(hoi, taxonomy)
+
+
+tax %>%
+  subset(condition %in% c(9,10,11))%>%
+  subset(assay %in% c("MIC"))%>%
+    mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens"))->sub
+
+sub$OD<-sub$OD*100
+
+sub%>%
+  mutate(bacteria = fct_reorder(bacteria, sub$order))%>%
+  ggplot(aes(x = condition, y = bacteria, fill = OD)) + 
+  geom_raster() +
+  labs(x=expression(paste(H[2]*O[2])))+
+  theme(text = element_text(size=15), 
+        axis.title.x = element_text(size=20, vjust=-0.8),
+        axis.text.x = element_blank(),
+        axis.title.y= element_blank(),
+        axis.text.y=element_text(size=15, face="italic"),
+        strip.text.y = element_text(angle=0, size=15, hjust = 0, face="italic"),
+        strip.background = element_blank(),
+        axis.ticks = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15),
+        plot.title = element_text(size=20, hjust=0.25),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  facet_grid(rows =vars(Family),  cols=vars(condition), scales = "free", space="free")+
+ 
+  labs(fill = expression(relative~OD[600]~'[%]'))+
+  ggtitle(expression(Growth~capability~upon~H[2]*O[2]-spike))+
+  scale_fill_steps(breaks = c(10,50,75))+
+  scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)->p
+
+show(p+ theme(legend.position = "none"))
+
+ggsave(filename = "MIC_MBC_h2o2_growth_only.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 25,
+       height = 20,
+       units = c("cm"))
+
+
+show(p)
+
+ggsave(filename = "legend.jpeg", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width = 14,
+       height = 30,
+       units = c("cm"))
+
+
+```
+
+
 ```{r}
 h2o2<-setNames(aggregate(hoi$value, by=list(hoi$bacteria, hoi$assay, hoi$replicate), FUN=mean), c("bacteria", "assay", "replicate", "value_H2O2"))
 write.xlsx(h2o2, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_H2O2.xlsx")
