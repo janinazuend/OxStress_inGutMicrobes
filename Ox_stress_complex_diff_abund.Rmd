@@ -180,9 +180,9 @@ time_cond<-c("stress", "post_stress_1", "post_stress_2")
 all_oxygen_genus <-data.frame(matrix(ncol=15, nrow=0))
 
 for (i in (1:length(stress_level_cond))){
-  ox_sub <-oxygen[ , oxygen$stress_level %in% c(stress_level_cond[i]) ]
+  # ox_sub <-oxygen[ , oxygen$stress_level %in% c(stress_level_cond[i]) ]
   
-  # ox_sub <-oxygen[ , oxygen$stress_level %in% c(stress_level_cond[i]) & oxygen$donor_name %in% c("D1")]
+   ox_sub <-oxygen[ , oxygen$stress_level %in% c(stress_level_cond[i]) & !oxygen$donor_name %in% c("D1", "D5")]
   
   
     for (j in (1:length(time_cond))){
@@ -211,17 +211,18 @@ for (i in (1:length(stress_level_cond))){
       all_oxygen_genus <- rbind(all_oxygen_genus, result)
       }}
 all_oxygen_genus %>%
-  subset(V15 %in% "stress")%>%
-  filter((diff.btw > 1 | diff.btw < -1) & (effect >0.3| effect < -0.3)) ->out
+  subset(V15 %in% "stress")->out
 
 unique(out$Family)
 
-out[,c(1,3,6,8,10, 14,15)]
+out[,c(1,3,6,8,10, 14,15,16)]%>%
+  subset(wi.ep < 0.05)
 ```
 
 
 ###Aldex: H2O2
 ###genus level
+#atm i take wi.ep => but I should correct for multiple testing in this case => think about how to do it => no idea what wi.eBH is exactly
 ```{r}
 set.seed(123)
 h2o2 <-ox_gen[ , ox_gen$stress %in% c("H2O2")]
@@ -290,7 +291,12 @@ print(uni)
 
 all_h2o2_genus %>%
 # out%>%
-  subset(diff.btw >5 & V15 %in% "stress")
+  subset(wi.ep <0.05 & V15 %in% "stress")-> sig_taxa
+
+all_h2o2_genus[, c("wi.ep", "wi.eBH", "diff.btw" ,"V14", "V15", "Family")] %>%
+  # subset(Family %in% "Lactobacillales Order")%>%
+  subset(wi.ep <0.05)%>%
+  filter(diff.btw > 0)
 
 
 ```

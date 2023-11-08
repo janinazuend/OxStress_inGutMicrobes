@@ -451,76 +451,32 @@ MBC_MIC_rel_long$label_75<-as.numeric(MBC_MIC_rel_long$label_75)
 MBC_MIC_rel_long_label<-gather(MBC_MIC_rel_long, label_type, label_value, "label":"label_75")
 ```
 
-
 ```{r}
 
-MBC_MIC_rel_long_label$label_value<-MBC_MIC_rel_long_label$label_value+1
-
 MBC_MIC_rel_long_label%>%
-  subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
-  drop_na(OD)->hoi
+ mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens" ,
+                             "Phocaeicola vulgatus" = "Bacteroides vulgatus"))->MBC_MIC_rel_long_label
+  
+  
+taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
 
 
-MBC_MIC_rel_long_label%>%
-  subset(bacteria %in% "Bacteroides xylanisolvens" & condition %in% 10)
-
-hoi%>%
-  mutate(bacteria = fct_reorder(bacteria, hoi$order))%>%
-  ggplot(aes(x = condition, y = assay, fill = OD)) + 
-  geom_raster() +
-  scale_shape_manual(values = c(16, 1), labels=c("10%", "50%"))+
-scale_color_manual(values=c("coral2", "darkseagreen"))+
-  labs(x=expression(paste("Oxygenation")))+
-  theme(text = element_text(size=15), 
-        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_blank(),
-        axis.text.y=element_text(size=10),
-        strip.text.y = element_text(angle = 0, face = "italic", hjust=0),
-        strip.background = element_blank())+
-  facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
-  geom_point(aes(x=label_value, color=assay, shape=label_type),  size=2.5, alpha=0.75, position=position_jitterdodge(jitter.width = 0.3, jitter.height = 0.1))+
-  scale_x_continuous(labels=c("0 nM", 
-                              "6.4 nM",  
-                              "21 nM", 
-                              "66 nM", 
-                              expression("2.2"~mu*M), 
-                              expression("6.8"~mu*M),  
-                              expression("21"~mu*M),
-                              expression("69"~mu*M),
-                              expression("222"~mu*M),
-                              expression("710"~mu*M),  
-                              "2.3 mM", "7.3 mM" , ">tested"), 
-                     breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12, 13))+
-  labs(fill = expression(relative~OD[600]), colour="", shape="Cut off value for growth")+
-  ggtitle(expression(MIC~and~MBC~of~H[2]*O[2]))
+tax<-left_join(MBC_MIC_rel_long_label, taxonomy)
 
 
-
-ggsave(filename = "MIC_MBC_h2o2_groeth.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-       width = 20,
-       height = 30,
-       units = c("cm"))
 
 ```
 
 ```{r}
-hoi$assay<-factor(hoi$assay, levels=c("MIC", "MBC"))
 
-hoi <- hoi %>%
+tax%>%
+  subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
+  drop_na(OD)%>%
+  mutate(assay = factor(assay, levels=c("MIC", "MBC")))%>%
   subset(!condition %in% 13)%>%
-    mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens"))
-
-
-
-
-hoi%>%
-  subset(assay %in% c("MIC", "MBC"))->sub
-
-sub$OD<-sub$OD*100
-
-sub%>%
-  mutate(bacteria = fct_reorder(bacteria, sub$order))%>%
+  mutate(OD = OD * 100)%>%
+  mutate(bacteria = fct_reorder(bacteria, order))%>%
+  mutate(Genus = fct_reorder(Genus, order))%>%
   ggplot(aes(x = condition, y = assay, fill = OD)) + 
   geom_raster() +
   labs(x=expression(paste(H[2]*O[2])))+
@@ -535,9 +491,10 @@ sub%>%
         legend.text = element_text(size = 15),
         legend.title = element_text(size= 15),
         plot.title = element_text(size=20, hjust=0.25),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
+        panel.background = element_rect(fill="transparent", colour=NA),
+        panel.border=element_rect(fill=NA),
+         plot.background = element_rect(fill='transparent', color=NA))+
+  facet_grid(rows =vars(Genus, bacteria), scales = "free", space = "free")+
   scale_x_continuous(labels=c("0 nM", 
                               "6.4 nM",  
                               "21 nM", 
@@ -555,13 +512,14 @@ sub%>%
   scale_fill_steps(breaks = c(10,50,75))+
   scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)->p
 
-show(p+ theme(legend.position = "none"))
+show(p + theme(legend.position = "none"))
 
-ggsave(filename = "MIC_MBC_h2o2_growth_only.jpeg", 
+ggsave(filename = "MIC_MBC_h2o2_growth_only.png", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 17,
+       width =25,
        height = 40,
-       units = c("cm"))
+       units = c("cm"), 
+       bg="transparent")
 
 
 show(p)
@@ -576,63 +534,74 @@ ggsave(filename = "legend.jpeg",
 ```
 
 
-
 ```{r}
-taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
-tax<-left_join(hoi, taxonomy)
 
+tax%>%
+  subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
+  drop_na(OD)%>%
+  mutate(assay = factor(assay, levels=c("MIC", "MBC")))%>%
+  subset(!condition %in% 13)%>%
+  mutate(OD = OD * 100)-> sub
 
-tax %>%
-  subset(condition %in% c(9,10,11))%>%
-  subset(assay %in% c("MIC"))%>%
-    mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens"))->sub
-
-sub$OD<-sub$OD*100
-
-sub%>%
-  mutate(bacteria = fct_reorder(bacteria, sub$order))%>%
-  ggplot(aes(x = condition, y = bacteria, fill = OD)) + 
+  setNames(aggregate(sub$OD, by=list(sub$assay, sub$condition), FUN=mean), c("assay", "condition", "OD"))->sub
+  
+  
+  
+ sub%>%           
+  ggplot(aes(x = condition, y = assay, fill = OD)) + 
   geom_raster() +
   labs(x=expression(paste(H[2]*O[2])))+
   theme(text = element_text(size=15), 
         axis.title.x = element_text(size=20, vjust=-0.8),
-        axis.text.x = element_blank(),
+        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_blank(),
-        axis.text.y=element_text(size=15, face="italic"),
+        axis.text.y=element_text(size=15),
         strip.text.y = element_text(angle=0, size=15, hjust = 0, face="italic"),
         strip.background = element_blank(),
-        axis.ticks = element_blank(),
+        axis.ticks.y = element_blank(),
         legend.text = element_text(size = 15),
         legend.title = element_text(size= 15),
         plot.title = element_text(size=20, hjust=0.25),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  facet_grid(rows =vars(Family),  cols=vars(condition), scales = "free", space="free")+
- 
+        panel.background = element_rect(fill="transparent", colour=NA),
+        panel.border=element_rect(fill=NA),
+         plot.background = element_rect(fill='transparent', color=NA))+
+  scale_x_continuous(labels=c("0 nM", 
+                              "6.4 nM",  
+                              "21 nM", 
+                              "66 nM", 
+                              expression("2.2"~mu*M), 
+                              expression("6.8"~mu*M),  
+                              expression("21"~mu*M),
+                              expression("69"~mu*M),
+                              expression("222"~mu*M),
+                              expression("710"~mu*M),  
+                              "2.3 mM", "7.3 mM" ), 
+                     breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
   labs(fill = expression(relative~OD[600]~'[%]'))+
-  ggtitle(expression(Growth~capability~upon~H[2]*O[2]-spike))+
   scale_fill_steps(breaks = c(10,50,75))+
   scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)->p
 
-show(p+ theme(legend.position = "none"))
+show(p + theme(legend.position = "none"))
 
-ggsave(filename = "MIC_MBC_h2o2_growth_only.jpeg", 
+ggsave(filename = "MIC_MBC_h2o2_growth_only.png", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 25,
-       height = 20,
-       units = c("cm"))
+       width =10,
+       height = 5,
+       units = c("cm"), 
+       bg="transparent")
 
 
 show(p)
 
 ggsave(filename = "legend.jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 14,
-       height = 30,
+       width = 10,
+       height = 5,
        units = c("cm"))
 
 
 ```
+
 
 
 ```{r}

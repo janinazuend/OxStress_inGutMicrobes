@@ -14,21 +14,22 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 # install.packages("ggbreak")
 # 
 # library(ggpmisc)
-# library(tidyverse)
+ library(tidyverse)
 # library(ggplot2)
 # library(tidyr)
 # # install.packages("devtools")
 # # devtools::install_github("slowkow/ggrepel")
 # library(ggrepel)
 # library(ggbreak)
-# library(openxlsx)
+ library(openxlsx)
 # library(readxl)
 # library(ggh4x)
 # library(ggpubr)
 # library(ggpubr)
-# library(rstatix)
+ library(rstatix)
 # library(dplyr)
 # library(scales)
+library(readxl)
 ```
 
 # 1. Read all the data into one df
@@ -68,7 +69,8 @@ for (l in 1:length(bacteria)) {
   colnames(aerobe)<- col_names_HPLC
   # aerobe[is.na(aerobe)] <- 0
 
-
+aerobe <-cbind(aerobe, HPLCwide[c(2:25),c(13)] )  
+  
   for (i in 1:3) {
 
   for (z in 4:12) {
@@ -96,8 +98,15 @@ for (l in 1:length(bacteria)) {
       aerobe[i, z] = as.numeric(aerobe[i, z]) - as.numeric(aerobe[24, z])
     }}
 
-  aerobe<-aerobe[-c(4,8,12,16,20,24),]
 
+  aerobe<-aerobe[-c(4,8,12,16,20,24),]
+  
+  
+
+   
+
+  aerobe$assay <- as.character(strsplit(bacteria[l], ".xls"))
+  
   aerobe_long <- aerobe%>%
     gather(metabolite, concentration, "succinate":"valerate", factor_key = T )
 
@@ -144,34 +153,34 @@ HPLC_blank_corrected_O2<- read.csv("C:/Users/zuendj/Desktop/03_data R/oxidative 
 # 3. Plots: absolute data
 
 ```{r}
-#loop for plots for all bacteria
-for (i in 1:length(bacteria_names)) {
-##create subset
-  subset<- HPLC_blank_corrected_O2$row_names == bacteria_names[i]
-  bacteria_subset<- HPLC_blank_corrected_O2[subset,]
-
-  t<-paste0(bacteria_names[i])
-
-ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
-    stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
-    stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
-    #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
-    facet_grid( rows=vars(condition_agar), cols= vars(metabolite), scales = "free", switch="y")+
-    #geom_hline(yintercept=0)+
-    theme(axis.title.x = element_blank(),
-          axis.text.x = element_blank(),
-          axis.ticks.x = element_blank() )+
-    ggtitle(t)+
-    ylab("metabolites produced [mM]")->p
-  #scale_y_continuous(limits = c(-0.5, 1))+
-
-
-show(p)
-
-  x<-paste0(bacteria[i], ".jpg")
-
-  # ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_O2")
-}
+# #loop for plots for all bacteria
+# for (i in 1:length(bacteria_names)) {
+# ##create subset
+#   subset<- HPLC_blank_corrected_O2$row_names == bacteria_names[i]
+#   bacteria_subset<- HPLC_blank_corrected_O2[subset,]
+# 
+#   t<-paste0(bacteria_names[i])
+# 
+# ggplot(subset(bacteria_subset, metabolite %in% c("succinate", "lactate", "formate", "acetate", "propionate", "butyrate")), aes(x=metabolite, y=concentration, fill=condition)) +
+#     stat_summary(fun = mean, geom = "bar", position = position_dodge(1), color = "black") +
+#     stat_summary(fun.data = mean_se, geom = "errorbar" , width = .5, position = position_dodge(1)) +
+#     #scale_fill_manual(values=c('darkgoldenrod1', "cyan4"))+
+#     facet_grid( rows=vars(condition_agar), cols= vars(metabolite), scales = "free", switch="y")+
+#     #geom_hline(yintercept=0)+
+#     theme(axis.title.x = element_blank(),
+#           axis.text.x = element_blank(),
+#           axis.ticks.x = element_blank() )+
+#     ggtitle(t)+
+#     ylab("metabolites produced [mM]")->p
+#   #scale_y_continuous(limits = c(-0.5, 1))+
+# 
+# 
+# show(p)
+# 
+#   x<-paste0(bacteria[i], ".jpg")
+# 
+#   # ggsave(filename = x, path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output/absolute_O2")
+# }
 ```
 
 # 4. Calculate relative values
@@ -205,6 +214,46 @@ for (i in 1:nrow(HPLC_values)){
   }
 }
 
+
+```
+
+```{r}
+
+HPLC_values%>%
+  ggplot(aes(x=total_SCFA, y=condition_agar))+
+  # facet_grid(rows=vars(assay), scales ="free")+
+  geom_point(aes(colour=condition), position =position_dodge(0.9))+
+  geom_boxplot(aes(colour=condition))+
+  theme(strip.text.y = element_text(angle=0))+
+  facet_grid(rows=vars(assay), scales = "free")
+
+ggsave(filename = paste( "o2_pure cult_tot.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/metabolites",
+       width = 28,
+       height = 35,
+       units = c("cm"))
+
+
+HPLC_values[, c("assay", "condition","condition_agar", "total_SCFA")]%>%
+  group_by(condition_agar, assay)%>%
+  t_test(total_SCFA ~ condition)->stats
+
+HPLC_values[, c("assay", "condition","condition_agar", "total_SCFA")]%>%
+  group_by(condition_agar, assay, condition)%>%
+  shapiro_test(total_SCFA)%>%
+  subset(p<0.05)->shapi
+
+shapi[, c("assay", "condition_agar")]->shapi
+shapi$sig <- "non_normal"
+
+left_join(stats, shapi)%>%
+  subset(p<0.05)%>%
+  subset(! sig %in% "non_normal")-> sig_differncences_total_metabol
+
+
+
+sig_differncences_total_metabol%>%
+  subset(assay %in% "Bacteroides_faecis")
 
 ```
 
@@ -322,15 +371,22 @@ out<-"init"
 shapi_out<-"init"
 shapi<-"init"
 
+HPLC_relative_long$metabolite<-as.character(HPLC_relative_long$metabolite)
 
+HPLC_relative_long%>%
+  filter(!is.na(concentration))->HPLC_relative_long
 
 #loop for plots for all bacteria
 for (i in 1:length(bacteria_names)) {
 ##create subset
   subset(HPLC_relative_long, row_names_relative_2 == bacteria_names[i])->bacteria_subset
   
+  metabol<-unique(bacteria_subset$metabolite)
+  
   for (j in 1:length(metabol)){
      subset(bacteria_subset, metabolite == metabol[j])->metabol_subset
+    
+   cond<-unique(metabol_subset$condition_agar) 
     
     for (x in 1:length(cond)){
      subset(metabol_subset, condition_agar == cond[x])->subset
@@ -344,7 +400,6 @@ rm(shapi)
   
 try(
   subset %>%
-  filter(!is.na(concentration)) %>%
   t_test(data= .,
   formula = concentration ~ condition, ref.group = 
     "anaerobe")%>%
@@ -373,16 +428,13 @@ try(shapi$Bacteria<- bacteria_names[i], silent=T)
 try(shapi$agar_condition<- cond[x], silent=T)
 try(shapi$metabolite<- metabol[j], silent=T)
 try(shapi$condition<- ana[z], silent=T)
+  
 try(stats_shapi<-rbind(stats_shapi, shapi), silent=T)}
-
 try(stats<-rbind(stats, out), silent=T)
 
 }}}
 
-stats
 
-# %>%
-#   filter(p != "NaN")->stats
 
 ```
 
@@ -505,104 +557,11 @@ means_stats_shapiro%>%
 
 ```
 
-# 6. assign taxonomy 
-
-```{r}
-
-#########################################
-#Assign phyla to species name
-########################################
-bacteria_pyla<-as.data.frame(unique(means_corr[,1]))
-
-bacteria_pyla$class<-0
-bacteria_pyla<-as.data.frame(bacteria_pyla)
-
-
-names(bacteria_pyla)<-c("Bacteria", "class")
-
-###
-bacteroidetes<-grep("Phocaei", bacteria_pyla$Bacteria)
-bacteria_pyla[bacteroidetes, c(2)] ="Bacteroidia"
-
-
-bacteroidetes<-grep("Bac", bacteria_pyla$Bacteria)
-bacteria_pyla[bacteroidetes, c(2)] ="Bacteroidia"
-
-pre<-grep("Prevo", bacteria_pyla$Bacteria)
-bacteria_pyla[pre,2]="Bacteroidia"
-
-parabac<-grep("Parabac", bacteria_pyla$Bacteria)
-
-bacteria_pyla[parabac,2]="Bacteroidia"
-
-blaut<-grep("Blaut", bacteria_pyla$Bacteria)
-bacteria_pyla[blaut,2]="Clostridia"
-
-rumi<-grep("Rumi", bacteria_pyla$Bacteria)
-bacteria_pyla[rumi,2]="Clostridia"
-
-rose<-grep("Rose", bacteria_pyla$Bacteria)
-bacteria_pyla[rose,2]="Clostridia"
-
-clo<-grep("Clo", bacteria_pyla$Bacteria)
-bacteria_pyla[clo,2]="Clostridia"
-
-Faec<-grep("Faecalibacterium", bacteria_pyla$Bacteria)
-
-bacteria_pyla[Faec,2]="Clostridia"
-
-flavi<-grep("Flavi", bacteria_pyla$Bacteria)
-bacteria_pyla[flavi,2]="Clostridia"
-
-copr<-grep("Copro", bacteria_pyla$Bacteria)
-bacteria_pyla[copr,2]="Clostridia"
-
-eu<-grep("Eu", bacteria_pyla$Bacteria)
-bacteria_pyla[eu,2]="Clostridia"
-
-flavi<-grep("Flavo", bacteria_pyla$Bacteria)
-bacteria_pyla[flavi,2]="Clostridia"
-
-lacto<-grep("Lacti", bacteria_pyla$Bacteria)
-bacteria_pyla[lacto,2]="Bacilli"
-
-subdo<-grep("Sub", bacteria_pyla$Bacteria)
-bacteria_pyla[subdo,2]="Clostridia"
-
-bif<-grep("Bif", bacteria_pyla$Bacteria)
-bacteria_pyla[bif,2]="Actinomycetia"
-
-colin<-grep("Collin", bacteria_pyla$Bacteria)
-bacteria_pyla[colin,2]="Coriobacteriia"
-
-anaero<-grep("Anaero", bacteria_pyla$Bacteria)
-bacteria_pyla[anaero,2]="Clostridia"
-
-anaro<-grep("Anaro", bacteria_pyla$Bacteria)
-bacteria_pyla[anaro,2]="Clostridia"
-
-marvin<-grep("Marvin", bacteria_pyla$Bacteria)
-bacteria_pyla[marvin,2]="Clostridia"
-
-phasc<-grep("Phasco", bacteria_pyla$Bacteria)
-bacteria_pyla[phasc,2]="Negativicutes"
-
-entero<-grep("Entero", bacteria_pyla$Bacteria)
-bacteria_pyla[entero,2]="Bacilli"
-
-esch<-grep("Esch", bacteria_pyla$Bacteria)
-bacteria_pyla[esch,2]="Gammaproteobacteria"
-#########################
-
-names(bacteria_pyla)<-c("Bacteria", "Class")
-```
 
 
 ```{r}
 ratio_O2<-means_stats_shapiro
 
-
-ratio_O2<-left_join(ratio_O2, bacteria_pyla, by= "Bacteria")
 
 # ratio_O2$mean_anaerobe[ratio_O2$mean_anaerobe<0.001]<-0
 # ratio_O2$mean_aerobe[ratio_O2$mean_aerobe<0.001]<-0
@@ -611,108 +570,16 @@ ratio_O2%>%
   subset(Bacteria != "Ruminococcus_bromii")->ratio_O2
 
 
+
 ratio_O2$ratio <-  ratio_O2$mean_aerobe - ratio_O2$mean_anaerobe 
 
 ratio_O2$agar_condition<-as.character(ratio_O2$agar_condition)
 
 
-ggplot(subset(ratio_O2, agar_condition %in% "minimal agar (''MIC'')"), aes(x=metabolite, y=Bacteria, fill=ratio))+
-  geom_tile()+
-  scale_fill_gradientn(colors = c("coral", "coral", "white", "cyan4"),  values = rescale(c(-3, -0.5,0,0.5)))+
-  facet_grid(rows=vars(Class), space="free", scale="free")+
-    theme(strip.text.y = element_text(angle=0, size = 15),
-        axis.title = element_blank(),
-        axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
-        axis.text.y = element_text(size=15 , face="italic"))+
-  labs(fill="Δrel. metabolites")
-
-
-
- ggsave(filename = "O2_heatplot.jpeg",   
-         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-         width = 22,
-         height = 20,
-         units = c("cm"))
-
 ```
 
 
 
-```{r}
-ratio_O2%>%
-  subset(Bacteria %in% c("Anaerostipes_caccae", 
-                         "Anaerostipes_hadrus", 
-                         "Anaerotignum_lactatifermentans",
-                         "Bacteroides_caccae",
-                         "Bacteroides_thetaiotaomicron" ,
-                         "Bacteroides_uniformis" ,
-                         "Phocaeicola_vulgatus" , 
-                         "Bifidobacterium_adolescentis"  , 
-                         "Bifidobacterium_longum" ,
-                         "Blautia_hansenii" ,
-                         "Blautia_hydrogenotrophica",
-                         "Blautia_obeum"  , "Blautia_producta" , 
-                         "Coprococcus_sp" ,
-                         "Enterococcus_faecalis"  ,
-                         "Escherichia_coli" , 
-                         "Eubacterium_limosum" ,
-                         "Faecalibacterium_prausnitzii" ,
-                         "Flavonifractor_sp", 
-                         "Lactiplantibacillus_plantarum" , 
-                         "Parabacterium_merdae"  ,
-                         "Phascolarctobacterium_faecium", 
-                         "Roseburia_intestinalis"   ,
-                         "Ruminococcus_gnavus", "Bacteroides_xylanisolvens",  "Prevotella_copri")) %>%
-           subset(agar_condition %in% c("minimal agar (''MIC'')"))->sub_nic
-
-
-ratio_O2%>% 
-  subset(Bacteria %in% c("Bacteroides_faecis", "Bacteroides_ovatus", "Eubacterium_eligens", "Bacteroides_fragilis", "Clostridium_sporogenes", "Collinsella_aerofaciens"   )) %>%
-           subset(agar_condition %in% c("agar with highest growth"))->sub_nic_1
-
-
-selection<-rbind(sub_nic, sub_nic_1)
-
-
-selection$p.signif[selection$p.signif=="ns"]<-NA
-selection$p_corrected[selection$p_corrected=="ns"]<-NA
-
-
-
-```
-
-```{r}
-# install.packages("base")
-library(base)
-
-selection$Bacteria <- gsub("_", " ", selection$Bacteria)
-```
-
-
-```{r}
-
-max<-max(selection$ratio)
-min<-min(selection$ratio)
-
-ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
-  geom_tile()+
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(min, 0, max)))+
-  facet_grid(rows=vars(Class), space="free", scale="free")+
-    theme(strip.text.y = element_text(angle=0, size = 15),
-        axis.title = element_blank(),
-        axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
-        axis.text.y = element_text(size=15 , face="italic"))+
-  labs(fill="Δrel. metabolites")+
-  ggtitle(expression(Metabolic~changes~as~a~response~to~O[2]))+
-  geom_text(aes(label=p_corrected))
-
-ggsave(filename = "O2_heatplot_selection.jpeg",   
-         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output", 
-         width = 22,
-         height = 20,
-         units = c("cm"))
-
-```
 
 # 4. Calculate means of absolute values: to filter for metabolites that are of low concentration
 
@@ -783,59 +650,89 @@ stats_absolute%>%
                          "Bacteroides_thetaiotaomicron" ,
                          "Bacteroides_uniformis" ,
                          "Phocaeicola_vulgatus" , 
-                         "Bifidobacterium_adolescentis"  , 
                          "Bifidobacterium_longum" ,
-                         "Blautia_hansenii" ,
-                         "Blautia_obeum"  , "Blautia_producta" , 
+                         "Blautia_obeum"  , 
                          "Enterococcus_faecalis"  ,
-                         "Escherichia_coli" , 
                          "Eubacterium_limosum" ,
                          "Faecalibacterium_prausnitzii" ,
                          "Flavonifractor_sp", 
-                         "Lactiplantibacillus_plantarum" , 
-                         
+                        
                          "Phascolarctobacterium_faecium", 
-                         "Roseburia_intestinalis"   ,
-                         "Ruminococcus_gnavus",  "Prevotella_copri", "Collinsella_aerofaciens")) %>%
+                        
+                         "Ruminococcus_gnavus"  )) %>%
            subset(agar_condition %in% c("minimal agar (''MIC'')"))->sub_nic
 
-
 stats_absolute%>%
-
-subset(Bacteria %in% c("Bacteroides_faecis", "Bacteroides_ovatus", "Eubacterium_eligens", "Bacteroides_fragilis", "Clostridium_sporogenes", "Parabacterium_merdae"  ,"Bacteroides_xylanisolvens",
-                         "Blautia_hydrogenotrophica"   )) %>%
+subset(Bacteria %in% c("Bacteroides_faecis","Bifidobacterium_adolescentis"  , "Escherichia_coli" ,   "Blautia_producta" , "Eubacterium_eligens", "Bacteroides_fragilis", "Clostridium_sporogenes", "Parabacterium_merdae"  ,"Bacteroides_xylanisolvens","Collinsella_aerofaciens" , "Prevotella_copri",   "Blautia_hydrogenotrophica" , "Eubacterium_eligens" )) %>%
            subset(agar_condition %in% c("agar with highest growth"))->sub_nic_1
 
+stats_absolute%>%
+subset(Bacteria %in% c( "Lactiplantibacillus_plantarum" ,  "Roseburia_intestinalis" )) %>%
+           subset(agar_condition %in% c("agar with highest growth"))->ctrl
 
-selection<-rbind(sub_nic, sub_nic_1)
+
+excludes<-c("Bacteroides_ovatus", "Blautia_hansenii" )
+
+
+selection<-rbind(sub_nic, sub_nic_1, ctrl)
 
 selection$p_corrected_low_conc[selection$p_corrected_low_conc=="ns"]<-NA
 
 selection$Bacteria <- gsub("_", " ", selection$Bacteria)
 
-selection$ratio <- selection$ratio *100
-max<-max(selection$ratio)
-min<-min(selection$ratio)
+selection$Bacteria[selection$Bacteria=="Eubacterium eligens"]<-"Lachnospira eligens"
+selection$Bacteria[selection$Bacteria=="Phocaeicola vulgatus"]<-"Bacteroides vulgatus"
+selection$Bacteria[selection$Bacteria=="Parabacterium merdae"]<-"Parabacteroides merdae"
+```
 
-ggplot(selection, aes(x=metabolite, y=Bacteria, fill=ratio))+
+
+```{r}
+taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
+colnames(taxonomy)[colnames(taxonomy) == "bacteria"] <- "Bacteria"
+
+tax<-left_join(selection[, -c(15)], taxonomy)
+
+```
+
+
+```{r}
+tax%>%
+  subset(!p_corrected_low_conc %in%  c(NA, ""))->filter_tax
+
+  unique(filter_tax$Bacteria)->filter_tax
+
+
+tax%>%filter(Bacteria %in% filter_tax)%>%
+  mutate(metabolite = factor(metabolite, levels= c("succinate","lactate", "formate" ,"acetate","butyrate","propionate")))%>%
+  mutate(ratio = (mean_conc_aerobe_abs - mean_conc_anaerobe_abs ))->sub
+
+
+max<-max(sub$ratio)
+min<-min(sub$ratio)
+
+sub%>%
+  ggplot( aes(x=metabolite, y=species_short, fill=ratio))+
   geom_tile()+
   scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(min, 0, max)))+
-  facet_grid(rows=vars(Class), space="free", scale="free")+
-    theme(strip.text.y = element_text(angle=0, size = 15),
+  facet_grid(rows=vars(Genus), space="free", scale="free")+
+    theme(strip.text.y = element_text(angle=0, size = 15, face="italic"),
         axis.title = element_blank(),
-        plot.title = element_text(size=20),
-        axis.text.x = element_text(angle = 90, size=15, vjust=0.2),
-        axis.text.y = element_text(size=15 , face="italic"), 
+        axis.text.x = element_text(angle = 90, size=15, vjust=0.5, hjust=1),
+        axis.text.y = element_text(size=15, face="italic"), 
+        panel.border=element_rect(fill=NA), 
+        legend.text = element_text(size=15),
+        plot.title = element_text(size=20), 
+        legend.title = element_text(size=15),
         panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
+        legend.text.align = 0, strip.background = element_blank())+
   labs(fill="??Metabolite fraction [%]")+
   ggtitle(expression(Metabolic~changes~as~a~response~to~O[2]))+
   geom_text(aes(label=p_corrected_low_conc))
 
 ggsave(filename = "O2_heatplot_selection_lowconc.jpeg",   
-         path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+         path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/metabolites", 
          width = 22,
-         height = 20,
+         height = 25,
          units = c("cm"))
 
 ```

@@ -354,11 +354,6 @@ for (i in 1:nrow(MBC_rel_O2)) { #vertical
      MBC_rel_O2[i,j] = MBC_rel_O2[i,j]/MBC_rel_O2[i, c("max")] 
   }}
 
-
-# MBC_relgrowth_value<-cbind(MBC_rel, df_final_replicates)
-# MIC_relgrowth_value<-cbind(MIC_rel, df_final_replicates)
-
-
 MIC_rel_long_O2<-gather(MIC_rel_O2, condition, OD, "1":"13", factor_key = T)
 MIC_rel_long_O2$assay<-c("MIC")
 MBC_rel_long_O2<-gather(MBC_rel_O2, condition, OD, "1":"13", factor_key = T)
@@ -367,32 +362,8 @@ MBC_rel_long_O2$assay<-c("MBC")
 MBC_MIC_rel_long_O2<-rbind(MIC_rel_long_O2, MBC_rel_long_O2)
 MBC_MIC_rel_long_O2<-left_join(MBC_MIC_rel_long_O2, order_O2)
 
-
-# MIC_rel_O2%>%
-#   subset(bacteria %in% "Eubacterium limosum")
 ```
 
-
-```{r}
-# # MBC_MIC_rel_long_O2$OD[MBC_MIC_rel_long_O2$OD <0.1]<-0
-# MBC_MIC_rel_long_O2$condition<-as.numeric(paste(MBC_MIC_rel_long_O2$condition))
-# 
-# 
-# for (i in 1:nrow(MBC_MIC_rel_long_O2)){
-#   if ( MBC_MIC_rel_long_O2[i, c("condition")] == MBC_MIC_rel_long_O2[i, c("value")]) { 
-#     MBC_MIC_rel_long_O2[i, c("label")] = MBC_MIC_rel_long_O2[i, c("value")]}}
-# 
-# MBC_MIC_rel_long_O2$label<-as.numeric(MBC_MIC_rel_long_O2$label)
-# 
-# for (i in 1:nrow(MBC_MIC_rel_long_O2)){
-#   if ( MBC_MIC_rel_long_O2[i, c("condition")] == MBC_MIC_rel_long_O2[i, c("value_75")]) { 
-#     MBC_MIC_rel_long_O2[i, c("label_75")] = MBC_MIC_rel_long_O2[i, c("value_75")]}}
-# 
-# MBC_MIC_rel_long_O2$label_75<-as.numeric(MBC_MIC_rel_long_O2$label_75)
-# 
-# 
-# MBC_MIC_rel_long_label_O2<-gather(MBC_MIC_rel_long_O2, label_type, label_value, "label":"label_75")
-```
 
 
 ```{r}
@@ -415,82 +386,25 @@ hoihoi<-left_join(hoi, p_long_O2)
 
 
 
+```
 
-# hoihoi%>%
-#   subset(label_type %in% "label")->hoihoi
-
-hoihoi$assay<-factor(hoihoi$assay, levels=c("MIC", "MBC"))
-
+#get taxonomy
+```{r}
 hoihoi%>%
-  mutate(bacteria = fct_reorder(bacteria, hoihoi$order))%>%
-  ggplot(aes(x = condition, y = assay, fill = OD)) + 
-  geom_raster() +
-  # scale_shape_manual(values = c(16, 1), labels=c("10%", "50%"))+
-scale_color_manual(values=c("coral2", "darkseagreen"), labels=c("stress", "post-stress"))+
-  labs(x=expression(paste("Oxygenation")))+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_blank(),
-        axis.text.y=element_blank(),
-        strip.text.y = element_text(angle = 0, face = "italic", hjust=0),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20),
-        strip.text = element_text(size=15))+
-  facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
-  geom_point(aes(x=label_value, color=assay, shape=label_type),  size=2.5, alpha=0.75, position=position_jitterdodge(jitter.width = 0.3, jitter.height = 0.1))+
-  # geom_text(aes(label=label, color=assay))+
-  scale_x_continuous(labels=c("0",
-                              "2.2", 
-                              "4.8",  
-                              "10.6", 
-                              "23.4", 
-                              "51.5", 
-                              "113",  
-                              "249",
-                              "549",
-                              "1207",
-                              "2656",  
-                              "5843"), 
-                     breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
-  labs(fill = expression(relative~OD[600]), colour="")+
-  ggtitle(expression(Growth~capability~under~different~oxygenation~conditions))+
-  geom_text(aes(label=significance), colour="white")+
-  scale_y_discrete(limits=rev)->p
+ mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens" ,
+                             "Phocaeicola vulgatus" = "Bacteroides vulgatus"))->hoihoi
 
-show(p)
-
-
-
-ggsave(filename = "MIC_MBC_o2_groeth.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 22,
-       height = 30,
-       units = c("cm"))
-
-
-
+taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
+wide_tax<-left_join(hoihoi, taxonomy)
 ```
 
 ```{r}
-# hoihoi%>%
-#   subset(label_type %in% "label")->hoihoi
 
-hoihoi$assay<-factor(hoihoi$assay, levels=c("MIC", "MBC"))
-
-hoihoi <- hoihoi %>%
-    mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens"))
-
-hoihoi%>%
-  subset(assay %in% c("MIC", "MBC"))->sub
-
-sub$OD<-sub$OD*100
-
-sub%>%
-  mutate(bacteria = fct_reorder(bacteria, sub$order))%>%
+wide_tax%>%
+  mutate(OD = OD*100)%>%
+  mutate(assay = factor(assay, levels=c("MIC", "MBC")))%>%
+  mutate(Genus = reorder(Genus, order))%>%
+   mutate(bacteria = reorder(bacteria, order))%>%
   ggplot(aes(x = condition, y = assay, fill = OD)) + 
   geom_raster() +
   scale_fill_steps(breaks = c(10, 50, 75))+
@@ -509,8 +423,9 @@ sub%>%
         legend.title = element_text(size= 15, vjust=1),
         plot.title = element_text(size=20, hjust=0.25),
         panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
+        panel.border=element_rect(fill=NA), 
+          plot.background = element_rect(fill='transparent', color=NA))+
+  facet_grid(rows =vars(Genus, bacteria), scales = "free", space = "free")+
   scale_x_continuous(labels=c("1.5", 
                                                     "1.28", 
                                                     "1.08",
@@ -531,6 +446,13 @@ sub%>%
 show(p+theme(legend.position = "none"))
 
 
+ggsave(filename = "MIC_MBC_o2_growth_only.png", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width =25,
+       height = 39.5,
+       units = c("cm"), 
+       bg="transparent")
+
 
 
 ggsave(filename = "MIC_MBC_o2_growth_only.jpeg", 
@@ -540,6 +462,59 @@ ggsave(filename = "MIC_MBC_o2_growth_only.jpeg",
        units = c("cm"))
 
 ```
+
+```{r}
+setNames(aggregate(wide_tax$OD, by=list(wide_tax$condition, wide_tax$assay), FUN=mean), c("condition", "assay", "OD"))%>%
+  mutate(assay=factor(assay, levels=c("MIC", "MBC")))%>%
+  mutate(OD = OD*100)%>%
+  ggplot(aes(x = condition, y = assay, fill = OD)) + 
+  geom_raster() +
+  scale_fill_steps(breaks = c(10, 50, 75))+
+  labs(x=c("Agar [???]"))+
+  theme(text = element_text(size=15), 
+        axis.title.x = element_text(size=20, vjust=-0.8),
+        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5),
+        axis.title.y= element_blank(),
+        axis.text.y=element_text(size=15),
+        strip.text.y = element_text(size=15, angle=0, face="italic", hjust=0),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "bottom",
+        legend.text = element_text(size = 15, vjust=0.8, angle=90, hjust=0.8),
+        # legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15, vjust=1),
+        plot.title = element_text(size=20, hjust=0.25),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), 
+          plot.background = element_rect(fill='transparent', color=NA))+
+  scale_x_continuous(labels=c("1.5", 
+                                                    "1.28", 
+                                                    "1.08",
+                                                    "0.92" ,
+                                                    "0.78",
+                                                    "0.67",  
+                                                    "0.57",
+                                                   "0.48",
+                                                    "0.41",
+                                                    "0.35",
+                                                    "0.3", 
+                                                    "0"), 
+                     breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
+  scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
+  labs(fill = expression(relative~OD[600]), colour="")->p
+
+show(p+theme(legend.position = "none"))
+
+
+ggsave(filename = "MIC_MBC_o2_growth_only.png", 
+       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
+       width =10,
+       height =5,
+       units = c("cm"), 
+       bg="transparent")
+
+```
+
 
 # Export MIC/MBC values
 ```{r}
@@ -554,27 +529,8 @@ o2_wide$diff <- o2_wide$MBC - o2_wide$MIC
 write.xlsx(o2_wide, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_MBC_O2_difference.xlsx")
 ```
 
-#get taxonomy
-```{r}
-taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
-wide_tax<-left_join(o2_wide, taxonomy)
 
-```
-```{r}
-gather(wide_tax, condition, value, "MBC":"diff")->heat_o2
 
-heat_o2$condition<-factor(heat_o2$condition, levels=c("MIC", "MBC", "diff"))
-
-heat_o2<-left_join(heat_o2, bacteria_pyla)
-
-heat_o2<-left_join(heat_o2, setNames(aggregate(heat_o2$value, by=list(heat_o2$bacteria), FUN=median), c("bacteria", "median")))
-
-heat_o2%>%
-   mutate(Family = fct_reorder(Family, heat_o2$median))%>%
-ggplot(aes(y=Family, x=value))+
-  geom_boxplot(aes(fill=condition))+
-  geom_point(aes(colour=bacteria, group=condition), position = position_dodge(0.8))
-```
 
 
 # Medium only

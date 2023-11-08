@@ -100,205 +100,18 @@ h2o2$stress<-"H2O2"
 
 all<-rbind(o2, h2o2)
 
-all[all== "Eubacterium eligens"]  = "Lachnospira eligens"
+heat[heat== "Eubacterium eligens"]  = "Lachnospira eligens"
+heat[heat== "Phocaeicola vulgatus"]  = "Bacteroides vulgatus"
 
 
-all$diff_conc<-all$concentration_MBC - all$concentration_MIC
 ```
 
 #get taxonomy
 ```{r}
 taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
-tax<-left_join(all, taxonomy)
-
-```
-##Difference
-
-```{r}
-gather(tax, condition, value, "concentration_MBC":"concentration_MIC")->heat
-
-heat$condition<-factor(heat$condition, levels=c("concentration_MIC", "concentration_MBC"))
-
-heat<-left_join(heat, setNames(aggregate(heat$value, by=list(heat$bacteria, heat$stress), FUN=median), c("bacteria", "stress","median")))
-diff<-left_join(tax, setNames(aggregate(tax$diff_conc, by=list(tax$bacteria, tax$stress), FUN=median), c("bacteria", "stress","median_diff")))
-
-names<-list("H2O2"=expression(H[2]*O[2]))
-
-facet_labeller <- function(variable,value){
-  return(names[value])
-}
-
-
-diff%>%
-  subset(stress %in% c("H2O2"))->sub
-
-
-sub<-left_join(sub, setNames(aggregate(sub$MIC, by=list(sub$bacteria), mean), c("bacteria", "order")))
-
-sub$diff_conc<-sub$diff_conc/1000
-
-sub%>%
-  mutate(bacteria = fct_reorder(bacteria, sub$diff_conc))%>%
-ggplot(aes(y=bacteria, x=diff_conc))+
-  geom_boxplot(outlier.shape=NA, )+
-  geom_jitter(width = 0.01, alpha=0.5, aes(colour=Family))+
-  facet_grid(cols=vars(stress), scales="free", labeller= facet_labeller)+
-  geom_vline(xintercept = 0, linetype="dashed")+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15),
-        axis.title.y= element_blank(),
-        axis.text.y=element_text(size=15),
-        strip.text = element_blank(),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20, hjust=0.5),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  ggtitle("Difference in lethal and growth-inhibiting levels")+
-  labs(colour = "Family")+
-  xlab(expression(??H[2]*O[2]*~"[mM]"))+scale_x_continuous(breaks=c(-2, 0, 2))+
-  facet_grid(rows=vars(Family), scales="free", space="free")
-
-ggsave(filename = "diff_h2o2.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 20,
-       height = 22,
-       units = c("cm"))
-
-names<-list("O2"=expression(O[2]))
-
-facet_labeller <- function(variable,value){
-  return(names[value])
-}
-diff%>%
-  subset(stress %in% c("O2"))->sub
-
-sub<-left_join(sub, setNames(aggregate(sub$MIC, by=list(sub$bacteria), mean), c("bacteria", "order")))
-
-
-sub%>%
-mutate(bacteria = fct_reorder(bacteria, desc(sub$diff_conc)))%>%
-ggplot(aes(y=bacteria, x=diff_conc))+
-  geom_boxplot(outlier.shape=NA)+
-  geom_jitter(width = 0.01, alpha=0.5, aes(colour=Family))+
-   facet_grid(cols=vars(stress), scales="free", labeller = facet_labeller)+
-  geom_vline(xintercept = 0, linetype="dashed")+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15),
-        axis.title.y= element_blank(),
-        axis.text.y=element_text(size=15),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20, hjust=0.5),
-        strip.text = element_blank(), 
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  ggtitle("Difference in lethal and growth-inhibiting levels")+
-  labs(colour = "Family")+
-  xlab(expression(??Agar~"[???]"))+
-  scale_x_reverse()+
-  facet_grid(rows=vars(Family), scales="free", space="free")
-
-ggsave(filename = "diff_o2.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 20,
-       height = 22,
-       units = c("cm"))
-
-
-
-
+tax<-left_join(heat, taxonomy)
 ```
 
-
-##MIC H2O2
-```{r}
-names<-list("H2O2"=expression(H[2]*O[2]))
-
-facet_labeller <- function(variable,value){
-  return(names[value])}
-
-heat%>%
-  subset(stress %in% c("H2O2"))%>%
-  subset(!condition %in% c("diff", "concentration_MBC"))%>%
-  mutate(Family = fct_reorder(Family, value))%>%
-  mutate(bacteria = fct_reorder(bacteria, value, .desc =T))%>%
-  ggplot(aes(y=bacteria, x=value))+
-  geom_boxplot(outlier.shape = NA)+
-  geom_jitter(aes(colour=Family, group=condition), position = position_jitterdodge(0.5), alpha=0.7)+
-  facet_grid(rows=vars(Family), scales="free", space="free")+ 
-  scale_x_log10(breaks=0,0.5,5)+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15),
-        axis.title.y= element_blank(),
-        axis.text.y=element_text(size=15),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20),
-        strip.text = element_blank(), 
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  ggtitle("MIC-H2O2")+
-  labs(colour = "Species")
-
-ggsave(filename = "H2O2.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 17,
-       height = 20,
-       units = c("cm"))
-
-```
-
-
-##MIC H2O2
-```{r}
-names<-list("O2"=expression(O[2]))
-
-facet_labeller <- function(variable,value){
-  return(names[value])}
-
-heat%>%
-  subset(stress %in% c("O2"))%>%
-  subset(!condition %in% c("diff", "concentration_MBC"))%>%
-  mutate(Family = fct_reorder(Family, value))%>%
-  mutate(bacteria = fct_reorder(bacteria, value, .desc =T))%>%
-  ggplot(aes(y=bacteria, x=value))+
-  geom_boxplot(outlier.shape = NA)+
-  geom_jitter(aes(colour=Family, group=condition), position = position_jitterdodge(0.5), alpha=0.7)+
-  facet_grid(rows=vars(Family), scales="free", space="free")+ 
-  scale_x_log10(breaks=0,0.5,5)+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_text(size=20),
-        axis.text.x = element_text(size=15),
-        axis.title.y= element_blank(),
-        axis.text.y=element_text(size=15),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20),
-        strip.text = element_blank(), 
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  ggtitle("MIC-H2O2")+
-  labs(colour = "Species")
-
-ggsave(filename = "O2.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 17,
-       height = 20,
-       units = c("cm"))
-
-```
 
 ##averages family level
 ```{r}
@@ -350,8 +163,8 @@ left_join(mean, sd)%>%
 
 sub%>%
   ggplot(aes(x=value_MIC, y=value_MBC))+
-  stat_ellipse(aes(fill=Family), geom="polygon", alpha=0.2)+
-    geom_jitter(aes(colour=Genus), width=0.05, height = 0.05, size=3, alpha=0.8)+
+  # stat_ellipse(aes(fill=Genus), geom="polygon", alpha=0.2)+
+    geom_jitter(aes(colour=Genus), width=0.12, height = 0.05, size=4, alpha=0.8)+
    theme(text = element_text(size=15), 
         axis.title.x = element_text(size=20),
         axis.text.x = element_text(size=15),
@@ -386,7 +199,7 @@ ggsave(filename = paste0(stress_cond[i], "mic_mbc.jpeg"),
        units = c("cm"))}
 
 234.2/40*14
-234.2/40*20
+51.7/14*20
 ```
 
 

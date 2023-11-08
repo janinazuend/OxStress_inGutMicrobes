@@ -148,6 +148,7 @@ otu_table(ps_strain_filt) <- otu_table(ps_strain_filt) %>%
 ps_strain_filt <- ps_strain_filt %>%
   filter_taxa(function(x) sum(x > 0) > 0, TRUE)
 ```
+
 #Rarefying
 ```{r}
 # phyloseq%>%
@@ -166,8 +167,7 @@ ps_strain_filt%>%
 ```
 
 #A) Alpha diversity
-
-#Alpha: passages
+#Alpha: passages of controls
 ```{r}
 #H2O2
 ###Line plot########################################################################################
@@ -205,7 +205,68 @@ ggsave(filename = "alpha_cultures.jpeg",
        height = 17,
        units = c("cm"))
 ```
-#alpha comapred to control ==>Final plot
+#H2O2 alpha dist absolute
+
+```{r}
+phyloseq_rare%>% 
+  phyloseq_alphas(phylo = TRUE)%>%
+  subset(stress %in% "H2O2" & !time %in% "pre-stress")%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high")),
+         time = factor(time, levels=c( "stress", "post_stress_1", "post_stress_2")))-> sub
+
+sub%>%
+  group_by(time)%>%
+  wilcox_test(data= .,
+  formula = diversity_shannon ~ stress_level, ref.group = "control" , p.adjust.method = "BH"
+  )%>%
+  add_significance()%>%
+  subset(!p.adj.signif %in% "ns")%>%
+  add_y_position()->stat_test
+
+
+names<-list("stress"= "Stress", 
+            "post_stress_1"= "Post 1", 
+            "post_stress_2"= "Post 2")
+
+sub%>%
+  ggplot(aes(x=stress_level, y=diversity_shannon))+
+  theme(text = element_text(size=15), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
+        axis.title.y= element_text(size=15),
+        axis.text.y=element_text(size=15),
+        strip.text.y = element_text(),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15),
+        plot.title = element_text(size=20, hjust=0.25),
+        strip.text = element_text(size=15), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  geom_boxplot(aes(fill=stress_level), outlier.shape = NA, position = position_dodge2(preserve = "single"))+
+ geom_jitter(aes(colour=donor_name),  width = 0.1)+
+  # ggtitle(expression('??Alpha'~'diversity:'~H[2]*O[2]~vs.~control))+
+  ylab("Shannon-Index")+
+  labs(colour="Donor", fill="Stress level")+
+   scale_fill_manual(values=c("skyblue2","skyblue3", "lightpink3", "lightpink4"))+
+  facet_grid(cols=vars(time),scales= "free", labeller=facet_labeller) +
+   stat_pvalue_manual(stat_test, label = "p.adj.signif", hide.ns = T)->p
+
+
+show(p + theme (legend.position = "none"))
+
+ggsave(filename = paste( "alpha_h2o2_delta.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/H2O2/alpha",
+       width = 14,
+       height = 7,
+       units = c("cm"))
+
+
+```
+
+
+#alpha comapred to control ==>Distances
 ```{r}
 
 phyloseq_rare%>% 
@@ -257,7 +318,9 @@ alphas_comparison[, c("donor_name", "time", "stress_level", "stress", "diversity
   ylab("??Shannon-Index")+
   labs(colour="Donor", fill="Stress level")+
   facet_grid(cols=vars(time),scales= "free", labeller=facet_labeller) +
-  geom_hline(yintercept=0, linetype=2)
+  geom_hline(yintercept=0, linetype=2)->p
+
+p
 
 
 
@@ -268,51 +331,14 @@ ggsave(filename = paste( "alpha_h2o2_delta.jpeg"),
        units = c("cm"))
 
 ```
-#stats
-```{r}
-stress_level_cond<-c("low", "median" , "high")
 
 
-alphas %>%
-  subset(!time %in% "pre-stress")%>%
-  group_by(time) %>%
-  wilcox_test(data= .,
-  formula = diversity_shannon ~ stress_level ,
-  ref.group = "control"
-  )%>%
-  add_significance()->wil
-```
 #Alpha: upon oxygen stress
 ```{r}
 #O2: aerobic
 phyloseq_rare%>% 
      subset_samples( stress %in% "control" | (stress %in% "O2" ))%>%
   phyloseq_alphas(phylo = TRUE) -> alphas
-
-###ad control value to all stress-level (anaerobe)
-alphas%>%
-  subset(stress %in% "control")->low
-low$stress_level <- "low"
-
-alphas%>%
-  subset(stress %in% "control")->median
-median$stress_level <- "median"
-
-alphas%>%
-  subset(stress %in% "control")->high
-high$stress_level <- "high"
-
-alphas%>%
-  subset(stress %in% "control")->max
-max$stress_level <- "max"
-###ad control value to all stress-level (aerobe)
-alphas%>%
-  subset(stress %in% "control")->control
-aerobe<-rbind(control, low, median, high, max)
-aerobe$incubation<-"aerobe"
-#####
-
-alphas <-rbind(alphas, aerobe, low, control, median, high, max)
 
 
 names<-list("stress"= "Stress", 
@@ -329,20 +355,25 @@ alphas%>%
   mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")),
          time = factor(time, levels=c( "stress", "post_stress_1", "post_stress_2"))) %>%
   ggplot(aes(x=stress_level, y=diversity_shannon))+
-  scale_fill_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"))+
- theme(strip.text = element_text(size  = 20),
-          axis.text.y= element_text(size = 15), 
-        axis.title.y = element_text(size=20), 
+  scale_fill_manual(values=c( "pink4","skyblue3"), labels=c("Control", "Stress"))+
+ theme(text = element_text(size=15), 
         axis.title.x = element_blank(),
-        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0)+
+        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
+        axis.title.y= element_text(size=15),
+        axis.text.y=element_text(size=15),
+        strip.text.y = element_text(),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size= 15),
+        plot.title = element_text(size=20, hjust=0.25),
+        strip.text = element_text(size=15), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
   geom_boxplot(aes(fill=incubation), outlier.shape = NA, position = position_dodge2(preserve = "single"))+
-  geom_point(aes(colour=donor_name, group=incubation), position = position_jitterdodge(0.1))+
-  ggtitle("Alpha diversity")+
-  # scale_x_discrete(labels=c("minimal", "low", "median", "high", "max"))+
+   geom_point(aes(colour=donor_name, group=incubation), position = position_jitterdodge(0.1))+
+  # ggtitle("Alpha diversity")+
+  scale_x_discrete(labels=c("minimal", "low", "median", "high", "max"))+
   ylab("Shannon-Index")+
   labs(colour="Donor", fill="Condition")+
    # force_panelsizes(rows = unit(c(1,2,2), "cm"),
@@ -357,16 +388,17 @@ alphas%>%
 
 ggsave(filename = paste(x, "O2_alpha_o2_shannon.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2/alpha",
-       width = 25,
-       height = 10,
+       width = 16.5,
+       height = 7,
        units = c("cm"))
 
 ```
-#Alpha compared to control ==>Final plot
+
+#Alpha compared to control ==>Distances
 ```{r}
-alphas[, c("donor_name", "time", "stress_level", "stress", "diversity_shannon", "incubation")]%>%
+alphas[, c("donor_name", "time", "stress_level", "stress", "observed", "incubation")]%>%
   subset(!time %in% "pre-stress")%>%
-  pivot_wider(values_from = diversity_shannon, names_from = incubation)%>%
+  pivot_wider(values_from = observed, names_from = incubation)%>%
   mutate(diff = aerobe - anaerobe)%>%
   mutate(stress_level = factor(stress_level, levels=c( "control","low", "median", "high", "max")),
          time = factor(time, levels=c( "stress", "post_stress_1", "post_stress_2"))) %>%
@@ -387,7 +419,7 @@ alphas[, c("donor_name", "time", "stress_level", "stress", "diversity_shannon", 
   labs(colour="Donor", fill="Stress level")+
   facet_grid(cols=vars(time),scales= "free", labeller=facet_labeller) +
   geom_hline(yintercept=0, linetype=2)+
-  ylim(-1, 0.5)+
+  # ylim(-1, 0.5)+
   scale_x_discrete(labels=c("minimal", "low", "median", "high", "max"))
 
 
@@ -412,23 +444,23 @@ alphas%>%
 ```
 
 #B) Beta diversity
-
 #Calculations of distances: control culture vs. subsequent passages
 ```{r}
 phyloseq_rare %>%
   subset_samples(!Sample_id_compete %in% c("feces_dil_1", "feces"))%>%
   subset_samples(!donor_name %in% NA)-> sub
 
+# sub %>%
+#   microbiome::transform("clr") -> ps_transformed
+
+sub%>%
+  phyloseq::distance(method = "bray") -> bc
+
 sub %>%
-  microbiome::transform("clr") -> ps_transformed
-
-ps_transformed%>%
-  phyloseq::distance(method = "euclidean") -> bc
-
-ps_transformed %>%
   ordinate(method = "PCoA",
            distance = bc) -> ord
-ps_transformed %>% 
+
+sub %>% 
   phyloseq_distance_boxplot(p = ., 
                             dist = bc, 
                             d = "time") -> out # column in metadata for comparaisons
@@ -459,7 +491,7 @@ joined%>%
 
 # match$condition_comp<-factor(match$condition_comp, levels=c("control","protein_YCFA"))
 ```
-##beta dist. over all
+##beta dist. over all passages (over all controls)
 ```{r}
 match%>%
   subset(stress_level %in% c("control") & stress %in% c("H2O2", "O2") & incubation %in% c("anaerobe"))%>%
@@ -626,29 +658,29 @@ ggsave(filename = "Beta_dist_box-pre-culture.jpeg",
 234.2/40*25
 
 ```
-
+###ADONIS
 ```{r}
 time <- c("stress", "post_stress_1", "post_stress_2")
 stress_level_cond <-c("low", "median", "high")
 
 for (i in 1:length(time)){
-  for (j in 1:length(stress_level_cond)){
+
   phyloseq_rare %>%
   subset_samples(!Sample_id_compete %in% c("feces_dil_1", "feces"))%>%
-  subset_samples(stress %in% "O2") ->sub
-    # subset_samples(time %in% time[i]) %>%
-    # subset_samples(stress_level %in% c("control", stress_level_cond[j]))->sub
+     subset_samples(!donor_name %in% c("D1", "D5"))%>%
+  subset_samples(stress %in% "O2") %>%
+    subset_samples(time %in% time[i])->sub
   
   sub%>%
   phyloseq::distance(method = "bray") -> bc
     
-    vegan::adonis2(bc ~ get_variable(sub,"stress_level")  + get_variable(sub,"time") + get_variable(sub,"incubation")+ get_variable(sub,"donor_name") , p.adjust.methods= "BH")->adonis
+    vegan::adonis2(bc ~ get_variable(sub,"incubation") , p.adjust.methods= "BH")->adonis
     
     
     
-  print(c(time[i], stress_level_cond[j]) )
+  print(c(time[i]))
   print(adonis)
-  }}
+  }
 
 ```
 
@@ -771,30 +803,29 @@ print(length(get_variable(sub,"stress_level")))
 ```
 
 ```{r}
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
 time <- c("stress", "post_stress_1", "post_stress_2")
 stress_level_cond <-c("low", "median", "high")
 
 for (i in 1:length(time)){
-  for (j in 1:length(stress_level_cond)){
+
   phyloseq_rare %>%
   subset_samples(!Sample_id_compete %in% c("feces_dil_1", "feces"))%>%
-  subset_samples(stress %in% "H2O2") %>%
-    subset_samples(time %in% time[i]) %>%
-    subset_samples(stress_level %in% c("control", stress_level_cond[j]))->sub
+  subset_samples(stress %in% "O2" & incubation %in% "aerobe") %>%
+    subset_samples(time %in% time[i] ) ->sub
   
- sub %>%
-  microbiome::transform("clr") -> ps_transformed
-
-ps_transformed%>%
-  phyloseq::distance(method = "euclidean") -> bc
+sub %>%
+  phyloseq::distance(method = "bray") -> bc
+  
+  sub%>%
+    physeq_pairwise_permanovas_adonis2(dm = bc,
+                                     compare_header = "stress_level") %>% 
+  arrange(pvalFDR)->p
     
-    vegan::adonis2(bc ~ get_variable(sub,"stress_level") , p.adjust.methods= "BH")->adonis
     
-    
-    
-  print(c(time[i], stress_level_cond[j]) )
-  print(adonis)
-  }}
+  print(c(time[i]))
+  print(p)
+  }
 
 ```
 #Distance between control conditions: O2
@@ -803,16 +834,16 @@ phyloseq_rare %>%
   # subset_samples(time %in% "stress")%>%
   subset_samples(stress %in% c("O2"))-> sub
 
-sub %>%
-  microbiome::transform("clr") -> ps_transformed
+# sub %>%
+#   microbiome::transform("clr") -> ps_transformed
 
-ps_transformed%>%
-  phyloseq::distance(method = "euclidean") -> bc
+sub%>%
+  phyloseq::distance(method = "bray") -> bc
 
 ps_transformed %>%
   ordinate(method = "PCoA",
            distance = bc) -> ord
-ps_transformed %>% 
+sub %>% 
   phyloseq_distance_boxplot(p = ., 
                             dist = bc, 
                             d = "incubation") -> out -> out # column in metadata for comparaisons
@@ -872,7 +903,9 @@ match_o2%>%
   ylab("Aitchison distance")+
   labs(colour="Donor", fill="Stress level") +
   facet_grid(cols=vars(time), scale="free", labeller=facet_labeller)+
-  ylim(10, 30)
+  ylim(10, 30)->p
+
+p
   
 
 
@@ -926,7 +959,7 @@ for (i in 1:length(time)){
   for (j in 1:length(stress_level_cond)){
   phyloseq_rare %>%
   subset_samples(!Sample_id_compete %in% c("feces_dil_1", "feces"))%>%
-  subset_samples(stress %in% "O2") %>%
+  subset_samples(stress %in% "O2" | !donor_name %in% c("D1")) %>%
     subset_samples(time %in% time[i]) %>%
     subset_samples(stress_level %in% c(stress_level_cond[j]))->sub
   
@@ -945,12 +978,13 @@ print(length(get_variable(sub,"incubation")))
   }}
 
 ```
+
 ```{r}
 phyloseq_rare %>%
   subset_samples(!Sample_id_compete %in% c("feces_dil_1", "feces"))%>%
-  subset_samples(stress %in% "O2") %>%
-  # subset_samples(time %in% "stress")%>%
-  subset_samples(stress_level %in% c("high", "max"))%>%
+  subset_samples(stress %in% "O2" ) %>%
+  subset_samples(time %in% "stress")%>%
+  # subset_samples(stress_level %in% c("high", "max"))%>%
     subset_samples(incubation %in% "anaerobe")->sub
   
  sub %>%
@@ -959,7 +993,7 @@ phyloseq_rare %>%
 ps_transformed%>%
   phyloseq::distance(method = "euclidean") -> bc
     
-    vegan::adonis2(bc ~ get_variable(sub,"stress_level") + get_variable(sub,"donor_name") , p.adjust.methods= "BH")->adonis
+    vegan::adonis2(bc ~ get_variable(sub,"stress_level")  , p.adjust.methods= "BH")->adonis
     
     
     
@@ -969,14 +1003,15 @@ ps_transformed%>%
 ```
 
 
-# PCoA -02
+# PCoA -02 aerobic incubation anaerobic incubation
 ```{r}
 library(plyr)
 
 
 phyloseq_rare %>%
-  subset_samples(time %in% "stress")%>%
-  # subset_samples(!donor_name %in% "D1")%>%
+  subset_samples(time %in% c("stress"))%>%
+   # subset_samples(time %in% c("post_stress_2", "post_stress_1"))%>%
+   # subset_samples(!donor_name %in% c("D1", "D5"))%>%
   # subset_samples(stress_level %in% c("max"))%>%
   subset_samples(stress %in% c("O2"))-> sub
 
@@ -1011,9 +1046,10 @@ phyloseq_rare %>%
 
   pdataframe%>%
       ggplot(aes(Axis_1, Axis_2))+ 
-      # scale_color_manual(values=c('darkgoldenrod1', "cyan4"))+
-      geom_point(aes(shape=incubation, colour=donor_name), size=4, stroke=1.5)+
-    stat_ellipse()+
+        scale_colour_manual(values=c( "lightpink3","skyblue3"), labels=c("Control", "Stress"), name="Condition")+
+    scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+      geom_point(aes(colour=incubation, shape=donor_name), size=4, stroke=1.5, alpha=.85)+
+    stat_ellipse(aes(group=incubation, colour=incubation))+
       theme(axis.text.y= element_text(size = 20), 
           axis.title.y = element_text(size=20), 
           axis.title.x = element_text(size=20),
@@ -1023,22 +1059,24 @@ phyloseq_rare %>%
           plot.title = element_text(size=20), 
           legend.text.align = 0, 
         panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))
+        panel.border=element_rect(fill=NA))+
+    xlab("PCoA1 (27.1%)")+
+    ylab("PCoA2 (19.3%)")+
+    ggtitle("Stress")
+  
+  ggsave(filename = paste("O2_beta_stress.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2/beta",
+       width = 16,
+       height = 11,
+       units = c("cm"))  
   
   
-```
-
-
-# PCoA -02
-```{r}
-library(plyr)
-
-
-phyloseq_rare %>%
-  subset_samples(time %in% "stress")%>%
-  # subset_samples(!donor_name %in% "D1")%>%
+  phyloseq_rare %>%
+  # subset_samples(time %in% c("stress"))%>%
+    subset_samples(time %in% c("post_stress_2", "post_stress_1"))%>%
+    # subset_samples(!donor_name %in% c( "D1", "D5"))%>%
   # subset_samples(stress_level %in% c("max"))%>%
-  subset_samples(stress %in% c("H2O2"))-> sub
+  subset_samples(stress %in% c("O2"))-> sub
 
 
   dist = "bray"
@@ -1071,9 +1109,10 @@ phyloseq_rare %>%
 
   pdataframe%>%
       ggplot(aes(Axis_1, Axis_2))+ 
-      # scale_color_manual(values=c('darkgoldenrod1', "cyan4"))+
-      geom_point(aes(shape=incubation, colour=donor_name), size=4, stroke=1.5)+
-    stat_ellipse(aes(group=incubation))+
+        scale_colour_manual(values=c( "lightpink3","skyblue3"), labels=c("Control", "Stress"), name="Condition")+
+    scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+      geom_point(aes(colour=incubation, shape=donor_name), size=4, stroke=1.5, alpha=.85)+
+    stat_ellipse(aes(group=incubation, colour=incubation))+
       theme(axis.text.y= element_text(size = 20), 
           axis.title.y = element_text(size=20), 
           axis.title.x = element_text(size=20),
@@ -1083,13 +1122,300 @@ phyloseq_rare %>%
           plot.title = element_text(size=20), 
           legend.text.align = 0, 
         panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))
+        panel.border=element_rect(fill=NA))+
+    xlab("PCoA1 (20.6%)")+
+    ylab("PCoA2 (18.6%)")+
+    ggtitle("Post-stress")
+  
+  
+    ggsave(filename = paste("O2_beta_post.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2/beta",
+       width = 16,
+       height = 11,
+       units = c("cm"))
+  
+  
+```
+
+# PCoA -02 stress levels
+
+```{r}
+library(plyr)
+
+
+phyloseq_rare %>%
+  subset_samples(time %in% c("stress") & incubation %in% "aerobe")%>%
+   # subset_samples(time %in% c("post_stress_2", "post_stress_1"))%>%
+   # subset_samples(!donor_name %in% c("D1", "D5"))%>%
+  # subset_samples(stress_level %in% c("max"))%>%
+  subset_samples(stress %in% c("O2"))-> sub
+
+
+  dist = "bray"
+  ord_meths = c("PCoA")
+
+
+  plist = llply(as.list(ord_meths), function(i, sub, dist){
+          ordi = ordinate(sub, method=i, distance=dist)
+          plot_ordination(physeq = sub, 
+                          ordination = ordi,
+                          color = "donor_name", 
+                          shape = "stress",
+                          title = "PCoA Bray-Curtis", 
+                          label= "time")},
+          sub, 
+          dist)
+
+
+  names(plist) <- ord_meths
+
+  pdataframe = ldply(plist, function(x){
+      df = x$data[, 1:2]
+      colnames(df) = c("Axis_1", "Axis_2")
+      return(cbind(df, x$data))})
+
+
+  
+  names(pdataframe)[1] = "method"
+
+
+  pdataframe%>%
+      ggplot(aes(Axis_1, Axis_2))+ 
+        # scale_colour_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"), name="Condition")+
+    scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+      geom_point(aes(colour=stress_level, shape=donor_name), size=4, stroke=1.5, alpha=.85)+
+    stat_ellipse(aes(group=stress_level, colour=incubation))+
+      theme(axis.text.y= element_text(size = 20), 
+          axis.title.y = element_text(size=20), 
+          axis.title.x = element_text(size=20),
+          axis.text.x = element_text(size=20),
+          legend.text = element_text(size = 20),
+          legend.title = element_text(size= 20),
+          plot.title = element_text(size=20), 
+          legend.text.align = 0, 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+    xlab("PCoA1 (27.1%)")+
+    ylab("PCoA2 (19.3%)")
+  
+  ggsave(filename = paste("O2_beta_stress.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2/beta",
+       width = 16,
+       height = 11,
+       units = c("cm"))  
+  
+  
+  phyloseq_rare %>%
+  # subset_samples(time %in% c("stress"))%>%
+    subset_samples(time %in% c("post_stress_2", "post_stress_1"))%>%
+    # subset_samples(!donor_name %in% c( "D1", "D5"))%>%
+  # subset_samples(stress_level %in% c("max"))%>%
+  subset_samples(stress %in% c("O2"))-> sub
+
+
+  dist = "bray"
+  ord_meths = c("PCoA")
+
+
+  plist = llply(as.list(ord_meths), function(i, sub, dist){
+          ordi = ordinate(sub, method=i, distance=dist)
+          plot_ordination(physeq = sub, 
+                          ordination = ordi,
+                          color = "donor_name", 
+                          shape = "stress",
+                          title = "PCoA Bray-Curtis", 
+                          label= "time")},
+          sub, 
+          dist)
+
+
+  names(plist) <- ord_meths
+
+  pdataframe = ldply(plist, function(x){
+      df = x$data[, 1:2]
+      colnames(df) = c("Axis_1", "Axis_2")
+      return(cbind(df, x$data))})
+
+
+  
+  names(pdataframe)[1] = "method"
+
+
+  pdataframe%>%
+      ggplot(aes(Axis_1, Axis_2))+ 
+        scale_colour_manual(values=c( "lightpink3","skyblue3"), labels=c("Control", "Stress"), name="Condition")+
+    scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+      geom_point(aes(colour=incubation, shape=donor_name), size=4, stroke=1.5, alpha=.85)+
+    stat_ellipse(aes(group=incubation, colour=incubation))+
+      theme(axis.text.y= element_text(size = 20), 
+          axis.title.y = element_text(size=20), 
+          axis.title.x = element_text(size=20),
+          axis.text.x = element_text(size=20),
+          legend.text = element_text(size = 20),
+          legend.title = element_text(size= 20),
+          plot.title = element_text(size=20), 
+          legend.text.align = 0, 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+    xlab("PCoA1 (20.6%)")+
+    ylab("PCoA2 (18.6%)")
+  
+  
+    ggsave(filename = paste("O2_beta_post.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2/beta",
+       width = 16,
+       height = 11,
+       units = c("cm"))
   
   
 ```
 
 
-# PCOa
+# PCoA -H202
+```{r}
+# library(plyr)
+
+
+phyloseq_rare %>%
+  # subset_samples(time %in% "stress")%>%
+  # subset_samples(!donor_name %in% c("D1", "D5"))%>%
+   subset_samples(stress_level %in% c("control","low","median","high"))%>%
+  subset_samples(stress %in% c("H2O2") & time %in% "stress")-> sub
+
+
+  dist = "bray"
+  ord_meths = c("PCoA")
+
+
+  plist = llply(as.list(ord_meths), function(i, sub, dist){
+          ordi = ordinate(sub, method=i, distance=dist)
+          plot_ordination(physeq = sub, 
+                          ordination = ordi,
+                          color = "donor_name", 
+                          shape = "stress",
+                          title = "PCoA Bray-Curtis", 
+                          label= "time")},
+          sub, 
+          dist)
+
+
+  names(plist) <- ord_meths
+
+  pdataframe = ldply(plist, function(x){
+      df = x$data[, 1:2]
+      colnames(df) = c("Axis_1", "Axis_2")
+      return(cbind(df, x$data))})
+
+
+  
+  names(pdataframe)[1] = "method"
+
+
+  pdataframe%>%
+    mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high")))->sub
+      ggplot(data=sub, aes(Axis_1, Axis_2))+ 
+        stat_ellipse(data = subset(sub, time %in% "stress"), aes(group=stress_level, fill=stress_level), geom="polygon", alpha=0.2, lty=1, size=1.5)+
+         # stat_ellipse(data = subset(sub, time %in% "post_stress_2"), aes(group=stress_level, colour=stress_level), lty=2, size=1, alpha=.8)+
+      geom_point(aes(colour=stress_level, shape=donor_name), size=4, alpha=0.8)+
+      theme(axis.text.y= element_text(size = 20), 
+          axis.title.y = element_text(size=20), 
+          axis.title.x = element_text(size=20),
+          axis.text.x = element_text(size=20),
+          legend.text = element_text(size = 20),
+          legend.title = element_text(size= 20),
+          plot.title = element_text(size=20), 
+          legend.text.align = 0, 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+    scale_colour_manual(values=c("skyblue2","skyblue3", "lightpink3", "lightpink4"), 
+                        # labels=c("control", expression("222"~mu*M), expression("710"~mu*M),  "2.3 mM"))+
+                        labels=c("control", "low", "median", "high"), name="Stress level")+
+     scale_fill_manual(values=c("skyblue2","skyblue3", "lightpink3", "lightpink4"), name="Stress level")+
+     scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+  xlab("PCoA1 (30.6 %)")+
+    ylab("PCoA2 (14 %)")+
+    scale_alpha_manual(values=c(1, 0.7, 0.6))+
+        ggtitle("Stress")
+      
+      ggsave(filename = paste("H2O2_beta_ocoa.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/H2O2/beta",
+       width = 16,
+       height = 18,
+       units = c("cm"))
+      
+      
+      phyloseq_rare %>%
+  # subset_samples(time %in% "stress")%>%
+  # subset_samples(!donor_name %in% c("D1", "D5"))%>%
+   subset_samples(stress_level %in% c("control","low","median","high"))%>%
+  subset_samples(stress %in% c("H2O2") & !time %in% "stress")-> sub
+
+
+  dist = "bray"
+  ord_meths = c("PCoA")
+
+
+  plist = llply(as.list(ord_meths), function(i, sub, dist){
+          ordi = ordinate(sub, method=i, distance=dist)
+          plot_ordination(physeq = sub, 
+                          ordination = ordi,
+                          color = "donor_name", 
+                          shape = "stress",
+                          title = "PCoA Bray-Curtis", 
+                          label= "time")},
+          sub, 
+          dist)
+
+
+  names(plist) <- ord_meths
+
+  pdataframe = ldply(plist, function(x){
+      df = x$data[, 1:2]
+      colnames(df) = c("Axis_1", "Axis_2")
+      return(cbind(df, x$data))})
+
+
+  
+  names(pdataframe)[1] = "method"
+
+
+  pdataframe%>%
+    mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high")))->sub
+      ggplot(data=sub, aes(Axis_1, Axis_2))+ 
+        stat_ellipse(aes(group=stress_level, fill=stress_level), geom="polygon", alpha=0.2, lty=1, size=1.5)+
+      geom_point(aes(colour=stress_level, shape=donor_name), size=4, alpha=0.8)+
+      theme(axis.text.y= element_text(size = 20), 
+          axis.title.y = element_text(size=20), 
+          axis.title.x = element_text(size=20),
+          axis.text.x = element_text(size=20),
+          legend.text = element_text(size = 20),
+          legend.title = element_text(size= 20),
+          plot.title = element_text(size=20), 
+          legend.text.align = 0, 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+    scale_colour_manual(values=c("skyblue2","skyblue3", "lightpink3", "lightpink4"), 
+                        # labels=c("control", expression("222"~mu*M), expression("710"~mu*M),  "2.3 mM"))+
+                        labels=c("control", "low", "median", "high"), name="Stress level")+
+     scale_fill_manual(values=c("skyblue2","skyblue3", "lightpink3", "lightpink4"), name="Stress level")+
+     scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+  xlab("PCoA1 (29.9 %)")+
+    ylab("PCoA2 (14.4 %)")+
+    scale_alpha_manual(values=c(1, 0.7, 0.6))+
+        ggtitle("Post-stress")
+      
+      ggsave(filename = paste("H2O2_beta_post.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/H2O2/beta",
+       width = 16,
+       height = 10,
+       units = c("cm"))
+
+  
+  
+```
+
+
+# PCOa - controls
 ```{r}
 library(plyr)
 
