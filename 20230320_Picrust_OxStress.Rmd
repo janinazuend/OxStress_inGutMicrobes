@@ -1,0 +1,260 @@
+```{r setup, echo =FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃƒÂ¼ss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
+
+
+# install.packages("data.table")
+# 
+# # Load the data.table package
+# library(data.table)
+# library(ggpicrust2)
+
+```
+
+```{r}
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# 
+# # BiocManager::install("biomformat")
+# library(biomformat)
+```
+
+## Enrichment files
+
+```{r}
+phyloseq <-readRDS("P:/Shared_documents/Former members/Serafina Plüss/20230320_sequencing_results/Janina/dada2/phyloseq_phylo/phyloseq_phylo.RDS")
+```
+
+```{r, echo=FALSE}
+phyloseq%>%
+  physeq_add_metadata(physeq = .,
+                      metadata = "P:/Shared_documents/Former members/Serafina Plüss/20230320_sequencing_results/Janina/metadata_file_janina.xlsx" %>%
+                        readxl::read_xlsx(),
+                      sample_column = "sample_name") -> phyloseq
+```
+
+```{r}
+phyloseq%>%
+  subset_samples(experiment %in% "tryptophan_enrichment")->trp
+
+trp%>% 
+  filter_taxa(function(x) sum(x > 10) > 0.05*nsamples(trp), TRUE)-> trp
+
+# Extract abundance matrix from the phyloseq object
+OTU = as(otu_table(trp), "matrix")
+# Coerce to data.frame
+OTUdf = as.data.frame(OTU)
+
+
+```
+
+```{r}
+setwd("P:/Shared_documents/Benoit Pugin")
+# Extract abundance matrix from the phyloseq object
+
+OTUdf %>%
+  rownames_to_column(var= "OTU ID")%>%
+  write.table("P:/Shared_documents/Benoit Pugin/otu_enrichment.tsv", sep = "\t", row.names = F, col.names = TRUE)
+
+
+write_biom(OTUdf, "P:/Shared_documents/Benoit Pugin/otu.biom")
+
+refseq(trp) %>%
+  Biostrings::writeXStringSet("P:/Shared_documents/Benoit Pugin/enrichment.fna", append=FALSE,
+                              compress=FALSE, compression_level=NA, format="fasta")
+```
+
+## get the files from picrust output
+```{r}
+ library(R.utils)
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline")
+
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/EC_predicted.tsv.gz")
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/KO_predicted.tsv.gz")
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/marker_predicted_and_nsti.tsv.gz")
+
+mapfile_EC = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/EC_predicted.tsv")
+mapfile_KO = paste0( "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/Enrichmen_picrust2_out_pipeline/KO_predicted.tsv")
+mapfile_PW = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/marker_predicted_and_nsti.tsv")
+
+mapEC = as.data.frame(fread(mapfile_EC, header = FALSE))
+colnames(mapEC) = mapEC[1,]
+mapEC = mapEC[-1,]
+
+mapKO = as.data.frame(fread(mapfile_KO, header = FALSE, sep = "\t"))
+colnames(mapKO) = mapKO[1,]
+mapKO = mapKO[-1,]
+```
+
+```{r}
+trp<-phyloseq_get_strains(trp)
+
+noNA = !is.na(tax_table(trp)[,"Genus"]) & !is.na(tax_table(trp)[,"Species"])
+tax_table(trp)[noNA][,"Species"] = paste(tax_table(trp)[noNA][,"Genus"], tax_table(trp)[noNA][,"Species"])
+trp%>%
+  tax_fix()->trp
+```
+
+```{r}
+as.data.frame(tax_table(trp))%>%
+  rownames_to_column("sequence")->tax
+
+mapEC[, c("sequence", "EC:3.5.1.4", "EC:3.5.5.1", "EC:3.1.1.1")]%>%
+  left_join(., tax )->ec
+
+```
+```{r}
+
+
+trp%>%
+  physeq_glom_rename(taxrank = "Strain", 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+  psmelt()%>%
+  left_join(., ec)->ec_abundance
+```
+```{r}
+ec_abundance%>%
+  subset(`EC:3.1.1.11` > 0)->filt
+
+filt%>%
+  ggplot(aes(y=Abundance, x=condition))+
+  geom_boxplot()+
+  geom_point()+
+  geom_point(aes(colour=Strain))+
+  geom_point(data = subset(filt, Abundance > 1), aes(colour=Strain))+
+  facet_grid(cols=vars(donor_name), scales="free", space="free")+
+  theme(axis.text.x = element_text (angle=90))
+```
+```{r}
+as.data.frame(refseq(trp))[c("ASV015"),]
+```
+
+
+
+## PICRUST2 downsteram analysis
+```{r}
+# install.packages("ggpicrust2")
+# library(ggpicrust2)
+```
+```{r}
+ko<-"P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/KO_predicted.tsv"
+kegg_abundance<-ko2kegg_abundance(ko)
+```
+
+
+
+```{r}
+as.data.frame(refseq(phylo_test))%>%
+  subset(x %in% "TACGTAGGGGGCAAGCGTTATCCGGATTTACTGGGTGTAAAGGGAGCGTAGACGGCATGGCAAGTCTGAAGTGAAAACCCAGGGCTCAACCCTGGGACTGCTTTGGAAACTGTCAAGCTAGAGTGCAGGAGAGGTAAGTGGAATTCCTAGTGTAGCGGTGAAATGCGTAGATATTAGGAGGAACACCAGTGGCGAAGGCGGCTTACTGGACTGTAACTGACGTTGAGGCTCGAAAGCGTGGGGAGCAAACAGG")
+```
+
+
+
+
+## Inno Niche
+```{r}
+phylo_test <-readRDS("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/phyloseq_phylo.RDS")
+```
+
+```{r}
+phylo_test%>% 
+  filter_taxa(function(x) sum(x > 10) > 0.05*nsamples(phylo_test), TRUE)-> phylo_test
+
+# Extract abundance matrix from the phyloseq object
+OTU = as(otu_table(phylo_test), "matrix")
+# Coerce to data.frame
+OTUdf = as.data.frame(OTU)
+
+
+```
+
+```{r}
+OTUdf %>%
+  rownames_to_column(var= "OTU ID")%>%
+  write.table("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/otu_innoniche.tsv", sep = "\t", row.names = F, col.names = TRUE)
+
+refseq(phylo_test) %>%
+  Biostrings::writeXStringSet("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/refseq_innoniche.fasta", append=FALSE,
+                              compress=FALSE, compression_level=NA, format="fasta")
+```
+
+```{r}
+OTUdf %>%
+  
+ASV0384
+```
+
+
+## get the files from picrust output
+```{r}
+  library(data.table)
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline")
+
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/EC_predicted.tsv.gz")
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/KO_predicted.tsv.gz")
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/marker_predicted_and_nsti.tsv.gz")
+
+mapfile_EC = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/EC_predicted.tsv")
+mapfile_KO = paste0( "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/KO_predicted.tsv")
+mapfile_PW = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/marker_predicted_and_nsti.tsv")
+
+
+mapEC = as.data.frame(fread(mapfile_EC, header = FALSE))
+colnames(mapEC) = mapEC[1,]
+mapEC = mapEC[-1,]
+# 
+# mapKO = read.table(mapfile_KO)
+# 
+# colnames(mapKO) = mapKO[1,]
+# mapKO = mapKO[-1,]
+
+```
+
+```{r}
+# ko<-"P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/KO_predicted.tsv"
+# 
+# kegg_abundance<-ko2kegg_abundance(ko)
+```
+```{r}
+as.data.frame(tax_table(phylo_trp))%>%
+  rownames_to_column("sequence")->tax
+
+mapEC[, c("sequence","EC:3.5.1.4")]%>%
+  left_join(., tax)%>%
+  subset(!`EC:3.5.1.4` %in% "0")->ec
+
+
+```
+
+```{r}
+phylo_trp%>%
+  physeq_glom_rename(taxrank = "Species", 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+  psmelt()%>%
+  left_join(., tax)%>%
+  # subset(prod %in% c("nothing", "IPA_ILA"))%>%
+  subset(tryptophan %in% c("Trp", "no-Trp"))%>%
+   subset(substrate %in% c( "Nut", "AG"))%>%
+  subset(Species %in% ec$Species)%>%
+  mutate(Species = reorder(Species, Abundance))%>%
+  ggplot(aes(y=donor_name, x=Abundance))+
+ geom_point(aes(colour=substrate, group=tryptophan), position = position_dodge(0.9))+
+  geom_boxplot(aes(fill=tryptophan), outlier.shape =NA, alpha=0.5)+
+   theme(axis.text.y= element_text(size = 15), 
+              axis.title.y = element_text(size=15), 
+              axis.title.x = element_text(size=15),
+              axis.text.x = element_text(size=15),
+              legend.text = element_text(size = 15),
+              legend.title = element_text(size= 15),
+              plot.title = element_text(size=15), 
+            panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA),
+        strip.text.y= element_text(angle=0))+
+  ggtitle("Clr-abundances in the two clusters")+
+  scale_fill_manual(values=c( "coral3", "cyan4", "green3", "darkgoldenrod2"))+
+  facet_grid(rows=vars(Species))
+```
+

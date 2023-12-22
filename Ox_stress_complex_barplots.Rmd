@@ -5,7 +5,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
 
 
-# devtools::install_github("tidyverse/tidyverse")
+ devtools::install_github("tidyverse/tidyverse")
  library(tidyverse)
  library(openxlsx)
  library(ggh4x)

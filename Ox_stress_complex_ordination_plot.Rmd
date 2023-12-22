@@ -1,0 +1,260 @@
+---
+title: "Ox_stress_Microviz"
+author: "Janina Zünd"
+date: "2023-11-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
+
+library(phyloseq)
+library(microViz)
+
+# install.packages("ggside")
+# library(ggside)
+```
+
+## 1. Get the phyloseq object 
+```{r}
+# unloadNamespace("miaViz")
+# unloadNamespace("mia")
+
+phyloseq <-readRDS("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/phyloseq_phylo.RDS")
+phyloseq%>%
+  phyloseq_get_strains()->phyloseq
+```
+
+```{r}
+hplc<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/20230613_hplc_list_results_stress.xlsx")
+hplc%>%
+  subset(!sample_name %in% NA)->hplc
+
+seq<-read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/mapping_file.xlsx")
+meta<-left_join(seq, hplc[,c(1:12)])
+
+class<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/wp2_complex/aerotolerance_classification_mod.xlsx")
+class$classification<-class$classification%>%
+  replace_na("no classification")
+
+ps_strain_filt%>%
+  physeq_glom_rename(taxrank = "Genus", 
+                     speedyseq = T)%>%
+   microbiome::transform("compositional") %>%
+   psmelt()->df_abund
+
+
+af_abund_class <- left_join(df_abund, class[, c("Genus", "classification")])
+
+setNames(aggregate(af_abund_class$Abundance, by=list(af_abund_class$classification, af_abund_class$donor_name, af_abund_class$stress, af_abund_class$stress_level, af_abund_class$incubation, af_abund_class$time), FUN="sum"), c("classification", "donor_name", "stress", "stress_level","incubation", "time", "Abundance"))%>%
+   mutate(classification = ifelse(classification == "facultative anaerobe", "facultative", classification))%>%
+  pivot_wider(values_from = Abundance, names_from =  classification)-> classi
+
+
+meta_class<-left_join(meta, classi)
+
+
+write.xlsx(meta_class, "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/meta_new.xlsx")
+
+
+
+
+```
+### Get and update metadata file
+```{r, echo=FALSE}
+
+phyloseq%>%
+  physeq_add_metadata(physeq = .,
+                      metadata = "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/meta_new.xlsx" %>%
+                        readxl::read_xlsx(),
+                      sample_column = "sample_name") -> phyloseq
+
+```
+###Filtering
+```{r}
+ps_strain_filt <- phyloseq
+
+# threshold in %
+threshold = 0.1
+
+# filter per sample to remove all ASV lower in abundance than threshold (%)
+otu_table(ps_strain_filt) <- otu_table(ps_strain_filt) %>%
+  as.data.frame() %>%
+  dplyr:: mutate(across(everything(), ~ ifelse(. <= sum(.) * (threshold/100), 0, .))) %>% otu_table(., taxa_are_rows = TRUE)
+
+# remove all ASVs that are not present in any sample
+ps_strain_filt <- ps_strain_filt %>%
+  filter_taxa(function(x) sum(x > 0) > 0, TRUE)
+
+noNA = !is.na(tax_table(ps_strain_filt)[,"Genus"]) & !is.na(tax_table(ps_strain_filt)[,"Species"])
+tax_table(ps_strain_filt)[noNA][,"Species"] = paste(tax_table(ps_strain_filt)[noNA][,"Genus"], tax_table(ps_strain_filt)[noNA][,"Species"])
+ps_strain_filt%>%
+  tax_fix()->ps_strain_filt
+```
+
+#Rarefying
+```{r}
+# phyloseq%>%
+ps_strain_filt%>%
+  phyloseq_check_lib_size(data_color = "donor_name",
+                          data_facet = NULL,
+                          nreads_display = 3165,
+                       first_n = nsamples(phyloseq)) -> lib
+
+ps_strain_filt%>%
+# phyloseq %>%
+  rarefy_even_depth(rngseed = 123,
+                    sample.size = 2900
+                    # sample.size = 5000
+                    ) -> phyloseq_rare
+```
+
+
+
+```{r}
+# unloadNamespace("phyloseq")
+
+phyloseq_rare %>%
+  tax_transform(trans="identity", rank="Genus") %>%
+  dist_calc("bray")
+```
+```{r}
+phyloseq_rare %>%
+  subset_samples(time %in% c("stress"))%>%
+  subset_samples(stress %in% c("O2") & stress_level %in% c("max", "high"))-> sub
+
+ ord_explore(sub)
+```
+
+```{r}
+phyloseq_rare %>%
+  subset_samples(time %in% c("stress"))%>%
+  subset_samples(stress %in% c("O2") & stress_level %in% c("max", "high")) %>%
+  tax_transform(trans="identity", rank = "Genus") %>%
+  # when no distance matrix or constraints are supplied, PCA is the default/auto ordination method
+  # dist_calc("bray") %>%
+  ord_calc(method = "PCA") %>%
+  ord_plot(color = "incubation", shape = "donor_name", plot_taxa = 1:7, size = 2) +
+  scale_colour_brewer(palette = "Dark2")+
+  stat_ellipse(aes(group=incubation, colour=incubation))+
+      scale_colour_manual(values=c( "lightpink3", "skyblue2"), name="Stress", labels=c("Stress", "Control"))+
+    scale_fill_manual(values=c("lightpink3","skyblue2"))+
+     scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+  #  ggside::geom_xsideboxplot(aes(colour = incubation, y = incubation), orientation = "y", outlier.shape = NA) +
+  # ggside::geom_ysideboxplot(aes(colour = incubation, x = incubation), orientation = "x", outlier.shape = NA) +
+  # ggside::scale_xsidey_discrete(labels = NULL) +
+  # ggside::scale_ysidex_discrete(labels = NULL) +
+  ggside::geom_xsidedensity(aes(fill = incubation), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = incubation), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void()
+
+  ggsave(filename =  "Beta_div_O2.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 17,
+       height = 14,
+       units = c("cm"))
+  
+```
+```{r}
+phyloseq_rare %>%
+  subset_samples(time %in% c("stress"))%>%
+  subset_samples(stress %in% c("O2") & stress_level %in% c("max", "high")) %>%
+  tax_transform(trans="identity", rank = "Genus") %>%
+  # when no distance matrix or constraints are supplied, PCA is the default/auto ordination method
+  # dist_calc("bray") %>%
+  ord_calc(constraints = c("anaerobic", "microaerophile", "facultative" )) %>%
+  ord_plot(color = "incubation", 
+           shape = "donor_name", 
+           plot_taxa = 1:7, 
+           size = 2,
+            constraint_vec_style = vec_constraint(1.5, alpha = 0.5)) +
+  scale_colour_brewer(palette = "Dark2")+
+  stat_ellipse(aes(group=incubation, colour=incubation))+
+      scale_colour_manual(values=c( "lightpink3", "skyblue2"), name="Stress", labels=c("Stress", "Control"))+
+    scale_fill_manual(values=c("lightpink3","skyblue2"))+
+     scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+  #  ggside::geom_xsideboxplot(aes(colour = incubation, y = incubation), orientation = "y", outlier.shape = NA) +
+  # ggside::geom_ysideboxplot(aes(colour = incubation, x = incubation), orientation = "x", outlier.shape = NA) +
+  # ggside::scale_xsidey_discrete(labels = NULL) +
+  # ggside::scale_ysidex_discrete(labels = NULL) +
+  ggside::geom_xsidedensity(aes(fill = incubation), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = incubation), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void()
+
+  ggsave(filename =  "Beta_div_O2.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 17,
+       height = 14,
+       units = c("cm"))
+  
+```
+
+
+```{r}
+phyloseq_rare %>%
+  subset_samples(time %in% c("stress"))%>%
+  subset_samples(stress %in% c("H2O2") & stress_level %in% c("control","high")) %>%
+  tax_transform(trans="identity", rank = "Genus") %>%
+  # when no distance matrix or constraints are supplied, PCA is the default/auto ordination method
+  # dist_calc("bray") %>%
+  ord_calc(method = "PCA") %>%
+  ord_plot(color = "stress_level", shape = "donor_name", plot_taxa = 1:9, size = 2) +
+  stat_ellipse(aes(group=stress_level, colour=stress_level))+
+      scale_colour_manual(values=c("skyblue2", "lightpink3"), name="Stress")+
+    scale_fill_manual(values=c("skyblue2", "lightpink3"))+
+     scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+  #  ggside::geom_xsideboxplot(aes(colour = incubation, y = incubation), orientation = "y", outlier.shape = NA) +
+  # ggside::geom_ysideboxplot(aes(colour = incubation, x = incubation), orientation = "x", outlier.shape = NA) +
+  # ggside::scale_xsidey_discrete(labels = NULL) +
+  # ggside::scale_ysidex_discrete(labels = NULL) +
+  ggside::geom_xsidedensity(aes(fill = stress_level), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = stress_level), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void()
+
+  ggsave(filename =  "Beta_div_H2O2_max.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 17,
+       height = 14,
+       units = c("cm"))
+  
+  
+  phyloseq_rare %>%
+  subset_samples(time %in% c("stress", "post_stress_1", "post_stress_2"))%>%
+  subset_samples(stress %in% c("H2O2") & stress_level %in% c("control","median")) %>%
+  tax_transform(trans="identity", rank = "Genus") %>%
+  # when no distance matrix or constraints are supplied, PCA is the default/auto ordination method
+  # dist_calc("bray") %>%
+  ord_calc(method = "PCA") %>%
+  ord_plot(color = "stress_level", shape = "donor_name", plot_taxa = 1:5, size = 2) +
+  stat_ellipse(aes(group=stress_level, colour=stress_level))+
+      scale_colour_manual(values=c("skyblue2", "lightpink3"), name="Stress")+
+    scale_fill_manual(values=c("skyblue2", "lightpink3"))+
+     scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+  #  ggside::geom_xsideboxplot(aes(colour = incubation, y = incubation), orientation = "y", outlier.shape = NA) +
+  # ggside::geom_ysideboxplot(aes(colour = incubation, x = incubation), orientation = "x", outlier.shape = NA) +
+  # ggside::scale_xsidey_discrete(labels = NULL) +
+  # ggside::scale_ysidex_discrete(labels = NULL) +
+  ggside::geom_xsidedensity(aes(fill = stress_level), alpha = 0.5, show.legend = FALSE) +
+  ggside::geom_ysidedensity(aes(fill = stress_level), alpha = 0.5, show.legend = FALSE) +
+  ggside::theme_ggside_void()
+
+  ggsave(filename =  "Beta_div_H2O2_median.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 17,
+       height = 14,
+       units = c("cm"))
+  
+```
+
+```{r}
+phyloseq_rare %>%
+  subset_samples(time %in% c("stress"))%>%
+  subset_samples(stress %in% c("H2O2") & stress_level %in% c("control","high")) %>%
+  tax_transform("clr", rank = "Genus") %>%
+  # when no distance matrix or constraints are supplied, PCA is the default/auto ordination method
+  ord_calc() %>%
+  ord_plot_iris(tax_level = "Genus", ord_plot = "above", anno_colour = "stress_level")
+```
+

@@ -14,70 +14,27 @@ Link to Florentin's github page: https://htmlpreview.github.io/?https://github.c
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina Plüss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
 
-# library("plyr")
-# install.packages("vctrs")
-# install.packages("vegan")
-# install.packages("cli")
 
-# library(vctrs)
-# library(vegan)
-# install.packages("ggplot2")
-#library(ggplot2)
-#install.packages('tinytex')
-#install.packages('rmarkdown')
-#install.packages("rlang")
-#install.packages("nlme")
-#install.packages("mgcv")
-#install.packages("ape")
-#library(nlme)
-# install.packages("remotes")
-# remotes::install_github("mikemc/speedyseq")
-# install.packages("BiocManager")
-# BiocManager::install("DESeq2")
-#install.packages("fs")
-# install.packages('devtools')
-#install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
-#unload("mia")
-# install.packages("GUniFrac")
+ install.packages('devtools')
+
 
 # install.packages(
 #   "microViz",
 #   repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
 # )
 
-
- # devtools::install_github("tidyverse/tidyverse")
- #  library(tidyverse)
- library(openxlsx)
-# # install.packages("ggalluvial")
-# library(ggalluvial)
- # library(ggh4x)
-# library(GUniFrac)
-  library(rstatix)
-# library(tinytex)
-# library(rmarkdown)
-# library(rlang) 
- library(tidyverse)
-   library(microViz)
-# library(dplyr)
-# library(mgcv)
-# library(ape)
-# library(phyloseq)
-# library(speedyseq)
-# library(DESeq2)
-  # library(plyr)
-# library(fs)
-# library(devtools)
-# library(pairwiseAdonis)
-library(ggpubr)
-
- # install.packages("dplyr")
-# install.packages("data.table")
-# devtools::install_github("vmikk/metagMisc")
-#  
-# library(metagMisc)
+# 
+#   devtools::install_github("tidyverse/tidyverse")
+#  library(tidyverse)
+#  library(openxlsx)
+#   library(rstatix)
+# 
+#  library(tidyverse)
+#    library(microViz)
+# library(ggpubr)
 
 
+# library(plyr)
 ```
 
 ```{r, echo =FALSE}
@@ -100,7 +57,7 @@ sample.data.frame <- function(ps) {
 # unloadNamespace("miaViz")
 # unloadNamespace("mia")
 
-phyloseq <-readRDS("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/phyloseq.RDS")
+phyloseq <-readRDS("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/phyloseq_phylo.RDS")
 phyloseq%>%
   phyloseq_get_strains()->phyloseq
 ```
@@ -1482,16 +1439,23 @@ phyloseq_rare %>%
 
 
 
-
+# ppcoa with phylogeny
 
 ```{r}
-physeq_1_rare %>% 
-  phyloseq_plot_bdiv(dlist = dlist, # list of distance computed from a phyloseq object
-                     ps_rare = ., # phyloseq object
-                     m = "PCoA", # PCoA or NMDS
-                     seed = 123, # for reproducibility
-                     axis1 = 1, # axis to plot
-                     axis2 = 2) -> plot_list
+phyloseq_rare %>%
+  subset_samples(time %in% c("stress"))%>%
+  subset_samples(stress %in% c("O2") & stress_level %in% c("max", "high"))-> sub
+
+ordu=ordinate(sub, "PCoA", "unifrac", weighted = T)
+plot_ordination(sub, ordu, color="incubation", shape="donor_name") +
+  scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+   stat_ellipse(aes(group=incubation, colour=incubation))
+  
+ordu=ordinate(sub, "PCoA", "bray")
+plot_ordination(sub, ordu, color="incubation", shape="donor_name") +
+  scale_shape_manual(values= c(15,  16, 17, 0, 1, 2, 3, 4), name="Donor")+
+   stat_ellipse(aes(group=incubation, colour=incubation))
+  
 ```
 
 
