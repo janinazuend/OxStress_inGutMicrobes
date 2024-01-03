@@ -5,8 +5,7 @@ knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_
 
 
 # install.packages("data.table")
-# 
-# # Load the data.table package
+# Load the data.table package
 # library(data.table)
 # library(ggpicrust2)
 
@@ -20,241 +19,451 @@ knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_
 # library(biomformat)
 ```
 
-## Enrichment files
-
+## 1. Get the phyloseq object 
 ```{r}
-phyloseq <-readRDS("P:/Shared_documents/Former members/Serafina Pl�ss/20230320_sequencing_results/Janina/dada2/phyloseq_phylo/phyloseq_phylo.RDS")
+# unloadNamespace("miaViz")
+# unloadNamespace("mia")
+
+phyloseq <-readRDS("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/phyloseq_phylo.RDS")
+phyloseq%>%
+  phyloseq_get_strains()->phyloseq
 ```
 
+```{r}
+hplc<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/20230613_hplc_list_results_stress.xlsx")
+hplc%>%
+  subset(!sample_name %in% NA)->hplc
+
+seq<-read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/mapping_file.xlsx")
+
+meta<-left_join(seq, hplc[,c(1:12)])
+write.xlsx(meta, "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/meta_new.xlsx")
+```
+### Get and update metadata file
 ```{r, echo=FALSE}
+
 phyloseq%>%
   physeq_add_metadata(physeq = .,
-                      metadata = "P:/Shared_documents/Former members/Serafina Pl�ss/20230320_sequencing_results/Janina/metadata_file_janina.xlsx" %>%
+                      metadata = "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/meta.xlsx" %>%
                         readxl::read_xlsx(),
                       sample_column = "sample_name") -> phyloseq
+
+as.data.frame(sample_data(phyloseq))->meta
+## remove donor 2 from data as very low sample size
+# phyloseq %>%
+#   subset_samples(!donor_name %in% "D1")->phyloseq
+
+```
+###Filtering
+```{r}
+ps_strain_filt <- phyloseq
+
+# threshold in %
+threshold = 0.1
+
+# filter per sample to remove all ASV lower in abundance than threshold (%)
+otu_table(ps_strain_filt) <- otu_table(ps_strain_filt) %>%
+  as.data.frame() %>%
+  dplyr:: mutate(across(everything(), ~ ifelse(. <= sum(.) * (threshold/100), 0, .))) %>% otu_table(., taxa_are_rows = TRUE)
+
+# remove all ASVs that are not present in any sample
+ps_strain_filt <- ps_strain_filt %>%
+  filter_taxa(function(x) sum(x > 0) > 0, TRUE)
+```
+
+#Rarefying
+```{r}
+# phyloseq%>%
+ps_strain_filt%>%
+  phyloseq_check_lib_size(data_color = "donor_name",
+                          data_facet = NULL,
+                          nreads_display = 3165,
+                       first_n = nsamples(phyloseq)) -> lib
+
+ps_strain_filt%>%
+# phyloseq %>%
+  rarefy_even_depth(rngseed = 123,
+                    sample.size = 3024
+                    # sample.size = 5000
+                    ) -> phyloseq_rare
 ```
 
 ```{r}
-phyloseq%>%
-  subset_samples(experiment %in% "tryptophan_enrichment")->trp
-
-trp%>% 
-  filter_taxa(function(x) sum(x > 10) > 0.05*nsamples(trp), TRUE)-> trp
-
 # Extract abundance matrix from the phyloseq object
-OTU = as(otu_table(trp), "matrix")
+OTU = as(otu_table(phyloseq_rare), "matrix")
 # Coerce to data.frame
 OTUdf = as.data.frame(OTU)
 
-
-```
-
-```{r}
-setwd("P:/Shared_documents/Benoit Pugin")
-# Extract abundance matrix from the phyloseq object
-
 OTUdf %>%
   rownames_to_column(var= "OTU ID")%>%
-  write.table("P:/Shared_documents/Benoit Pugin/otu_enrichment.tsv", sep = "\t", row.names = F, col.names = TRUE)
+  write.table("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/otu_ox_stress.tsv", sep = "\t", row.names = F, col.names = TRUE)
 
 
-write_biom(OTUdf, "P:/Shared_documents/Benoit Pugin/otu.biom")
-
-refseq(trp) %>%
-  Biostrings::writeXStringSet("P:/Shared_documents/Benoit Pugin/enrichment.fna", append=FALSE,
+refseq(phyloseq_rare) %>%
+  Biostrings::writeXStringSet("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/OxStress.fna", append=FALSE,
                               compress=FALSE, compression_level=NA, format="fasta")
 ```
 
 ## get the files from picrust output
 ```{r}
- library(R.utils)
-setwd("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline")
+# library(R.utils)
+# library(readr)
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline")
 
-# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/EC_predicted.tsv.gz")
-# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/KO_predicted.tsv.gz")
-# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/marker_predicted_and_nsti.tsv.gz")
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline/EC_predicted.tsv.gz")
+ # gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline/KO_predicted.tsv.gz")
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline/EC_metagenome_out/pred_metagenome_unstrat.tsv.gz")
+# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline/pathways_out/path_abun_unstrat.tsv.gz")
+mapEC = as.data.frame(readr::read_tsv(("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline/EC_predicted.tsv")))
 
-mapfile_EC = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/EC_predicted.tsv")
-mapfile_KO = paste0( "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/Enrichmen_picrust2_out_pipeline/KO_predicted.tsv")
-mapfile_PW = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/marker_predicted_and_nsti.tsv")
 
-mapEC = as.data.frame(fread(mapfile_EC, header = FALSE))
-colnames(mapEC) = mapEC[1,]
-mapEC = mapEC[-1,]
-
-mapKO = as.data.frame(fread(mapfile_KO, header = FALSE, sep = "\t"))
-colnames(mapKO) = mapKO[1,]
-mapKO = mapKO[-1,]
-```
-
-```{r}
-trp<-phyloseq_get_strains(trp)
-
-noNA = !is.na(tax_table(trp)[,"Genus"]) & !is.na(tax_table(trp)[,"Species"])
-tax_table(trp)[noNA][,"Species"] = paste(tax_table(trp)[noNA][,"Genus"], tax_table(trp)[noNA][,"Species"])
-trp%>%
-  tax_fix()->trp
-```
-
-```{r}
-as.data.frame(tax_table(trp))%>%
-  rownames_to_column("sequence")->tax
-
-mapEC[, c("sequence", "EC:3.5.1.4", "EC:3.5.5.1", "EC:3.1.1.1")]%>%
-  left_join(., tax )->ec
-
+mapKO = as.data.frame(readr::read_tsv(("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline/KO_predicted.tsv")))
+pathway = as.data.frame(readr::read_tsv(("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/picrust/picrust2_out_pipeline/pathways_out/path_abun_unstrat.tsv")))
 ```
 ```{r}
+mapKO%>%
+  gather(., KO_number, count, "K00001":"K19791")%>%
+  subset(KO_number %in% c("K00248","K17829", "K00209", "K00634","K00929", "K01034", "K01035", "K19703"))%>%
+  setNames(c("OTU", "KO_number", "count"))->butyrate
+
+rownames(butyrate)<-NULL
+```
 
 
-trp%>%
-  physeq_glom_rename(taxrank = "Strain", 
-                     speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% c("stress") &
+                   stress_level %in% c("high", "control") &
+                   stress %in% "O2")%>%
+  microbiome::transform("compositional") %>% 
   psmelt()%>%
-  left_join(., ec)->ec_abundance
-```
-```{r}
-ec_abundance%>%
-  subset(`EC:3.1.1.11` > 0)->filt
+  left_join(., butyrate)%>%
+  subset(!count == 0)->but_abund
 
-filt%>%
-  ggplot(aes(y=Abundance, x=condition))+
-  geom_boxplot()+
-  geom_point()+
-  geom_point(aes(colour=Strain))+
-  geom_point(data = subset(filt, Abundance > 1), aes(colour=Strain))+
-  facet_grid(cols=vars(donor_name), scales="free", space="free")+
-  theme(axis.text.x = element_text (angle=90))
-```
-```{r}
-as.data.frame(refseq(trp))[c("ASV015"),]
-```
-
-
-
-## PICRUST2 downsteram analysis
-```{r}
-# install.packages("ggpicrust2")
-# library(ggpicrust2)
-```
-```{r}
-ko<-"P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/picrust2_out_pipeline/KO_predicted.tsv"
-kegg_abundance<-ko2kegg_abundance(ko)
-```
-
-
-
-```{r}
-as.data.frame(refseq(phylo_test))%>%
-  subset(x %in% "TACGTAGGGGGCAAGCGTTATCCGGATTTACTGGGTGTAAAGGGAGCGTAGACGGCATGGCAAGTCTGAAGTGAAAACCCAGGGCTCAACCCTGGGACTGCTTTGGAAACTGTCAAGCTAGAGTGCAGGAGAGGTAAGTGGAATTCCTAGTGTAGCGGTGAAATGCGTAGATATTAGGAGGAACACCAGTGGCGAAGGCGGCTTACTGGACTGTAACTGACGTTGAGGCTCGAAAGCGTGGGGAGCAAACAGG")
-```
-
-
-
-
-## Inno Niche
-```{r}
-phylo_test <-readRDS("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/phyloseq_phylo.RDS")
-```
-
-```{r}
-phylo_test%>% 
-  filter_taxa(function(x) sum(x > 10) > 0.05*nsamples(phylo_test), TRUE)-> phylo_test
-
-# Extract abundance matrix from the phyloseq object
-OTU = as(otu_table(phylo_test), "matrix")
-# Coerce to data.frame
-OTUdf = as.data.frame(OTU)
-
-
-```
-
-```{r}
-OTUdf %>%
-  rownames_to_column(var= "OTU ID")%>%
-  write.table("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/otu_innoniche.tsv", sep = "\t", row.names = F, col.names = TRUE)
-
-refseq(phylo_test) %>%
-  Biostrings::writeXStringSet("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/refseq_innoniche.fasta", append=FALSE,
-                              compress=FALSE, compression_level=NA, format="fasta")
-```
-
-```{r}
-OTUdf %>%
+setNames(aggregate(but_abund$Abundance, by=list(but_abund$KO_number, but_abund$donor_name, but_abund$incubation, but_abund$stress_level), FUN=sum), 
+         c("KO_number", "donor_name", "incubation", "stress_level", "Abundance"))%>%
+  ggplot(aes(x=KO_number, y=Abundance))+
+  geom_boxplot(aes(fill=incubation))+
+  geom_point(aes(colour=donor_name, group=incubation), position=position_dodge2(0.9))+
+  facet_grid(cols=vars(stress_level))
   
-ASV0384
 ```
 
 
-## get the files from picrust output
+
 ```{r}
-  library(data.table)
-setwd("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline")
+mapEC%>%
+  gather(., EC_number, count, "EC:1.1.1.1":"EC:6.6.1.2")%>%
+  subset(EC_number %in% c("EC:1.3.8.1", "EC:2.3.1.19", "EC:2.7.27"))%>%
+  setNames(c("OTU", "EC_number", "count"))->butyrate
 
-# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/EC_predicted.tsv.gz")
-# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/KO_predicted.tsv.gz")
-# gunzip("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/marker_predicted_and_nsti.tsv.gz")
-
-mapfile_EC = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/EC_predicted.tsv")
-mapfile_KO = paste0( "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/KO_predicted.tsv")
-mapfile_PW = paste0("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/marker_predicted_and_nsti.tsv")
-
-
-mapEC = as.data.frame(fread(mapfile_EC, header = FALSE))
-colnames(mapEC) = mapEC[1,]
-mapEC = mapEC[-1,]
-# 
-# mapKO = read.table(mapfile_KO)
-# 
-# colnames(mapKO) = mapKO[1,]
-# mapKO = mapKO[-1,]
-
+rownames(butyrate)<-NULL
 ```
 
-```{r}
-# ko<-"P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/PB_Inno_Niche/InnoNiche_picrust/picrust2_out_pipeline/KO_predicted.tsv"
-# 
-# kegg_abundance<-ko2kegg_abundance(ko)
-```
-```{r}
-as.data.frame(tax_table(phylo_trp))%>%
-  rownames_to_column("sequence")->tax
-
-mapEC[, c("sequence","EC:3.5.1.4")]%>%
-  left_join(., tax)%>%
-  subset(!`EC:3.5.1.4` %in% "0")->ec
-
-
-```
 
 ```{r}
-phylo_trp%>%
-  physeq_glom_rename(taxrank = "Species", 
-                     speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
+phyloseq_rare%>%
+  subset_samples(time %in% c("stress") &
+                   stress_level %in% c("high", "control") &
+                   stress %in% "O2")%>%
+  microbiome::transform("compositional") %>% 
   psmelt()%>%
-  left_join(., tax)%>%
-  # subset(prod %in% c("nothing", "IPA_ILA"))%>%
-  subset(tryptophan %in% c("Trp", "no-Trp"))%>%
-   subset(substrate %in% c( "Nut", "AG"))%>%
-  subset(Species %in% ec$Species)%>%
-  mutate(Species = reorder(Species, Abundance))%>%
-  ggplot(aes(y=donor_name, x=Abundance))+
- geom_point(aes(colour=substrate, group=tryptophan), position = position_dodge(0.9))+
-  geom_boxplot(aes(fill=tryptophan), outlier.shape =NA, alpha=0.5)+
-   theme(axis.text.y= element_text(size = 15), 
-              axis.title.y = element_text(size=15), 
-              axis.title.x = element_text(size=15),
-              axis.text.x = element_text(size=15),
-              legend.text = element_text(size = 15),
-              legend.title = element_text(size= 15),
-              plot.title = element_text(size=15), 
-            panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA),
-        strip.text.y= element_text(angle=0))+
-  ggtitle("Clr-abundances in the two clusters")+
-  scale_fill_manual(values=c( "coral3", "cyan4", "green3", "darkgoldenrod2"))+
-  facet_grid(rows=vars(Species))
+  left_join(., butyrate)%>%
+  subset(!count == 0)->but_abund
+
+setNames(aggregate(but_abund$Abundance, by=list(but_abund$EC_number, but_abund$donor_name, but_abund$incubation, but_abund$stress_level), FUN=sum), 
+         c("EC_number", "donor_name", "incubation", "stress_level", "Abundance"))%>%
+  ggplot(aes(x=EC_number, y=Abundance))+
+  geom_boxplot(aes(fill=incubation))+
+  geom_point(aes(colour=donor_name, group=incubation), position=position_dodge2(0.9))+
+  facet_grid(cols=vars(stress_level))
+  
+```
+
+
+```{r}
+orthology <-data.frame(KO_number = c("K00248","K17829","K00209","K00634","K00929","K01034","K01035","K19709"),
+                       EC_number = c("EC:1.3.8.1","EC:1.3.1.86","EC:1.3.1.44","EC:2.3.1.19","EC:2.7.27","EC:2.8.3.8","EC:2.8.3.9","EC:2.8.3.8"),
+                       reaction = c("Crotonyl-CoA to Butynoyl-CoA","Crotonyl-CoA to Butynoyl-CoA","Crotonyl-CoA to Butynoyl-CoA","Butyrate-CoA to Butyrate-P","Butyrate-P to Butyrate","Butyrate-CoA to Butyrate","Butyrate-CoA to Butyrate","Butyrate-CoA to Butyrate"))
+
+mapEC%>%
+  gather(., EC_number, count, "EC:1.1.1.1":"EC:6.6.1.2")%>%
+  subset(EC_number %in% c("EC:1.3.8.1","EC:1.3.1.86","EC:1.3.1.44","EC:2.3.1.19","EC:2.7.27","EC:2.8.3.8","EC:2.8.3.9","EC:2.8.3.8"))%>%
+  setNames(c("sequence", "EC_number", "count_EC"))->EC_long
+rownames(EC_long)<-NULL
+
+mapKO%>%
+  gather(., KO_number, count, "K00001":"K19791")%>%
+  subset(KO_number %in% c("K00248","K17829","K00209","K00634","K00929","K01034","K01035","K19709"))%>%
+    left_join(., orthology)%>%
+  left_join(., EC_long)%>%
+  mutate(diff = count - count_EC)%>%
+  setNames(c("OTU", "KO_number", "count", "EC_number", "reaction","count_EC", "diff"))->merged
+
+unique(merged$EC_number)
+  
+
+```
+
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% c("stress") &
+                   stress_level %in% c("control",  "max") &
+                   stress %in% "O2" & 
+                   incubation %in% c("anaerobe", "aerobe"))%>%
+  microbiome::transform("compositional") %>% 
+  psmelt()%>%
+  left_join(., merged)%>%
+  subset(count > 0 | count_EC > 0)->but_abund
+
+setNames(aggregate(but_abund$Abundance, by=list(but_abund$reaction, but_abund$donor_name, but_abund$incubation, but_abund$stress_level), FUN=sum), 
+         c("reaction", "donor_name", "incubation", "stress_level", "Abundance"))%>%
+  ggplot(aes(x=reaction, y=Abundance))+
+  geom_boxplot(aes(fill=incubation), outlier.shape=NA)+
+  geom_jitter(aes(colour=donor_name, group=incubation), position=position_dodge(0.9))+
+  facet_grid(cols=vars(stress_level))
+  
+```
+```{r}
+left_join(mapKO[,c("sequence", "K00248","K17829","K00209","K00634","K00929","K01034","K01035","K19709")], 
+          mapEC[,c("sequence","EC:1.3.8.1","EC:1.3.1.86","EC:2.8.3.8","EC:2.8.3.9","EC:2.8.3.8")])->merged
+
+
+
+asv<- unique(merged$sequence)
+
+merged$but_prod <-NULL
+merged$but_CoA <-NULL
+merged$butK <-NULL
+
+pathways<-c("but_CoA", "butK")
+
+for (i in 1:length(asv)){
+  
+  if (merged[i, c("K00248")] > 0 | 
+      merged[i, c("EC:1.3.8.1")] > 0 |
+      merged[i, c("K17829")] > 0 |
+      merged[i, c("EC:1.3.1.86")] > 0 |
+      merged[i, c("K00209")] > 0 ){x=1}
+  else {x=0}
+  
+  if (merged[i, c("K00634")] > 0 ){y=1}
+  else {y=0}
+  
+   if (merged[i, c("K00929")] > 0  ){z=1}
+    else {z=0}
+  
+  merged[i, c("butK")] = (x+y+z) / 3
+
+  
+   if (merged[i, c("K00248")] > 0 | 
+      merged[i, c("EC:1.3.8.1")] > 0 |
+      merged[i, c("K17829")] > 0 |
+      merged[i, c("EC:1.3.1.86")] > 0 |
+        merged[i, c("K00209")]  > 0 ){x=1}
+  else {z=0}
+  
+  if (merged[i, c("K01034")] > 0 | 
+      merged[i, c("EC:2.8.3.8")] > 0 |
+      merged[i, c("K01035")] > 0 |
+      merged[i, c("EC:2.8.3.9")] > 0 |
+        merged[i, c("K19709")] > 0 |
+      merged[i, c("EC:2.8.3.8")] > 0 ){y=1}
+  else {y=0}
+  
+  merged[i, c("but_CoA")] = (x+y) / 2
+ 
+}
+
+left_join(as.data.frame(tax_table(phyloseq_rare))%>%
+            rownames_to_column("OTU"), setNames(merged[,c("sequence","butK", "but_CoA")], c("OTU","butK", "but_CoA")))-> abund
+```
+
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% c("stress") &
+                   stress_level %in% c("control",  "max") &
+                   stress %in% "O2" & 
+                   incubation %in% c("anaerobe", "aerobe"))%>%
+  microbiome::transform("compositional") %>% 
+  psmelt()%>%
+  left_join(., abund)%>%
+  subset(butK ==1 | but_CoA ==1 )->but_abund
+
+setNames(aggregate(but_abund$Abundance, by=list(but_abund$donor_name, 
+                                                but_abund$incubation, 
+                                                but_abund$stress_level), FUN=sum), 
+         c("donor_name", "incubation", "stress_level", "Abundance"))%>%
+  ggplot(aes(x=stress_level, y=Abundance))+
+  geom_boxplot(aes(fill=incubation), outlier.shape=NA)+
+  geom_jitter(aes(colour=donor_name, group=incubation), position=position_dodge(0.9))+
+  facet_grid(cols=vars(stress_level))
+
+
+unique(but_abund$Genus)
+```
+
+##sod
+```{r}
+mapKO%>%
+  gather(., KO_number, count, "K00001":"K19791")%>%
+  subset(KO_number %in% c("K00518", #  	nickel superoxide dismutase,
+                          "K04564",#  	superoxide dismutase, Fe-Mn family
+                          "K04565", #  	superoxide dismutase, Cu-Zn family 
+                          "K16627", #  	superoxide dismutase, Cu-Zn family
+                          "K05919", #  	superoxide reductase
+                          "K03781" , #	catalase,
+                          "K07217" , #	manganese catalase
+                          "K19885" ,  #	dichlorochromopyrrolate synthase / catalase
+                          "K03782", # Catalase peroxidase
+                          "K03386" , "K03564", "K11065", "K11187", "K13279", "K14171", "K20011", "K23856", "K24157", "K24158", #Thioredoxin Peroxidase
+                          "K24119", # Peroxiredoxin Nash dependent
+                          "K11188", "K24136", "K24137", "K24138" #peroxiredoxin, Glutathione dependent 
+                          
+))%>%
+  setNames(c("OTU", "KO_number", "count"))->sod
+
+rownames(sod)<-NULL
+```
+
+```{r}
+classes<-data.frame(KO_number = c("K00518", #  	nickel superoxide dismutase,
+                          "K04564",#  	superoxide dismutase, Fe-Mn family
+                          "K04565", #  	superoxide dismutase, Cu-Zn family 
+                          "K16627", #  	superoxide dismutase, Cu-Zn family
+                          "K05919", #  	superoxide reductase
+                          "K03781" , #	catalase,
+                          "K07217" , #	manganese catalase
+                          "K19885" ,  #	dichlorochromopyrrolate synthase / catalase
+                          "K03782", # Catalase peroxidase
+                          "K03386" , "K03564", "K11065", "K11187", "K13279", "K14171", "K20011", "K23856", "K24157", "K24158", #Thioredoxin Peroxidase
+                          "K24119", # Peroxiredoxin Nash dependent
+                          "K11188", "K24136", "K24137", "K24138" ),
+           Enzyme = c("nickel superoxide dismutase",
+                          "superoxide dismutase, Fe-Mn family",
+                          "superoxide dismutase, Cu-Zn family",
+                          "superoxide dismutase, Cu-Zn family",
+                          "superoxide reductase",
+                          "catalase",
+                          "manganese catalase",
+                          "dichlorochromopyrrolate synthase / catalase",
+                          "Catalase peroxidase",
+                          "Thioredoxin Peroxidase", "Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase",
+                          "Peroxiredoxin NADH dependent",
+                          "Glutathione-dependent peroxiredoxin", "Glutathione-dependent peroxiredoxin", "Glutathione-dependent peroxiredoxin", "Glutathione-dependent peroxiredoxin" ),
+           Enzyme_type = c("SOD",
+                          "SOD",
+                          "SOD",
+                          "SOD",
+                          "superoxide reductase",
+                          "catalase",
+                          "catalase",
+                          "catalase",
+                          "catalase",
+                          "Thioredoxin Peroxidase", "Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase","Thioredoxin Peroxidase",
+                          "Peroxiredoxin",
+                          "Peroxiredoxin", "Peroxiredoxin", "Peroxiredoxin", "Peroxiredoxin" )) 
+
+  
+```
+
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% c("stress") &
+                   stress_level %in% c("high","median", "control") &
+                   (stress %in% c("H2O2")))%>%
+  microbiome::transform("compositional") %>% 
+  psmelt()%>%
+  left_join(., sod)%>%
+  subset(!count == 0)->but_abund
+
+setNames(aggregate(but_abund$Abundance, by=list(but_abund$KO_number, but_abund$donor_name, but_abund$incubation, but_abund$stress_level, but_abund$stress), FUN=sum), 
+         c("KO_number", "donor_name", "incubation", "stress_level","stress" ,"Abundance"))%>%
+    mutate(stress_level =factor(stress_level, levels=c("control", "median", "high")))%>%
+
+  ggplot(aes(x=KO_number, y=Abundance))+
+  geom_boxplot(aes(fill=stress_level))+
+  geom_point(aes(colour=donor_name, group=stress_level), position=position_dodge(0.9))+
+  facet_grid(cols=vars(stress, incubation))+
+  theme(axis.text.x = element_text(angle=90),
+                strip.text.x= element_text(angle=90))
+
+
+left_join(but_abund, classes)%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "median", "high")))->sub
+
+
+sub%>%
+  ggplot(aes(x=stress_level, y=Abundance))+
+  geom_boxplot(aes(fill=stress_level), outlier.shape = NA)+
+  geom_point(data = subset(sub, Abundance < 0.05), aes(group=stress_level, shape = stress_level), position=position_dodge(0.9))+
+  geom_point(data = subset(sub, Abundance > 0.05), aes(group=stress_level, shape = stress_level, colour=Genus ), position=position_dodge(0.9))+
+  facet_grid(rows=vars(donor_name), cols=vars(Enzyme_type, Enzyme), scales="free", space="free")+
+  theme(axis.text.x = element_text(angle=90), strip.text.x= element_text(angle=90))+
+scale_color_manual(values=c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00",
+  "#6a3d9a", "#a6cee3", "#b2df8a", "#fb9a99",
+  "#fdbf6f", "#cab2d6", "#cccccc", "yellow",
+  "coral4", "darkgoldenrod", "seagreen2","cyan4"))
+  
+ggsave(filename = paste("stress_enzymes_h202.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 20,
+       height = 20,
+       units = c("cm"))
+```
+
+
+
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% c("stress") &
+                   stress_level %in% c("max") &
+          
+                   (stress %in% c("O2") & incubation %in% c("aerobe", "anaerobe")))%>%
+  microbiome::transform("compositional") %>% 
+  psmelt()%>%
+  left_join(., sod)%>%
+  subset(!count == 0)->but_abund
+
+setNames(aggregate(but_abund$Abundance, by=list(but_abund$KO_number, but_abund$donor_name, but_abund$incubation, but_abund$stress_level, but_abund$stress), FUN=sum), 
+         c("KO_number", "donor_name", "incubation", "stress_level","stress" ,"Abundance"))%>%
+    # mutate(stress_level =factor(stress_level, levels=c("control", "median", "high")))%>%
+  ggplot(aes(x=KO_number, y=Abundance))+
+  geom_boxplot(aes(fill=incubation))+
+  geom_point(aes(colour=donor_name, group=incubation), position=position_dodge(0.9))+
+  facet_grid(cols=vars(stress))+
+  theme(axis.text.x = element_text(angle=90))
+
+but_abund%>%
+  ggplot(aes(x=KO_number, y=Abundance))+
+  geom_boxplot(aes(fill=incubation))+
+  geom_point(aes(colour=Genus, group=incubation), position=position_dodge(0.9))+
+  facet_grid(cols=vars(donor_name))+
+  theme(axis.text.x = element_text(angle=90))
+
+
+
+left_join(but_abund, classes)%>%
+  mutate(stress_level = factor(stress_level, levels=c( "max")))->sub
+
+
+sub%>%
+  ggplot(aes(x=incubation, y=Abundance))+
+  geom_boxplot(aes(fill=incubation), outlier.shape = NA)+
+  geom_point(data = subset(sub, Abundance < 0.05), aes(group=incubation, shape = incubation), position=position_dodge(0.9))+
+  geom_point(data = subset(sub, Abundance > 0.05), aes(group=incubation, shape = incubation, colour=Genus ), position=position_dodge(0.9))+
+  facet_grid(rows=vars(donor_name), cols=vars(Enzyme_type, Enzyme), scales="free", space="free")+
+  theme(axis.text.x = element_text(angle=90), 
+        strip.text.x= element_text(angle=90))+
+scale_color_manual(values=c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00",
+  "#6a3d9a", "#a6cee3", "#b2df8a", "#fb9a99",
+  "#fdbf6f", "#cab2d6", "#cccccc", "yellow",
+  "coral4", "darkgoldenrod", "seagreen2","cyan4"))
+
+ggsave(filename = paste("stress_enzymes.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 20,
+       height = 20,
+       units = c("cm"))
 ```
 

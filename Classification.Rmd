@@ -8,25 +8,25 @@ knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃÂ¼ss/20230
 #   repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
 # )
 # devtools::install_github("tidyverse/tidyverse")
- library(tidyverse)
- library(openxlsx)
- library(ggh4x)
- library(microViz)
+ # library(tidyverse)
+ # library(openxlsx)
+ # library(ggh4x)
+ # library(microViz)
 
 
 
 ```
 
 ```{r, echo =FALSE}
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R") 
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R") 
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R") 
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
-source("https://raw.githubusercontent.com/fconstancias/metabaRpipe-source/master/Rscripts/functions.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_varia.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R") 
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R") 
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R") 
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+# source("https://raw.githubusercontent.com/fconstancias/metabaRpipe-source/master/Rscripts/functions.R")
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_varia.R")
+# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
 
 #get metadata file: load this function
 sample.data.frame <- function(ps) {
@@ -68,13 +68,6 @@ phyloseq%>%
 
 as.data.frame(sample_data(phyloseq))->meta
 
-
-as.data.frame(tax_table(phyloseq))%>%
-  subset(Genus %in% "Erysipelatoclostridium")
-
-
-
-
 ```
 
 ```{r}
@@ -100,30 +93,28 @@ ps_strain_filt%>%
                      speedyseq = T)%>%
    microbiome::transform("compositional") %>%
   subset_samples(time %in% c("pre-stress", "stress", "post_stress_1", "post_stress_2"))%>%
-   psmelt()->df_abund
+   psmelt()%>%
+  subset(Abundance > 0.001)->df_abund
 
 write.xlsx(setNames(as.data.frame(unique(df_abund$Genus)), c("Genus")), "C:/Users/zuendj/Desktop/03_data R/wp2_complex/aerotolerance_classification.xlsx" )
 # 
-# 
-df_abund%>%
-  subset(donor_name %in% c("D1", "D8", "D3", "D7") & Genus %in% "Sutterella")%>%
-  subset(stress %in% "H2O2" & stress_level %in%  "high" & time %in% "post_stress_2")
+
 ```
 
 ```{r}
 
-class<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/wp2_complex/aerotolerance_classification_mod.xlsx")
+class<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/wp2_complex/aerotolerance_classification_filtered.xlsx")
 
 class$classification<-class$classification%>%
   replace_na("no classification")
 
-af_abund_class <- left_join(df_abund, class[, c("Genus", "classification")])
-
+df_abund_class <- left_join(df_abund, class[, c("Genus", "classification", "Literature")])
 ```
 ##O2
 ```{r}
-af_abund_class%>%
-  subset(stress %in% c("O2", "control"))->sub
+df_abund_class%>%
+  subset(stress %in% c("O2", "control"))%>%
+   subset(Abundance > 0)->sub
 
 setNames(aggregate(sub$Abundance, by=list(sub$classification, sub$donor_name, sub$stress, sub$stress_level, sub$incubation, sub$time), FUN="sum"), c("classification", "donor_name", "stress", "stress_level","incubation", "time", "Abundance"))%>%
   mutate(time = factor(time, levels =c("pre-stress","stress", "post_stress_1", "post_stress_2")))  %>%    
@@ -150,46 +141,25 @@ ggsave(filename = paste( "oxygen.jpeg"),
        height = 30,
        units = c("cm"))
 ```
-```{r}
-af_abund_class%>%
-  subset(stress %in% c("O2", "control"))->sub
 
-setNames(aggregate(sub$Abundance, by=list(sub$classification, sub$donor_name, sub$stress, sub$stress_level, sub$incubation, sub$time), FUN="sum"), c("classification", "donor_name", "stress", "stress_level","incubation", "time", "Abundance"))%>%
-  subset(incubation %in% "anaerobe")%>%
-  mutate(time = factor(time, levels =c("pre-stress","stress", "post_stress_1", "post_stress_2")),
-         stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max"))) %>%     
-  ggplot(aes(x=classification, y=Abundance))+
-  geom_boxplot(outlier.shape =  NA, aes(fill=stress_level))+
-  geom_point(aes(colour=donor_name, group=stress_level, shape = stress_level), position =position_jitterdodge(0.1))+
-  # facet_grid(cols=vars(incubation))+
-  theme(strip.text = element_text(size  = 20),
-        axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=20, angle=90, vjust=0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0)+
-   # scale_fill_manual(values=c( "lightpink3","skyblue3"), labels=c( "Stress","Control"), name="Condition")+
-  facet_grid(cols=vars(time))
-```
+
+
 
 ```{r}
-af_abund_class%>%
+df_abund_class%>%
   subset(stress %in% c("O2") & 
            time %in% c("stress") & 
            incubation %in% c("aerobe"))%>%
-  subset(donor_name %in% "D2" & classification %in% "facultative anaerobe")->sub
+  subset( classification %in% "microaerophile")->sub
 
-aggregate(sub$Abundance, by=list(sub$Genus), FUN= sum)
+aggregate(sub$Abundance, by=list(sub$Genus, sub$stress_level, sub$donor_name), FUN= mean)
 ```
 
 ```{r}
 donor_cond<-c("D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8")
 
 for (i in 1:length(donor_cond)){
-af_abund_class%>%
+df_abund_class%>%
   subset(stress %in% c("O2", "control") & donor_name %in% donor_cond[i] & time %in% "stress")->sub
 
 setNames(aggregate(sub$Abundance, by=list(sub$classification, sub$donor_name, sub$stress, sub$stress_level, sub$incubation, sub$time), FUN="sum"), c("classification", "donor_name", "stress", "stress_level","incubation", "time", "Abundance"))%>%
@@ -222,6 +192,24 @@ ggsave(filename = paste( donor_cond[i], "metabolites_controls.jpeg"),
 }
 ```
 
+```{r}
+df_abund_class%>%
+  subset(stress %in% c("O2") & 
+           time %in% c("stress") )%>%
+  # subset( classification %in% c("microaerophile","facultative anaerobe"))%>%
+  mutate(classification = ifelse(OTU == "Bacteroides", "Bacteroides", classification))%>%
+   mutate(classification = ifelse(OTU == "Bifidobacterium", "Bifidobacterium", classification))%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))%>%
+  ggplot(aes(x=stress_level, y=Abundance))+
+  geom_bar(stat="identity", aes(fill=classification))+
+  facet_grid(cols=vars(incubation), rows=vars(donor_name))
+
+ggsave(filename = paste("classification_bar.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/classification",
+       width = 17,
+       height = 15,
+       units = c("cm"))
+```
 
 ##H2O2
 ```{r}
@@ -266,5 +254,71 @@ ggsave(filename = paste("classification_h2o2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/classification",
        width = 20,
        height = 15,
+       units = c("cm"))
+```
+
+### Butyrate
+##O2
+```{r}
+df_abund_class%>%
+  subset(stress %in% c("O2"))%>%
+   subset(Abundance > 0.001)%>%
+  subset(Literature %in% "yes")->sub
+
+setNames(aggregate(sub$Abundance, by=list(sub$donor_name, sub$stress, sub$stress_level, sub$incubation, sub$time), FUN="sum"), c("donor_name", "stress", "stress_level","incubation", "time", "Abundance"))%>%
+  mutate(time = factor(time, levels =c("pre-stress","stress", "post_stress_1", "post_stress_2")))  %>%    
+    mutate(stress_level = factor(stress_level, levels =c("control","low", "median", "high", "max")))  %>% 
+  ggplot(aes(x=time, y=Abundance))+
+  geom_boxplot(outlier.shape =  NA, aes(fill=incubation), position = position_dodge2(preserve = "single"))+
+  geom_point(aes(colour=donor_name, group=incubation, shape = stress_level), position =position_jitterdodge(0.1))+
+  # facet_grid(cols=vars(incubation))+
+  theme(strip.text = element_text(size  = 20),
+        axis.text.y= element_text(size = 20), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=20, angle=90, vjust=0.5, hjust=1),
+        legend.text = element_text(size = 20, vjust=1, hjust=0),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0)+
+   scale_fill_manual(values=c( "lightpink3","skyblue3"), labels=c( "Stress","Control"), name="Condition")+
+  facet_grid( rows=vars(stress_level))
+
+ggsave(filename = paste( "Butyrate.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/classification",
+       width = 30,
+       height = 30,
+       units = c("cm"))
+```
+
+### Butyrate
+##O2
+```{r}
+df_abund_class%>%
+  subset(stress %in% c("H2O2"))%>%
+   subset(Abundance > 0.001)%>%
+  subset(Literature %in% "yes")->sub
+
+setNames(aggregate(sub$Abundance, by=list(sub$donor_name, sub$stress, sub$stress_level, sub$incubation, sub$time), FUN="sum"), c("donor_name", "stress", "stress_level","incubation", "time", "Abundance"))%>%
+  mutate(time = factor(time, levels =c("pre-stress","stress", "post_stress_1", "post_stress_2")))  %>%    
+    mutate(stress_level = factor(stress_level, levels =c("control","low", "median", "high")))  %>% 
+  ggplot(aes(x=time, y=Abundance))+
+  geom_boxplot(outlier.shape =  NA, aes(fill=stress_level), position = position_dodge2(preserve = "single"))+
+  geom_point(aes(colour=donor_name, group=stress_level, shape = stress_level), position =position_jitterdodge(0.1))+
+  # facet_grid(cols=vars(incubation))+
+  theme(strip.text = element_text(size  = 20),
+        axis.text.y= element_text(size = 20), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=20, angle=90, vjust=0.5, hjust=1),
+        legend.text = element_text(size = 20, vjust=1, hjust=0),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0)
+   # scale_fill_manual(values=c( "lightpink3","skyblue3"), labels=c( "Stress","Control"), name="Condition")
+ggsave(filename = paste( "Butyrate_h2O2.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/classification",
+       width = 30,
+       height = 30,
        units = c("cm"))
 ```

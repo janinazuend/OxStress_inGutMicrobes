@@ -329,11 +329,11 @@ hplc[, c("donor_name", "time", "stress_level", "stress", "??Succinate", "??Forma
   # subset(time %in% "stress")%>%
   subset(p < 0.05)
 
-hplc[, c("donor_name", "time", "stress_level", "stress","??Lactate")]%>%
-  subset(stress %in% c("H2O2") & stress_level %in% c("control", "high")) %>%
+hplc[, c("donor_name", "time", "stress_level", "stress","??Butyrate")]%>%
+  subset(stress %in% c("H2O2") & stress_level %in% c("control", "median") & !donor_name %in% "D1") %>%
   group_by(time)%>%
-  wilcox_test(data= .,
-    formula = `??Lactate` ~ stress_level, p.adjust.method = "BH")%>%
+  t_test(data= .,
+    formula = `??Butyrate` ~ stress_level, p.adjust.method = "BH")%>%
   add_significance()%>%
   # subset(group2 %in% "high")%>%
   # subset(time %in% "stress")%>%
