@@ -5,10 +5,11 @@ date: '2022-12-14'
 ---
 
 ```{r setup, echo =FALSE}
+
 .libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative stress", cho = TRUE, warning = FALSE, message = FALSE)
-
+knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R", cho = TRUE, warning = FALSE, message = FALSE)
+# library(knitr)
 # Install Packages:
 # install.packages("rlang")
 # install.packages("tidyr")
@@ -201,7 +202,7 @@ q1_calc <- function(x) {
   q1 <- quantile(x, 0.25, na.rm =TRUE)
   return(q1)}
 
-z=2
+z=1.5
 
 #####MBC
 
@@ -276,7 +277,7 @@ MIC_vector <- vector()
 for (i in 1:nrow(MIC_mod_av)) { #vertical 
   candidates <- vector()
      for(j in 3:14) {#horizontal 
-       if (!is.na(MIC_mod_av[i,j]) & MIC_mod_av[i,j]/MIC_mod_av[i, "max"]>0.25 & MIC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
+       if (!is.na(MIC_mod_av[i,j]) & MIC_mod_av[i,j]/MIC_mod_av[i, 3]>0.25 & MIC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
          candidates <- append(candidates, colnames(MIC_mod_av)[j])
          candidates <-as.numeric(candidates)
          # print((MIC_replicates_h2o2)[j,1])
@@ -291,7 +292,7 @@ MBC_vector <- vector()
 for (i in 1:nrow(MBC_mod_av)) { #vertical 
   candidates <- vector()
   for(j in 3:14) {#horizontal 
-    if (!is.na(MBC_mod_av[i,j]) & MBC_mod_av[i,j]/MBC_mod_av[i, "max"]>0.25 & MBC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
+    if (!is.na(MBC_mod_av[i,j]) & MBC_mod_av[i,j]/MBC_mod_av[i, 3]>0.25 & MBC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
       
       candidates <- append(candidates, colnames(MBC_mod_av)[j])
       candidates <-as.numeric(candidates)
@@ -384,9 +385,9 @@ for (i in 1:nrow(MBC_rel)) { #vertical
   }}
 
 
-MIC_rel_long<-gather(MIC_rel, condition, OD, "1":"13", factor_key = T)
+MIC_rel_long<-gather(MIC_rel, condition, OD, "1":"12", factor_key = T)
 MIC_rel_long$assay<-c("MIC")
-MBC_rel_long<-gather(MBC_rel, condition, OD, "1":"13", factor_key = T)
+MBC_rel_long<-gather(MBC_rel, condition, OD, "1":"12", factor_key = T)
 MBC_rel_long$assay<-c("MBC")
 
 MBC_MIC_rel_long<-rbind(MIC_rel_long, MBC_rel_long)
@@ -437,29 +438,25 @@ tax<-left_join(MBC_MIC_rel_long_label, taxonomy)
 tax%>%
   subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
   drop_na(OD)%>%
-  mutate(assay = factor(assay, levels=c("MIC", "MBC")))%>%
   subset(!condition %in% 13)%>%
   mutate(OD = OD * 100)%>%
   mutate(bacteria = fct_reorder(bacteria, order))%>%
   mutate(Genus = fct_reorder(Genus, order))%>%
+   mutate(assay = ifelse(assay=="MIC", "a_MIC", assay))->sub
+
+sub%>%
   ggplot(aes(x = condition, y = assay, fill = OD, pattern_type = condition)) + 
-  geom_raster() +
   labs(x=expression(paste(H[2]*O[2])))+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_text(size=20, vjust=-0.8),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
+  theme(text = element_text(size=8), 
+        axis.title.x = element_text(vjust=-0.8),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_blank(),
-        axis.text.y=element_text(size=15),
-        strip.text.y = element_text(angle=0, size=15, hjust = 0, face="italic"),
+        strip.text.y = element_text(angle=0,  hjust = 0, face="italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20, hjust=0.25),
-        # panel.background = element_rect(fill="transparent", colour=NA),
-        panel.border=element_rect(fill=NA))+
-           # fill='transparent', color=NA)           )+
-  facet_grid(rows =vars(bacteria), scales = "free", space = "free")+
+        plot.title = element_text(hjust=0.25),
+        panel.background = element_rect(fill="transparent"),
+        panel.spacing = unit(0, "lines"))+
   scale_x_continuous(labels=c("0 nM", 
                               "6.4 nM",  
                               "21 nM", 
@@ -472,17 +469,33 @@ tax%>%
                               expression("710"~mu*M),  
                               "2.3 mM", "7.3 mM" ), 
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
-  labs(fill = expression(OD/OD[max]~`[%]`), colour="")+
+
   ggtitle(expression(Growth~capability~upon~H[2]*O[2]-spike))+
-   scale_fill_steps(breaks = c(12.5, 25,37.5, 50,62.5, 75, 87.5))+
-  scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)->p
+     scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
+  
+   new_scale_fill() +
+  
+   geom_raster(data = filter(sub, assay == "a_MIC"), aes(fill = OD)) +
+  scale_fill_steps(
+    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5),
+    name = expression(OD/OD[max]~`[%]`),
+    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred" ) +
+  
+  new_scale_fill() +
+ geom_raster(data = filter(sub, assay == "MBC"), aes(fill = OD)) +
+  scale_fill_steps(
+    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5),
+    name = expression(OD/OD[max]~`[%]`),
+    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
+  
+  facet_grid(rows =vars( bacteria), scales = "free", space = "free")
 
 # show(p + theme(legend.position = "none"))
 
 ggsave(filename = "MIC_MBC_h2o2.png", 
        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width =22,
-       height = 41,
+       width =10,
+       height = 18,
        units = c("cm")#, 
        #bg="transparent"
        )
@@ -665,9 +678,8 @@ write.xlsx(h2o2_wide, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress
 # 
 # df_pvalue_both<-rbind(df_pvalue, df_pvalue_MBC)
 # 
-# ```
-# 
-# 
+```
+ 
 
 
 
