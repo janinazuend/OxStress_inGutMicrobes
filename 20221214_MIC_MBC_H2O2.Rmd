@@ -246,25 +246,25 @@ outlier_corr[, c("bacteria", "condition", "value", "replicate","technical_rep")]
 average_long<-gather(MIC_H2O2_replicates_outlier_corr, condition, OD, "1":"12", factor_key = T )
 #take averages of the technical replicate
 average_long_tec<-setNames(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), c("bacteria",  "replicate","condition", "OD"))
+
 #get average per condition -> to get max
-average<-setNames(aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE), c("bacteria", "condition" ,"average"))
+average<-setNames(aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE), c("bacteria", "condition" ,"OD"))
 # find max
-max_mic<-setNames(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
+max_mic<-setNames(aggregate(average$OD, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
 #after getting the average per replicate, get wide table again
-MIC_replicates_wide<-pivot_wider(average_long_tec, names_from = condition , values_from = OD)
+MIC_replicates_wide<-pivot_wider(average, names_from = condition , values_from = OD)
 
 
 #same for MBC
 average_long<-gather(MBC_H2O2_replicates_outlier_corr, condition, OD, "1":"12", factor_key = T )
 average_long_tec<-setNames(aggregate(average_long$OD, list(average_long$bacteria, average_long$replicate, average_long$condition), FUN=mean, na.rm=TRUE), c("bacteria",  "replicate","condition", "OD"))
-average<-aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE)
-names(average)<-c("bacteria", "condition" ,"average")
-max_mbc<-setNames(aggregate(average$average, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
+average<-setNames(aggregate(average_long_tec$OD, list(average_long_tec$bacteria, average_long_tec$condition), FUN=mean, na.rm=TRUE), c("bacteria", "condition" ,"OD"))
+max_mbc<-setNames(aggregate(average$OD, by = list(average$bacteria), max, na.rm=TRUE), c("bacteria", "max"))
 #after getting the average per replicate, get wide table again
-MBC_replicates_wide<-pivot_wider(average_long_tec, names_from = condition , values_from = OD)
+MBC_replicates_wide<-pivot_wider(average, names_from = condition , values_from = OD)
 
-MIC_mod_av<-left_join(MIC_replicates_wide, max_mic)
-MBC_mod_av<-left_join(MBC_replicates_wide, max_mbc)
+# MIC_mod_av<-left_join(MIC_replicates_wide, max_mic)
+# MBC_mod_av<-left_join(MBC_replicates_wide, max_mbc)
 ```
 
 ```{r}
@@ -274,175 +274,84 @@ MBC_mod_av<-left_join(MBC_replicates_wide, max_mbc)
 
 ## GET MIC - as a function of MAX ##
 MIC_vector <- vector()
-for (i in 1:nrow(MIC_mod_av)) { #vertical 
+for (i in 1:nrow(MIC_replicates_wide)) { #vertical 
   candidates <- vector()
-     for(j in 3:14) {#horizontal 
-       if (!is.na(MIC_mod_av[i,j]) & MIC_mod_av[i,j]/MIC_mod_av[i, 3]>0.25 & MIC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
-         candidates <- append(candidates, colnames(MIC_mod_av)[j])
+     for(j in 2:13) {#horizontal 
+       if (!is.na(MIC_replicates_wide[i,j]) & MIC_replicates_wide[i,j]/MIC_replicates_wide[i, 2]>0.2 & MIC_replicates_wide[i,j]>0.0336) {#-> MIC_value_absolut)
+         candidates <- append(candidates, colnames(MIC_replicates_wide)[j])
          candidates <-as.numeric(candidates)
-         # print((MIC_replicates_h2o2)[j,1])
+         
        }
      }
+  # print(max(candidates))
   MIC_vector <- append(MIC_vector, max(candidates))
 }
 
 
 
 MBC_vector <- vector()
-for (i in 1:nrow(MBC_mod_av)) { #vertical 
+for (i in 1:nrow(MBC_replicates_wide)) { #vertical 
   candidates <- vector()
-  for(j in 3:14) {#horizontal 
-    if (!is.na(MBC_mod_av[i,j]) & MBC_mod_av[i,j]/MBC_mod_av[i, 3]>0.25 & MBC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
+  for(j in 2:13) {#horizontal 
+    if (!is.na(MBC_replicates_wide[i,j]) & MBC_replicates_wide[i,j]/MBC_replicates_wide[i, 2]>0.2 & MBC_replicates_wide[i,j]>0.0336) {#-> MIC_value_absolut)
       
-      candidates <- append(candidates, colnames(MBC_mod_av)[j])
+      candidates <- append(candidates, colnames(MBC_replicates_wide)[j])
       candidates <-as.numeric(candidates)
     }
   }
+   # print(max(candidates))
   MBC_vector <- append(MBC_vector, max(candidates))
 }
 
 
-MIC_vector_full <- vector()
-for (i in 1:nrow(MIC_mod_av)) { #vertical 
-  candidates <- vector()
-     for(j in 3:14) {#horizontal 
-       if (!is.na(MIC_mod_av[i,j]) & MIC_mod_av[i,j]/MIC_mod_av[i, "max"]>0.5 & MIC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
-         candidates <- append(candidates, colnames(MIC_mod_av)[j])
-         candidates <-as.numeric(candidates)
-         # print((MIC_replicates_h2o2)[j,1])
-       }
-     }
-  MIC_vector_full <- append(MIC_vector_full, max(candidates))
-}
 
-
-MBC_vector_full <- vector()
-for (i in 1:nrow(MBC_mod_av)) { #vertical 
-  candidates <- vector()
-  for(j in 3:14) {#horizontal 
-    if (!is.na(MBC_mod_av[i,j]) & MBC_mod_av[i,j]/MBC_mod_av[i, "max"]>0.5 & MBC_mod_av[i,j]>0.0336) {#-> MIC_value_absolut)
-      
-      candidates <- append(candidates, colnames(MBC_mod_av)[j])
-      candidates <-as.numeric(candidates)
-    }
-  }
-  MBC_vector_full <- append(MBC_vector_full, max(candidates))
-}
 ```
 
 ```{r}
 #assign MIC/MBC vectors to a data frame
-df_final_replicates <- data.frame(bacteria = MIC_mod_av$bacteria,
-                                  replicate = MIC_mod_av$replicate,
+tolerances_h2o2 <- data.frame(bacteria = MBC_replicates_wide$bacteria,
                                   MIC = as.numeric(MIC_vector),
-                                  MBC = as.numeric(MBC_vector),
-                                  MIC_75 = as.numeric(MIC_vector_full),
-                                  MBC_75 = as.numeric(MBC_vector_full))
-
-
-order<-aggregate(df_final_replicates$MBC, by=list(df_final_replicates$bacteria), median, na.rm=T)
-colnames(order) <-c("bacteria", "order")
-df_final_replicates<-left_join(df_final_replicates, order)
-
-
-df_long<-gather(df_final_replicates[,c("bacteria", "replicate", "MIC", "MBC", "order")], assay, value, "MIC":"MBC", factor_key = T)
-
-df_long_75<-gather(df_final_replicates[,c("bacteria", "replicate", "MIC_75", "MBC_75", "order")], assay, value_75, "MIC_75":"MBC_75", factor_key = T)
-names(df_long_75)[names(df_long_75) == "MIC_75"] <- "MIC"
-
-df_long_75$assay <- recode_factor(df_long_75$assay, MIC_75 = "MIC",
-                                MBC_75 = "MBC")
-
-df_long_both<-left_join(df_long, df_long_75)
-
-
-
-
-median(df_final_replicates$MBC)
-
-
-df_final_replicates%>%
-  subset(bacteria %in% "Bacteroides xylanisolvens")
-
+                                  MBC = as.numeric(MBC_vector)
+                              )
 ```
 
 
-## Go back to the heatplot with relative od values
+## relative od values
 ```{r}
-
-
-MBC_rel<-MBC_mod_av
-MIC_rel<-MIC_mod_av
-
-for (i in 1:nrow(MIC_rel)) { #vertical
-  for(j in 3:14) {#horizontal
-     MIC_rel[i,j] = MIC_rel[i,j]/MIC_rel[i, c("max")]
+od_wide<-rbind(MBC_replicates_wide %>%
+             mutate(assay="MBC"), 
+           MIC_replicates_wide%>%
+             mutate(assay="MIC"))
+rel <- od_wide
+for (i in 1:nrow(rel)) { #vertical
+  for(j in 2:13) {#horizontal
+     rel[i,j] = od_wide[i,j]/od_wide[i, 2]
   }}
 
-for (i in 1:nrow(MBC_rel)) { #vertical
-  for(j in 3:14) {#horizontal
-     MBC_rel[i,j] = MBC_rel[i,j]/MBC_rel[i, c("max")]
-  }}
+rel_long<-gather(rel, condition, OD, "1":"12", factor_key = T)
 
-
-MIC_rel_long<-gather(MIC_rel, condition, OD, "1":"12", factor_key = T)
-MIC_rel_long$assay<-c("MIC")
-MBC_rel_long<-gather(MBC_rel, condition, OD, "1":"12", factor_key = T)
-MBC_rel_long$assay<-c("MBC")
-
-MBC_MIC_rel_long<-rbind(MIC_rel_long, MBC_rel_long)
-MBC_MIC_rel_long<-left_join(MBC_MIC_rel_long, df_long_both)
 ```
 
 ```{r}
 
-# MBC_MIC_rel_long$OD[MBC_MIC_rel_long$OD <0.1]<-0
-MBC_MIC_rel_long$condition<-as.numeric(paste(MBC_MIC_rel_long$condition))
-
-
-for (i in 1:nrow(MBC_MIC_rel_long)){
-  if ( MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value")]) { 
-    MBC_MIC_rel_long[i, c("label")] = MBC_MIC_rel_long[i, c("value")]}}
-
-MBC_MIC_rel_long$label<-as.numeric(MBC_MIC_rel_long$label)
-
-for (i in 1:nrow(MBC_MIC_rel_long)){
-  if ( MBC_MIC_rel_long[i, c("condition")] == MBC_MIC_rel_long[i, c("value_75")]) { 
-    MBC_MIC_rel_long[i, c("label_75")] = MBC_MIC_rel_long[i, c("value_75")]}}
-
-MBC_MIC_rel_long$label_75<-as.numeric(MBC_MIC_rel_long$label_75)
-
-
-MBC_MIC_rel_long_label<-gather(MBC_MIC_rel_long, label_type, label_value, "label":"label_75")
-```
-
-```{r}
-
-MBC_MIC_rel_long_label%>%
+rel_long%>%
+  left_join(., tolerances_h2o2%>%
+              gather(assay, tolerance, "MIC", "MBC"))%>%
  mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens" ,
                              "Phocaeicola vulgatus" = "Bacteroides vulgatus",
-                          "Lachnospira sp" = "Lachnospiraceae bacterium"))->MBC_MIC_rel_long_label
-  
-  
-taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
-
-
-tax<-left_join(MBC_MIC_rel_long_label, taxonomy)
-
-
-
+                          "Lachnospira sp" = "Lachnospiraceae bacterium"))->rel_long
 ```
 
 ```{r}
 
-tax%>%
+rel_long%>%
   subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
-  drop_na(OD)%>%
-  subset(!condition %in% 13)%>%
   mutate(OD = OD * 100)%>%
-  mutate(bacteria = fct_reorder(bacteria, order))%>%
-  mutate(Genus = fct_reorder(Genus, order))%>%
-   mutate(assay = ifelse(assay=="MIC", "a_MIC", assay))->sub
+  mutate(bacteria = fct_reorder(bacteria, tolerance))%>%
+   mutate(assay = ifelse(assay=="MIC", "a_MIC", assay))%>%
+  mutate(condition = as.numeric(paste(condition)))%>% 
+  mutate(OD = ifelse(OD < 0 , 0, OD))%>%
+  mutate(OD = ifelse(OD > 120 , 120, OD))->sub
 
 sub%>%
   ggplot(aes(x = condition, y = assay, fill = OD, pattern_type = condition)) + 
@@ -477,15 +386,15 @@ sub%>%
   
    geom_raster(data = filter(sub, assay == "a_MIC"), aes(fill = OD)) +
   scale_fill_steps(
-    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5),
-    name = expression(OD/OD[max]~`[%]`),
+    breaks = c(  20,  40,  60,80,  100, 120),
+    name = expression(OD~`[%]`),
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred" ) +
   
   new_scale_fill() +
  geom_raster(data = filter(sub, assay == "MBC"), aes(fill = OD)) +
   scale_fill_steps(
-    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5),
-    name = expression(OD/OD[max]~`[%]`),
+    breaks = c(  20,  40,  60,80,  100, 120),
+    name = expression(OD~`[%]`),
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
   
   facet_grid(rows =vars( bacteria), scales = "free", space = "free")

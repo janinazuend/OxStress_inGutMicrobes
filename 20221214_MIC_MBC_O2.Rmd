@@ -641,11 +641,11 @@ MIC_vector_O2 <- vector()
 for (i in 1:nrow(MIC_mod_av_O2)) { #vertical 
   candidates <- vector()
      for(j in 3:14) {#horizontal 
-       if (MIC_mod_av_O2[i,j]/MIC_mod_av_O2[i, c(j+12)]>0.10) {#-> MIC_value_absolut)
+       if (MIC_mod_av_O2[i,j]/MIC_mod_av_O2[i, c(j+12)]>0.2) {#-> MIC_value_absolut)
 
          candidates <- append(candidates, colnames(MIC_mod_av_O2)[j])
          candidates <-as.numeric(candidates)
-         print( max(candidates))
+         # print( max(candidates))
        }
      }
   MIC_vector_O2 <- append(MIC_vector_O2, max(candidates))
@@ -658,11 +658,11 @@ MBC_vector_O2 <- vector()
 for (i in 1:nrow(MBC_mod_av_O2)) { #vertical 
   candidates <- vector()
      for(j in 3:14) {#horizontal 
-       if ( MBC_mod_av_O2[i,j]/MBC_mod_av_O2[i, c(j+12)]>0.10) {#-> MIC_value_absolut)
+       if ( MBC_mod_av_O2[i,j]/MBC_mod_av_O2[i, c(j+12)]>0.2) {#-> MIC_value_absolut)
 
          candidates <- append(candidates, colnames(MBC_mod_av_O2)[j])
          candidates <-as.numeric(candidates)
-        print( max(candidates))
+        # print( max(candidates))
        }
      }
   MBC_vector_O2 <- append(MBC_vector_O2, max(candidates))
@@ -691,14 +691,14 @@ left_join(OD_relative_to_anaerobe, df_final_replicates_O2)%>%
   mutate(bacteria = reorder(bacteria, MBC))%>%
    mutate(ratio = ratio*100)%>%
   mutate(ratio = ifelse(ratio <0, 0, ratio))%>%
-  mutate(ratio = ifelse(ratio >110, 110, ratio))%>%
+  mutate(ratio = ifelse(ratio >120, 120, ratio))%>%
   mutate(assay= ifelse(assay == "MIC", "a_MIC", assay))->sub
 
 min(sub$ratio)
 
 sub%>%
   ggplot(aes(x = condition, y = assay)) + 
-  labs(x=c("Agar [???]"))+
+  labs(x=c("Agar [%]"))+
   theme(text = element_text(size=8), 
         axis.title.x = element_text(vjust=-0.8),
         axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
@@ -709,18 +709,18 @@ sub%>%
         plot.title = element_text(hjust=0.25),
         panel.background = element_rect(fill="transparent"),
         panel.spacing = unit(0, "lines"))+
-  scale_x_continuous(labels=c("1.5","1.28", "1.08", "0.92" , "0.78", "0.67", "0.57", "0.48", "0.41", "0.35",  "0.3","0"),
+  scale_x_continuous(labels=c("0.15","0.13", "0.11", "0.09" , "0.08", "0.07", "0.06", "0.05", "0.04", "0.035",  "0.03","0"),
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
    scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
-  labs(fill = expression(OD/OD[max]~`[%]`), colour="")+
+  labs(fill = expression(OD~`[%]`), colour="")+
   ggtitle(expression(Growth~capability~under~oxygenation))+
   
   new_scale_fill() +
   
    geom_raster(data = filter(sub, assay == "a_MIC"), aes(fill = ratio)) +
   scale_fill_steps(
-    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100),
-    name = expression(OD/OD[max]~`[%]`),
+    breaks = c(  20,  40,  60,80,  100, 120),
+    name = expression(OD~`[%]`),
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred" ) +
   
 
@@ -728,8 +728,8 @@ sub%>%
   
  geom_raster(data = filter(sub, assay == "MBC"), aes(fill = ratio)) +
   scale_fill_steps(
-    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100),
-    name = expression(OD/OD[max]~`[%]`),
+    breaks = c( 20,  40,  60,80,  100, 120),
+    name = expression(OD~`[%]`),
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
   facet_grid(rows =vars( bacteria), scales = "free", space = "free")
   
