@@ -33,11 +33,11 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R", cho = TRUE,
 #Load the data
 ########################################
 
-setwd("P:/Shared_documents/Janina_Zuend/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/01_import")
 # bacteria <- list.files(path = "P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
 
-list.files(path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2/MIC")->bacteria
-bacteria <- subset(bacteria, !bacteria %in% c("Subdoligranulum variable.csv", "Anaerobutyricum hallii.csv", "Marvinbryantia formatixigens.csv", "Ruminococcus bromii.csv", 'Fusicatenibacter saccharivorans.csv', 'Lachnospira sp.csv'))
+list.files(path = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/01_import")->bacteria
+
 
 options(scipen=999)
 #########################################
@@ -134,11 +134,7 @@ for (l in 1:length(bacteria)) {
 #Load the data
 ########################################
 
-setwd("P:/Shared_documents/Janina_Zuend/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
-# bacteria <- list.files(path = "P:/Shared_documents/Janina Zünd/08_phd/09_student thesis/Marina/03_experimentation/03_MIC_MBC/01_OD-measurements/single_bacteria_for_plot")
-
-list.files(path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/input/h2o2/MIC")->bacteria
-bacteria <- subset(bacteria, !bacteria %in% c("Subdoligranulum variable.csv", "Anaerobutyricum hallii.csv", "Marvinbryantia formatixigens.csv", "Ruminococcus bromii.csv", 'Fusicatenibacter saccharivorans.csv', 'Lachnospira sp.csv'))
+setwd("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/01_import")
 
 options(scipen=999)
 #########################################
@@ -237,6 +233,7 @@ bacteria <- strsplit(bacteria, ".csv")
 bacteria <- as.character(bacteria)
 
 
+
 row_names<-matrix(0,length(bacteria)*6,1)
 position = 0
 for (i in 1:length(bacteria)) {
@@ -261,12 +258,10 @@ colnames(MBC_O2_replicates_ana)<-list("bacteria", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 
 
 # 2. Export blanck corrected OD values for outlier correction
 ```{r}
-write.xlsx(MBC_O2_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates.xlsx")
-write.xlsx(MIC_O2_replicates, file = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates.xlsx")
-
-
-MBC_O2_replicates<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MBC_O2_replicates_non_mod.xlsx")
-MIC_O2_replicates<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/oxidative stress/MIC_O2_replicates_non_mod.xlsx")
+MBC_O2_replicates$replicate = rep(c(1,1,2,2,3,3), times=length(unique(bacteria)))
+MBC_O2_replicates$technical_rep = rep(c("a","b"), times = 3* length(unique(bacteria)))
+MIC_O2_replicates$replicate = rep(c(1,1,2,2,3,3), times=length(unique(bacteria)))
+MIC_O2_replicates$technical_rep = rep(c("a","b"), times = 3* length(unique(bacteria)))
 ```
 
 ##Outlier correction
@@ -347,6 +342,16 @@ outlier_corr[, c("bacteria", "condition", "value", "replicate","technical_rep")]
   pivot_wider(values_from = value, names_from = condition)->MIC_O2_replicates_outlier_corr_ana
 
 ```
+```{r}
+rbind(MIC_O2_replicates_outlier_corr%>%
+        mutate(assay="MIC_aerobic"),MBC_O2_replicates_outlier_corr%>%
+        mutate(assay="MBC_aerobic") )%>%
+  rbind(., MIC_O2_replicates_outlier_corr_ana%>%
+        mutate(assay="MIC_anaerobic"))%>%
+   rbind(., MBC_O2_replicates_outlier_corr_ana%>%
+        mutate(assay="MBC_anaerobic"))%>%
+  write.xlsx(., "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/O2_growthdata_blank_outlier_corr.xlsx")
+```
 
 # 3. Average of triplicates & Find max values 
 ```{r}
@@ -373,189 +378,12 @@ MIC_mod_av_O2<-left_join(MIC_replicates_wide_O2, max_mic_O2)
 MBC_mod_av_O2<-left_join(MBC_replicates_wide_O2, max_mbc_O2)
 ```
 
-# 4. get values of tolerated concentration
-### two vectors are generated: one using a growth tresh hold of 10% of the max growth and one for 50 % of the may grwoth &&& an minimal growth of an od of 0.0344 is required (derived from the stdv. of absorbance of the blank)
-```{r}
 
-MIC_vector_O2 <- vector()
-for (i in 1:nrow(MIC_mod_av_O2)) { #vertical 
-  candidates <- vector()
-     for(j in 3:14) {#horizontal 
-       if (!is.na(MIC_mod_av_O2[i,j]) & MIC_mod_av_O2[i,j]/MIC_mod_av_O2[i, "max"]>0.25 & MIC_mod_av_O2[i,j]>0.03449526) {#-> MIC_value_absolut)
-
-         candidates <- append(candidates, colnames(MIC_mod_av_O2)[j])
-         candidates <-as.numeric(candidates)
-       }
-     }
-  MIC_vector_O2 <- append(MIC_vector_O2, max(candidates))
-}
-
-# trial to see if results make sense to set limit at 10% of the growth of the control
-# | MBC_mod_av[i,j]/MBC_mod_av[i, 14]>0.10
-
-MBC_vector_O2 <- vector()
-for (i in 1:nrow(MBC_mod_av_O2)) { #vertical 
-  candidates <- vector()
-  for(j in 3:14) {#horizontal 
-    if (!is.na(MBC_mod_av_O2[i,j]) & MBC_mod_av_O2[i,j]/MBC_mod_av_O2[i, "max"]>0.25 & MBC_mod_av_O2[i,j]>0.03392658) {#-> MIC_value_absolut)
-      
-      candidates <- append(candidates, colnames(MBC_mod_av_O2)[j])
-      candidates <-as.numeric(candidates)
-    }
-  }
-  MBC_vector_O2 <- append(MBC_vector_O2, max(candidates))
-}
-
-```
-
-
-```{r}
-#assign vectors with MIC/MBCs to df
-df_final_replicates_O2 <- data.frame(bacteria = MIC_mod_av_O2$bacteria, 
-                                  replicate = MIC_mod_av_O2$replicate,
-                                  MIC = as.numeric(MIC_vector_O2), 
-                                  MBC = as.numeric(MBC_vector_O2))
-
-#add a vector to order the strains 
-order_O2<-setNames(aggregate(df_final_replicates_O2$MBC, by=list(df_final_replicates_O2$bacteria), median), c("bacteria", "order"))
-df_final_replicates_O2<-left_join(df_final_replicates_O2, order_O2)
-
-#MIC and MBC cols into one col
-df_long_O2<-gather(df_final_replicates_O2[,c("bacteria", "replicate", "MIC", "MBC", "order")], assay, value, "MIC":"MBC", factor_key = T)
-```
-
-## Heatplot with relative od values
-```{r}
-MBC_rel_O2<-MBC_mod_av_O2
-MIC_rel_O2<-MIC_mod_av_O2
-
-for (i in 1:nrow(MIC_rel_O2)) { #vertical 
-  for(j in 3:14) {#horizontal 
-     MIC_rel_O2[i,j] = MIC_rel_O2[i,j]/MIC_rel_O2[i, c("max")] 
-  }}
-
-for (i in 1:nrow(MBC_rel_O2)) { #vertical 
-  for(j in 3:14) {#horizontal 
-     MBC_rel_O2[i,j] = MBC_rel_O2[i,j]/MBC_rel_O2[i, c("max")] 
-  }}
-
-MIC_rel_long_O2<-gather(MIC_rel_O2, condition, OD, "1":"12", factor_key = T)
-MIC_rel_long_O2$assay<-c("MIC")
-MBC_rel_long_O2<-gather(MBC_rel_O2, condition, OD, "1":"12", factor_key = T)
-MBC_rel_long_O2$assay<-c("MBC")
-
-MBC_MIC_rel_long_O2<-rbind(MIC_rel_long_O2, MBC_rel_long_O2)
-MBC_MIC_rel_long_O2<-left_join(MBC_MIC_rel_long_O2, order_O2)
-
-```
-```{r}
-
-# MBC_MIC_rel_long_label_O2$label_value<-MBC_MIC_rel_long_label_O2$label_value
-
-MBC_MIC_rel_long_O2$OD[MBC_MIC_rel_long_O2$condition == 13]<-NA
-
-
-MBC_MIC_rel_long_O2%>%
-  subset(!bacteria %in% c("Subdoligranulum variable", "Anaerobutyricum hallii", "Marvinbryantia formatixigens", "Ruminococcus bromii"))%>%
-  drop_na(OD)->hoi
-
-# p_long_O2$condition<-as.numeric(p_long_O2$condition)
-
-hoi$condition<-as.numeric(hoi$condition)
-# hoihoi<-left_join(hoi, p_long_O2)
-```
-
-#get taxonomy
-```{r}
-hoi%>%
- mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens" ,
-                             "Phocaeicola vulgatus" = "Bacteroides vulgatus"))->hoihoi
-
-taxonomy = read.csv(file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/Strain_panel.csv", sep=";", header=T, check.names =F)
-wide_tax<-left_join(hoihoi, taxonomy)
-```
-##final plot
-```{r}
-# install.packages("ggnewscale")
-# library(ggnewscale)
-setNames(aggregate(wide_tax$OD, by=list(wide_tax$bacteria, wide_tax$condition, wide_tax$assay, wide_tax$order), FUN=mean), c("bacteria", "condition", "assay", "order", "OD"))%>%
-  mutate(OD = OD*100)%>%
-  mutate(assay = ifelse(assay=="MIC", "a_MIC", assay))%>%
-  # mutate(Genus = reorder(Genus, order))%>%
-   mutate(bacteria = reorder(bacteria, order))->sub
-
-sub%>%
-  ggplot(aes(x = condition, y = assay)) + 
-  # geom_raster(aes(fill=OD)) +
-  # scale_fill_steps(breaks = c(12.5, 25,37.5, 50,62.5, 75, 87.5))+
-  labs(x=c("Agar [???]"))+
-  theme(text = element_text(size=8), 
-        axis.title.x = element_text(vjust=-0.8),
-        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_blank(),
-        strip.text.y = element_text(angle=0,  hjust = 0, face="italic"),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        plot.title = element_text(hjust=0.25),
-        panel.background = element_rect(fill="transparent"),
-        panel.spacing = unit(0, "lines"))+
-  scale_x_continuous(labels=c("1.5", 
-                                                    "1.28", 
-                                                    "1.08",
-                                                    "0.92" ,
-                                                    "0.78",
-                                                    "0.67",  
-                                                    "0.57",
-                                                   "0.48",
-                                                    "0.41",
-                                                    "0.35",
-                                                    "0.3", 
-                                                    "0"), 
-                     breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
-  scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
-  labs(fill = expression(OD/OD[max]~`[%]`), colour="")+
-  ggtitle(expression(Growth~capability~under~oxygenation))+
-  
-  new_scale_fill() +
-  
-   geom_raster(data = filter(sub, assay == "a_MIC"), aes(fill = OD)) +
-  scale_fill_steps(
-    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5),
-    name = expression(OD/OD[max]~`[%]`),
-    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred" ) +
-  
-
-  new_scale_fill() +
-  
- geom_raster(data = filter(sub, assay == "MBC"), aes(fill = OD)) +
-  scale_fill_steps(
-    breaks = c(12.5, 25, 37.5, 50, 62.5, 75, 87.5),
-    name = expression(OD/OD[max]~`[%]`),
-    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
-  facet_grid(rows =vars( bacteria), scales = "free", space = "free")
-  
-
-
-# ggsave(filename = "MIC_MBC_o2.png", 
-#        path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-#        width =25,
-#        height = 39.5,
-#        units = c("cm"), 
-#        bg="transparent")
-
-
-
-ggsave(filename = "MIC_MBC_o2_growth_only.jpeg", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width = 10,
-       height = 18,
-       units = c("cm"))
-
-```
 ##Comparison of aerobic values and anaerobic values
 
 ```{r}
 # library(ggpubr)
+#join the two datframes (anaerobic an aerobic values)
 
 left_join(MIC_O2_replicates_outlier_corr %>%
   gather(condition, aerobe, `1`:`12`),
@@ -602,6 +430,7 @@ ggsave(filename = "MIC_MBC_o2_growth_only.jpeg",
 
 #heatplot with values relative to anaerobic controls
 ```{r}
+#combine all data frames
 left_join(MIC_O2_replicates_outlier_corr %>%
   gather(condition, aerobe, `1`:`12`),
   MIC_O2_replicates_outlier_corr_ana %>%
@@ -618,30 +447,29 @@ rbind(MIC, MBC)%>%
   gather(incubation, OD, "aerobe":"anaerobe")  -> joint
   
   
-  
 setNames(aggregate(joint$OD, by =list( joint$condition, joint$bacteria, joint$assay, joint$incubation), FUN="mean", na.rm=T), c( "condition", "bacteria", "assay", "incubation","OD_mean"))%>%
   pivot_wider(names_from = incubation, values_from = OD_mean)%>%
   mutate(ratio = aerobe / anaerobe)->OD_relative_to_anaerobe
       
-
-
 ```
 # 4. get values of tolerated concentration
 ### two vectors are generated: one using a growth tresh hold of 10% of the max growth and one for 50 % of the may grwoth &&& an minimal growth of an od of 0.0344 is required (derived from the stdv. of absorbance of the blank)
 ```{r}
-OD_relative_to_anaerobe[,c("condition", "bacteria", "assay", "aerobe","anaerobe")]%>%
-  pivot_wider(names_from = condition, values_from = c(aerobe, anaerobe))->wide
+OD_relative_to_anaerobe[,c("condition", "bacteria", "assay", "ratio")]%>%
+  # mutate(condition = as.factor(condition, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")))%>%
+  pivot_wider(names_from = condition, values_from = c(ratio))->wide
 
-colnames(wide)<-c("bacteria", "assay", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "anaerobe_1", "anaerobe_2", "anaerobe_3", "anaerobe_4", "anaerobe_5", "anaerobe_6", "anaerobe_7", "anaerobe_8", "anaerobe_9", "anaerobe_10", "anaerobe_11", "anaerobe_12")
 
-wide %>%
+wide [,c("assay", "bacteria","1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12" )]->wide
+
+wide%>%
   subset(assay %in% "MIC")-> MIC_mod_av_O2
 
 MIC_vector_O2 <- vector()
 for (i in 1:nrow(MIC_mod_av_O2)) { #vertical 
   candidates <- vector()
      for(j in 3:14) {#horizontal 
-       if (MIC_mod_av_O2[i,j]/MIC_mod_av_O2[i, c(j+12)]>0.2) {#-> MIC_value_absolut)
+       if (MIC_mod_av_O2[i,j]>0.2) {#-> MIC_value_absolut)
 
          candidates <- append(candidates, colnames(MIC_mod_av_O2)[j])
          candidates <-as.numeric(candidates)
@@ -658,43 +486,62 @@ MBC_vector_O2 <- vector()
 for (i in 1:nrow(MBC_mod_av_O2)) { #vertical 
   candidates <- vector()
      for(j in 3:14) {#horizontal 
-       if ( MBC_mod_av_O2[i,j]/MBC_mod_av_O2[i, c(j+12)]>0.2) {#-> MIC_value_absolut)
+       if ( MBC_mod_av_O2[i,j] > 0.2) {#-> MIC_value_absolut)
+         
+         
 
          candidates <- append(candidates, colnames(MBC_mod_av_O2)[j])
          candidates <-as.numeric(candidates)
-        # print( max(candidates))
+        
        }
      }
+  # print( max(candidates))
   MBC_vector_O2 <- append(MBC_vector_O2, max(candidates))
 }
+
 
 ```
 
 
 ```{r}
 #assign vectors with MIC/MBCs to df
-df_final_replicates_O2 <- data.frame(bacteria = MIC_mod_av_O2$bacteria,
+df_final_replicates_O2 <- data.frame(bacteria = MBC_mod_av_O2$bacteria,
                                   MIC = as.numeric(MIC_vector_O2), 
                                   MBC = as.numeric(MBC_vector_O2))
 
+write.xlsx(df_final_replicates_O2, "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/O2_tolerances.xlsx" )
+
+
+df_final_replicates_O2%>%
+ mutate(MBC = ifelse(bacteria == "Escherichia coli" |
+                      bacteria == "Lactiplantibacillus plantarum" |
+                        bacteria == "Enterococcus faecalis" |
+                        bacteria == "Bifidobacterium longum", 13, MBC))-> order_o2
 
 ```
+
 
 ##plot - relative to anaerobe values
 ```{r}
 # install.packages("ggnewscale")
-# library(ggnewscale)
+ library(ggnewscale)
+
+write.xlsx(OD_relative_to_anaerobe, "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/O2_relative_OD_values.xlsx")
 
 left_join(OD_relative_to_anaerobe, df_final_replicates_O2)%>%
+  left_join(., sampling_selection)%>%
   mutate(bacteria = factor(bacteria))%>%
   mutate(condition = as.numeric(paste(condition)))%>% 
+  mutate(MBC = ifelse(bacteria == "Escherichia coli" |
+                      bacteria == "Lactiplantibacillus plantarum" |
+                        bacteria == "Enterococcus faecalis" |
+                        bacteria == "Bifidobacterium longum", 13, MBC))%>%
   mutate(bacteria = reorder(bacteria, MBC))%>%
    mutate(ratio = ratio*100)%>%
   mutate(ratio = ifelse(ratio <0, 0, ratio))%>%
   mutate(ratio = ifelse(ratio >120, 120, ratio))%>%
   mutate(assay= ifelse(assay == "MIC", "a_MIC", assay))->sub
 
-min(sub$ratio)
 
 sub%>%
   ggplot(aes(x = condition, y = assay)) + 
@@ -706,9 +553,10 @@ sub%>%
         strip.text.y = element_text(angle=0,  hjust = 0, face="italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        plot.title = element_text(hjust=0.25),
-        panel.background = element_rect(fill="transparent"),
-        panel.spacing = unit(0, "lines"))+
+        panel.border=element_rect(fill=NA), 
+          panel.background = element_rect(fill="white"),
+          legend.text.align = 0, 
+          panel.spacing = unit(0, "lines"))+
   scale_x_continuous(labels=c("0.15","0.13", "0.11", "0.09" , "0.08", "0.07", "0.06", "0.05", "0.04", "0.035",  "0.03","0"),
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
    scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
@@ -719,20 +567,22 @@ sub%>%
   
    geom_raster(data = filter(sub, assay == "a_MIC"), aes(fill = ratio)) +
   scale_fill_steps(
-    breaks = c(  20,  40,  60,80,  100, 120),
+     breaks = c( 20, 40,  60,80 , 100, 120),
     name = expression(OD~`[%]`),
-    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred" ) +
-  
-
+    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred1" ) +
   new_scale_fill() +
-  
  geom_raster(data = filter(sub, assay == "MBC"), aes(fill = ratio)) +
   scale_fill_steps(
-    breaks = c( 20,  40,  60,80,  100, 120),
+     breaks = c(20, 40,  60,80  ,100, 120),
     name = expression(OD~`[%]`),
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
-  facet_grid(rows =vars( bacteria), scales = "free", space = "free")
+  geom_point(data = subset(sub, !is.na(agar_condition)), aes(x = condition, y = assay), shape=1)+
+  # geom_point(data=subset(sub, ratio > 20), colour="red", size=0.5)+
+  facet_grid(rows =vars( bacteria), scales = "free", space = "free")->growth_o2
   
+growth_o2
+
+write.csv(sub, file="C:/Users/zuendj/Desktop/03_data R/oxidative stress/gowth_data_o2.csv")
 
 
 # ggsave(filename = "MIC_MBC_o2.png", 
@@ -754,11 +604,13 @@ ggsave(filename = "MIC_MBC_o2_rel_to_ana.jpeg",
 
 
 
+
+
 ### compare O2 and H2O2
 ```{r}
-# library(pheatmap)
-MBC_H2O2<-setNames(order, c("bacteria", "H2O2"))
-MBC_O2<-setNames(order_O2, c("bacteria", "O2"))
+ # library(pheatmap)
+MBC_H2O2<-setNames(tolerances_h2o2[, c("bacteria", "MBC")], c("bacteria", "H2O2"))
+MBC_O2<-setNames(df_final_replicates_O2[, c("bacteria", "MBC")], c("bacteria", "O2"))
 mat<-left_join(MBC_O2, MBC_H2O2)
 
 unique(mat$O2)
@@ -784,6 +636,16 @@ ggsave("heatmap.png", p, device = "png", bg= "transparent", width=5, heigh =10)
 
 ```
 
+```{r}
+df_final_replicates_O2$toll <- NA
+
+df_final_replicates_O2%>%
+  mutate(toll = ifelse(MIC ==MBC, "yes", toll))%>%
+  subset(!toll %in% "yes")%>%
+  subset(!MBC %in% 12)
+
+mean(sub$MBC)
+```
 
 
 ##old code
