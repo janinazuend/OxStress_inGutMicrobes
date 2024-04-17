@@ -1,0 +1,253 @@
+---
+title: "C-sources & 8 donors"
+---
+
+Link to Florentin's github page: https://htmlpreview.github.io/?https://github.com/fconstancias/DivComAnalyses/blob/master/SOP/community_analyses/Microbiome_R_tutorial.html#alpha-diversity
+
+1. Getting ready: load all packages
+-newest version of R
+-rtools required 
+
+
+```{r setup, echo =FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina Plüss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
+
+
+ install.packages('devtools')
+
+
+# install.packages(
+#   "microViz",
+#   repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
+# )
+
+# 
+#   devtools::install_github("tidyverse/tidyverse")
+#  library(tidyverse)
+#  library(openxlsx)
+#   library(rstatix)
+# 
+#  library(tidyverse)
+#    library(microViz)
+# library(ggpubr)
+
+
+# library(plyr)
+```
+
+```{r, echo =FALSE}
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/metabaRpipe-source/master/Rscripts/functions.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_varia.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+
+#get metadata file: load this function
+sample.data.frame <- function(ps) {
+  return(as(phyloseq::sample_data(ps), "data.frame"))}
+```
+## 1. Get the phyloseq object 
+```{r}
+# unloadNamespace("miaViz")
+# unloadNamespace("mia")
+
+
+##get all the samples from anaerobic controls with agar and pre-culture
+
+phyloseq_agar <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")%>%
+  subset_samples(stress %in% c("O2", "control") &
+                   incubation %in% "anaerobe")
+
+meta <- sample.data.frame(phyloseq_agar)
+```
+
+
+
+#1. Alpha diversity
+
+```{r}
+names<-list("diversity_shannon"= "Shannon", 
+            "observed"= "Observed")
+
+phyloseq_agar%>%
+  phyloseq_alphas(phylo = TRUE)%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))%>%
+  gather(index, value, "observed":"diversity_shannon")%>%
+  ggplot(aes(x=time, y=value))+
+  theme(strip.text = element_text(size  = 20),
+          axis.text.y= element_text(size = 20), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=20, angle=90, hjust=1),
+        legend.text = element_text(size = 20, vjust=1, hjust=0),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0)+
+  geom_boxplot(outlier.shape =  NA, aes(fill=stress_level))+
+  geom_jitter(aes(colour=donor_name,group=stress_level),  position = position_dodge(0.9))+
+  facet_grid(rows=vars(index), scales="free", labeller=facet_labeller)+
+  ylab("Alpha diversity")+
+  labs(colour="Donor")+
+  scale_x_discrete(labels = c("pre-culture", "P1", "P2", "P3"))+
+  ggtitle("Alpha diversity of ex-vivo cultures")
+
+
+ggsave(filename = "alpha_cultures.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 17,
+       height = 17,
+       units = c("cm"))
+```
+
+#Growth
+```{r}
+
+meta%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))%>%
+  ggplot(aes(x=time, y=OD_blank_corr))+
+  theme(strip.text = element_text(size  = 20),
+          axis.text.y= element_text(size = 20), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=20, angle=90, hjust=1),
+        legend.text = element_text(size = 20, vjust=1, hjust=0),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0)+
+  geom_boxplot(outlier.shape =  NA, aes(fill=stress_level), position =position_dodge(preserve = "single"))+
+  geom_point(aes(colour=donor_name, group=stress_level),  position = position_jitterdodge( dodge.width=0.9, jitter.width = 0.1))+
+  ylab("OD600")+
+  labs(colour="Donor")+
+  scale_x_discrete(labels = c("pre-culture", "P1", "P2", "P3"))+
+  ggtitle("Growth")
+
+
+ggsave(filename = "alpha_cultures.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 17,
+       height = 17,
+       units = c("cm"))
+```
+
+#stats
+```{r}
+alphas%>%
+  subset(!time %in% c("pre-stress"))%>%
+  group_by(time, stress_level) %>%
+  t_test(data= .,
+  formula = diversity_shannon ~ incubation ,
+  )%>%
+  add_significance()->wil
+```
+
+#B) Beta diversity
+#Calculations of distances: control culture vs. subsequent passages
+```{r}
+phyloseq_agar %>%
+  phyloseq::distance(method = "bray") -> bc
+
+phyloseq_agar %>%
+  ordinate(method = "PCoA",
+           distance = bc) -> ord
+
+phyloseq_agar %>% 
+  phyloseq_distance_boxplot(p = ., 
+                            dist = bc, 
+                            d = "time") -> out # column in metadata for comparaisons
+
+setNames(as.data.frame(out$matrix),c("sample_name", "sample_name_comp", "value", "condition_comp", "comparison")) -> distances
+
+distances%>%
+  subset(comparison %in% c("pre-stress"))-> distances
+
+joined<-left_join(distances, sample.data.frame(phyloseq_agar)[,c(1,10:14)])
+
+joined%>%
+  mutate(sample_name_comp = recode(sample_name_comp, 
+                                   "M-09" = 'D1',
+                                   "M-10" = 'D2',
+                                   "M-11" = 'D3',
+                                   "M-12" = 'D4',
+                                   "M-13" = 'D5',
+                                   "M-14" = 'D6',
+                                   "M-15" = 'D7',
+                                   "M-16" = 'D8',))->joined
+
+for (i in 1:nrow(joined)){
+  if (joined[i,c("donor_name")] == joined[i,c("sample_name_comp")]){joined[i,c("match")]= "true"}
+}
+
+joined%>%
+  subset(match %in% "true")->match
+
+# match$condition_comp<-factor(match$condition_comp, levels=c("control","protein_YCFA"))
+```
+##beta dist. over all passages (over all controls)
+```{r}
+match%>%
+  mutate(time = factor(time, levels=c("stress", "post_stress_1", "post_stress_2")))%>%
+  ggplot(aes(x=time, y=value))+
+  theme(strip.text = element_text(size  = 20),
+          axis.text.y= element_text(size = 20), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size=20, angle=90),
+        legend.text = element_text(size = 20, vjust=1, hjust=0),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20),  panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0)+
+  geom_boxplot(outlier.shape=NA, aes(fill=stress_level))+
+  geom_point(aes(colour=donor_name, group=stress_level), width=0.1, position = position_dodge(0.9))+
+  ylab("Aitchison dsitance")+
+  ggtitle("Beta distance between pre-cultures and passages")+
+    scale_x_discrete(labels=c("P1", "P2", "P3"))+
+  labs(colour="Donor")
+
+ggsave(filename = paste("beta_controls.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output",
+       width = 17,
+       height = 10,
+       units = c("cm"))
+
+```
+```{r}
+phyloseq_agar%>%
+  subset_samples(time %in% "stress")%>%
+  tax_fix()%>%
+  ord_explore()
+```
+##clr difference
+```{r}
+
+
+phyloseq_agar%>%
+  physeq_glom_rename(taxrank = "Family", 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+   psmelt()%>%
+  subset(time %in% "stress")->df_abund 
+
+df_abund[, c("OTU","Abundance" , "donor_name" ,   "stress_level",  "Kingdom"   , "Phylum" ,     "Class"     ,  "Order","Family"    ,  "Genus"     ,  "Species"  ,   "Strain"    )] %>%
+  pivot_wider(names_from = stress_level, values_from = Abundance)%>%
+  mutate(diff_control= max - control,
+         diff_low = max - low,
+         diff_median = max - median,
+         diff_high = max - high)%>%
+  gather(condition, diff, "diff_control":"diff_high")%>%
+  subset(condition %in% "diff_control")%>%
+  filter( diff > 1 | diff < -1)%>%
+  ggplot(aes(x=condition, y = OTU))+
+  geom_tile(aes(fill=diff))+
+  facet_grid(col=vars(donor_name))
+```
+
+
+

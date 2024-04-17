@@ -27,26 +27,350 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/wp2_complex",
 #   library(openxlsx)
 # # # library(gplots)
 # # library(rstatix)
-library(ggpubr)
+# library(ggpubr)
 # facet_labeller <- function(variable,value){
 #   return(names[value])
 # }
 ```
 
 ```{r}
+phyloseq_rare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
+phyloseq_rare%>%
+  phyloseq_alphas(phylo = TRUE)->meta
+```
+##growth H2O2
+```{r}
+meta %>%
+  subset(!time %in% "post_stress_2")%>%
+   subset(stress %in% c("H2O2", "control"))->h2o2
 
-hplc<-read.xlsx("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/20230613_hplc_list_results_stress.xlsx")
+
+
+
+# add the pre-stress cond for all 
+#####
+# h2o2%>%
+#   subset(time %in% c("pre-stress", "stress", "post_stress_1"))->no
+
+
+
+h2o2 %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "low")->low
+
+h2o2 %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "median")->median
+
+h2o2 %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "high")->high
+
+h2o2 %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "max")->max
+
+combined_df <- do.call(rbind, list(h2o2,  low, median, high, max))
+######
+
+# add control for all stress level
+###
+
+combined_df%>%
+  subset(!stress_level %in% c("control"))%>%
+   mutate(incubation = "stress")->no
+combined_df %>%
+  subset(stress_level %in% "control")%>%
+  mutate(stress_level = "low", incubation = "control")->low
+combined_df %>%
+  subset(stress_level %in% "control")%>%
+  mutate(stress_level = "median", incubation = "control")->median
+combined_df %>%
+  subset(stress_level %in% "control")%>%
+  mutate(stress_level = "high", incubation = "control")->high
+
+combined_df %>%
+  subset(stress_level %in% "control")%>%
+  mutate(stress_level = "max", incubation = "control")->max
+
+combined_df_control <- do.call(rbind, list(no, low, median, high, max))
+```
+#OD line plot
+```{r}
+combined_df_control->sub
+
+left_join(setNames(aggregate(sub$OD_blank_corr, by=list(sub$incubation, sub$time, sub$stress_level), FUN=mean), c("stress", "time","stress_level" , "mean_od")), 
+          setNames(aggregate(sub$OD_blank_corr, by=list(sub$incubation, sub$time, sub$stress_level), FUN=sd), c("stress", "time","stress_level" , "sd")))->order
+
+order%>%
+  subset(!stress_level %in% "max")%>%
+   mutate(stress_level = ifelse(stress_level  == "low","0.22 mM", stress_level))%>%
+  mutate(stress_level = ifelse(stress_level  == "median","0.71 mM", stress_level))%>%
+    mutate( stress_level = ifelse(stress_level == "high", "2.3 mM", stress_level))%>%
+   mutate( stress_level = ifelse(stress_level == "max", "7.3 mM", stress_level))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))%>%
+  mutate(stress = factor(stress))%>%
+  ggplot(aes(x=time, y=mean_od))+
+  geom_line(aes(colour=stress, group=stress))+
+  facet_grid(cols=vars(stress_level), scale="free")+
+  scale_fill_manual(values=c( "skyblue3", "lightpink3"), guide="none")+
+  scale_colour_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"), name="Condition")+
+
+
+  geom_ribbon(aes(ymin = mean_od-sd, ymax = mean_od+sd, fill=stress, group=stress),
+              alpha = 0.3)+
+  
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=0.5) +
+   geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
+             color = "grey", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.5) +
+ 
+  theme(text = element_text(size=15),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
+        strip.text.y = element_text(angle=0, hjust=0, face="italic"),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ylab("OD600")+
+   
+  scale_x_discrete(labels=c('pre-stress' = "Pre-culture", 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  scale_y_continuous(breaks = c(0, 0.25, 0.5, 1), expand = c(0, 0)) +
+  geom_hline(yintercept=0, lty=2, colour="grey")->h2o2_OD
+h2o2_OD
 
 ```
+
+#alpha div line plot
+```{r}
+combined_df_control->sub
+
+left_join(setNames(aggregate(sub$observed, by=list(sub$incubation, sub$time, sub$stress_level), FUN=mean), c("stress", "time","stress_level" , "mean_observed")), 
+          setNames(aggregate(sub$observed, by=list(sub$incubation, sub$time, sub$stress_level), FUN=sd), c("stress", "time","stress_level" , "sd")))->order
+
+order%>%
+  subset(!stress_level %in% "max")%>%
+   mutate(stress_level = ifelse(stress_level  == "low","0.22 mM", stress_level))%>%
+  mutate(stress_level = ifelse(stress_level  == "median","0.71 mM", stress_level))%>%
+    mutate( stress_level = ifelse(stress_level == "high", "2.3 mM", stress_level))%>%
+   mutate( stress_level = ifelse(stress_level == "max", "7.3 mM", stress_level))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))%>%
+  mutate(stress = factor(stress))%>%
+  ggplot(aes(x=time, y=mean_observed))+
+  geom_line(aes(colour=stress, group=stress))+
+  facet_grid(cols=vars(stress_level), scale="free")+
+  scale_fill_manual(values=c( "skyblue3", "lightpink3"), guide="none")+
+  scale_colour_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"), name="Condition")+
+
+
+  geom_ribbon(aes(ymin = mean_observed-sd, ymax = mean_observed+sd, fill=stress, group=stress),
+              alpha = 0.3)+
+  
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=0.5) +
+   geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
+             color = "grey", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.5) +
+ 
+  theme(text = element_text(size=15),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
+        strip.text.y = element_text(angle=0, hjust=0, face="italic"),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ylab("ASVs")+
+   
+  scale_x_discrete(labels=c('pre-stress' = "Pre-culture", 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  # scale_y_continuous(breaks = c(0, 0.25, 0.5, 1), expand = c(0, 0)) +
+  geom_hline(yintercept=0, lty=2, colour="grey")->h2o2_observed
+h2o2_observed
+
+```
+
+#Distance between control conditions: H2O2
+```{r}
+
+phyloseq_rare %>%
+  subset_samples(!time %in% "post_stress_2")%>%
+  subset_samples(stress %in% c("H2O2"))-> sub
+
+sub %>%
+  phyloseq::distance(method = "bray") -> bc
+
+sub %>%
+  ordinate(method = "PCoA",
+           distance = bc) -> ord
+sub %>% 
+  phyloseq_distance_boxplot(p = ., 
+                            dist = bc, 
+                            d = "stress_level") -> out# column in metadata for comparaisons
+
+setNames(as.data.frame(out$matrix),c("sample_name", "sample_name_comp", "value", "condition_comp", "comparison")) -> distances
+
+distances%>%
+  subset(comparison %in% c("control"))-> distances
+
+joined<-left_join(distances, sample.data.frame(sub)[,c(1,7:12)])
+
+sample_name<-setNames(sample.data.frame(sub)[,c("sample_name", "donor_name", "time")], c("sample_name_comp", "donor_comp", "time_comp"))
+
+
+joined_2<-left_join(joined, sample_name)
+ 
+
+for (i in 1:nrow(joined_2)){
+  if (joined_2[i,c("donor_name")] == joined_2[i,c("donor_comp")] & joined_2[i,c("time")] == joined_2[i,c("time_comp")]){joined_2[i,c("match")]= "true"}
+}
+
+joined_2%>%
+  subset(match == c("true"))-> match_h2o2
+```
+
+```{r}
+match_h2o2$stress_level<-factor(match_h2o2$stress_level, levels=c("low", "median", "high"))
+
+
+names<-list("stress"= "Stress", 
+            "post_stress_1"= "Post 1")
+
+facet_labeller <- function(variable,value){
+  return(names[value])
+}
+
+
+match_h2o2%>%
+   subset(stress %in% "H2O2" )%>%
+  select(donor_name, value, stress_level, time)%>%
+  rbind(., data.frame(donor_name = c("D1", "D2", "D3", "D4", "D5", "D6", "D7"),
+                      value= rep(0, 7),
+                      stress_level = rep("low", 7),
+                      time=rep("pre-stress", 7)))%>%
+   rbind(., data.frame(donor_name = c("D1", "D2", "D3", "D4", "D5", "D6", "D7"),
+                      value= rep(0, 7),
+                      stress_level = rep("median", 7),
+                      time=rep("pre-stress", 7)))%>%
+   rbind(., data.frame(donor_name = c("D1", "D2", "D3", "D4", "D5", "D6", "D7"),
+                      value= rep(0, 7),
+                      stress_level = rep("high", 7),
+                      time=rep("pre-stress", 7)))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))-> sub
+
+left_join(setNames(aggregate(sub$value, by=list( sub$time, sub$stress_level), FUN=mean), c( "time","stress_level" , "value")), 
+          setNames(aggregate(sub$value, by=list( sub$time, sub$stress_level), FUN=sd), c( "time","stress_level" , "sd")))->order
+
+
+order%>%
+  mutate(stress_level = as.character(stress_level))%>%
+  subset(!stress_level %in% "max")%>%
+   mutate(stress_level = ifelse(stress_level  == "low","0.22 mM", stress_level))%>%
+  mutate(stress_level = ifelse(stress_level  == "median","0.71 mM", stress_level))%>%
+    mutate( stress_level = ifelse(stress_level == "high", "2.3 mM", stress_level))%>%
+  mutate(stress_level = factor(stress_level, levels = c("0.22 mM", "0.71 mM",  "2.3 mM")))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))%>%
+  ggplot(aes(x=time, y=value))+
+  geom_line(colour="lightpink3", aes(group = stress_level))+
+  facet_grid(cols=vars(stress_level), scale="free")+
+  geom_ribbon(aes(ymin = value-sd, ymax = value+sd, group = stress_level), fill="lightpink3",     alpha = 0.3)+
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=0.5) +
+   geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
+             color = "grey", alpha=0.8, size=0.5) +
+  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.5) +
+ 
+  theme(text = element_text(size=15),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
+        strip.text.y = element_text(angle=0, hjust=0, face="italic"),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  ylab("Bray-Curtis")+
+  scale_x_discrete(labels=c('pre-stress' = "Pre-culture", 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  # scale_y_continuous(breaks = c(0, 0.25, 0.5, 1), expand = c(0, 0)) +
+  geom_hline(yintercept=0, lty=2, colour="grey")->h2o2_beta
+h2o2_beta
+
+
+sub%>%
+  ggplot(aes(x=time, y=value))+
+  # scale_fill_manual(values=c("steelblue3",  "coral2", "coral3"))+
+ theme(strip.text = element_text(size  = 20),
+          axis.text.y= element_text(size = 20), 
+        axis.title.y = element_text(size=20), 
+        axis.title.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
+        legend.text = element_text(size = 20, vjust=1, hjust=0),
+        legend.title = element_text(size= 20),
+        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0)+
+  geom_boxplot(outlier.shape = NA, position = position_dodge2(preserve = "single"))+
+  geom_point(aes(colour=donor_name, group=stress_level), position = position_jitterdodge(0.05))+
+  ggtitle(expression('Beta'~distances~between~H[2]*O[2]~and~control))+
+   scale_x_discrete(labels=c("Pre-culture", "Stress", "Post-stress"))+
+  ylab("Bray distance")+
+  labs(colour="Donor", fill="Stress level") +
+   facet_grid(cols=vars(stress_level), scale="free")
+   # force_panelsizes(rows = unit(8, "cm"),
+   #                 cols = unit(11, "cm"))
+
+ggsave(filename = paste("beta_h2o2.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/H2O2",
+       width = 25,
+       height = 10,
+       units = c("cm"))
+```
+
+### grid
+```{r}
+plot_grid(h2o2_OD + theme(axis.ticks.x =  element_blank(), 
+                           axis.title.x = element_blank(),
+                           axis.text.x =  element_blank(),
+                           legend.position = "none")+  
+            force_panelsizes(rows =unit(1.75, "cm")),
+          
+             
+          h2o2_observed+theme(strip.text = element_blank(),
+                               axis.text.x =  element_blank(), 
+                               axis.ticks.x =  element_blank(), 
+                               legend.position = "none")+  
+            force_panelsizes(rows =unit(1.75, "cm")), 
+          
+          h2o2_beta+theme(strip.text = element_blank(),
+                              legend.position = "none")+
+          scale_y_continuous(breaks=c(0, 0.5, 1), limits=c(0,1))+  
+            force_panelsizes(rows =unit(1.75, "cm")), 
+      
+          
+          
+          nrow=3, 
+        align= "v"
+        # ,
+        # rel_heights = c(0.4, 0.105, 0.14)
+          )
+
+
+ggsave(filename = paste( "h2o2_growth_alpha.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 10,
+       height = 12,
+       units = c("cm"))
+```
+
 
 ##stats and plot for h2o2
 ```{r}
 ###wilcox test with adjusted p value, BH correction
 hplc%>%
-  subset(stress %in% "H2O2" & time %in% c("stress", "post_stress_1", "post_stress_2"))%>%
-  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")),
-         time = factor(time, levels=c( "stress", "post_stress_1", "post_stress_2"))) %>%
-  group_by(time)%>%
+  subset(stress %in% "H2O2" & time %in% c("stress"))%>%
   wilcox_test(data= .,
   formula = OD_blank_corr ~ stress_level, 
   ref.group = "control" ,
@@ -57,119 +381,96 @@ hplc%>%
   add_y_position()->stat_test
 
 
-names<-list("stress"= "Stress", 
-            "post_stress_1"= "Post 1", 
-            "post_stress_2"= "Post 2")
-
 hplc%>%
-  subset(stress %in% "H2O2" & time %in% c("stress", "post_stress_1", "post_stress_2"))%>%
-  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")),
-         time = factor(time, levels=c( "stress", "post_stress_1", "post_stress_2"))) %>%
+  subset(stress %in% "H2O2" & time %in% c("stress"))->sub
+
+sub%>%
+  left_join(., setNames(aggregate(sub$OD_blank_corr, by=list( sub$stress_level, sub$time), FUN= "mean"), c( "stress_level", "time", "mean")))%>%
+              left_join(.,   setNames(aggregate(sub$OD_blank_corr, by=list( sub$stress_level, sub$time), FUN= "sd"), c( "stress_level", "time", "sd")))%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max"))) %>%
   ggplot(aes(x=stress_level, y=OD_blank_corr))+
-  geom_boxplot(outlier.shape =  NA, aes(fill= stress_level))+
-  geom_point(aes(colour=donor_name), position = position_dodge(0.9))+
-  facet_grid(cols=vars(time), labeller=facet_labeller)+
+  geom_boxplot(outlier.shape = NA, position = position_dodge2(preserve = "single"), alpha=0.9)+
+  geom_point(aes(colour=donor_name), position = position_dodge(0.9), width=0.1)+
   theme(text = element_text(size=15), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_text(size=15),
-        axis.text.y=element_text(size=15),
-        strip.text.y = element_text(),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
   labs(fill = "Stress level", colour="Donor")+
-  # ggtitle(expression(Growth~capability~of~complex~cultures~after~H[2]*O[2]*~stress))+
-  ylim(-0.1,1.3)+
+  ylim(-0.1,1)+
   geom_hline(yintercept = 0, lty="dashed", colour="grey")+
-   scale_fill_manual(values=c("skyblue2","skyblue3", "lightpink3", "lightpink4", "coral4"))+
   ylab(expression(OD[600]))+
-  stat_pvalue_manual(stat_test, label = "p.adj.signif", hide.ns = T)->p
-
-show(p + theme (legend.position = "none"))
+  stat_pvalue_manual(stat_test, label = "p.adj.signif", hide.ns = T)+
+  scale_x_discrete(labels = c("0", "0.22", "0.71", "2.3", 7.3))+
+  xlab(expression(H[2]*O[2]~`[mM]`))
 
 
 ggsave(filename = paste( "growth_H2o2.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/growth",
-       width = 14,
-       height = 7,
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 7.5,
+       height = 7.5,
        units = c("cm"))
 
 ```
 
-```{r}
-hplc[,  c("donor_name", "time", "stress_level", "stress", "OD_blank_corr", "incubation")]%>%
-  subset( stress %in% "H2O2" & time %in% c("stress"))%>%
-  pivot_wider(values_from = OD_blank_corr, names_from = stress_level)%>%
-  mutate(diff= max/control)->sub
 
-as.data.frame(sub$diff)
-```
 
 
 ###stats and plot for O2
 ```{r}
 hplc%>%
-  subset( stress %in% "O2" & time %in% c("stress", "post_stress_1", "post_stress_2"))%>%
+  subset( stress %in% "O2" & time %in% c("stress"))%>%
   group_by(time, stress_level)%>%
-  mutate(incubation = factor(incubation))%>%
   wilcox_test(data= .,
   formula = OD_blank_corr ~ incubation 
   )%>%
-  add_significance()
+  add_significance()%>%
+  add_xy_position()%>%
+  mutate(xmax = ifelse(stress_level == "control", 1.2, xmax),
+         xmin = ifelse(stress_level == "control", 0.8, xmin))%>%
+  mutate(xmax = ifelse(stress_level == "low", 1.8, xmax),
+         xmin = ifelse(stress_level == "low", 2.2, xmin))%>%
+  mutate(xmax = ifelse(stress_level == "median", 3.2, xmax),
+         xmin = ifelse(stress_level == "median", 2.8, xmin))%>%
+  mutate(xmax = ifelse(stress_level == "high", 4.2, xmax),
+         xmin = ifelse(stress_level == "high", 3.8, xmin))->stat_test
 
-```
-
-
-
-```{r}
-names<-list("stress"= "Stress", 
-            "post_stress_1"= "Post 1", 
-            "post_stress_2"= "Post 2", 
-            "aerobe"="aerobe",
-            "anaerobe"="anaerobe")
+aggregate(hplc$OD_blank_corr, by = list(hplc$incubation, hplc$stress_level, hplc$time), FUN=sd)%>%
+  subset(Group.2 %in% "max")
 
 hplc%>%
-  subset(stress %in% "O2" & time %in% c("stress", "post_stress_1", "post_stress_2"))%>%
-  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")),
-         time = factor(time, levels=c("stress", "post_stress_1", "post_stress_2"))) %>%
+subset(stress %in% "O2" & time %in% c("stress"))%>%
+  left_join(., setNames(aggregate(sub$OD_blank_corr, by=list( sub$stress_level, sub$time, sub$incubation), FUN= "mean"), c( "stress_level", "time", "incubation","mean")))%>%
+              left_join(.,   setNames(aggregate(sub$OD_blank_corr, by=list( sub$stress_level, sub$time, sub$incubation), FUN= "mean"), c( "stress_level", "time", "incubation","sd")))%>%
+  mutate(incubation = factor(incubation, levels =c("anaerobe", "aerobe")))%>%
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max"))) %>%
   ggplot(aes(x=stress_level, y=OD_blank_corr))+
-  geom_boxplot(aes(fill=incubation), outlier.shape =  NA)+
+  geom_boxplot(aes(fill=incubation), outlier.shape = NA, position = position_dodge2(preserve = "single"), alpha=0.9)+
   geom_point(aes(colour=donor_name, group=incubation), position = position_dodge(0.9))+
-  facet_grid(cols=vars(time), labeller=facet_labeller)+
   theme(text = element_text(size=15), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=15, angle = 90, vjust= 0.5, hjust=1),
-        axis.title.y= element_text(size=15),
-        axis.text.y=element_text(size=15),
-        strip.text.y = element_text(),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size= 15),
-        plot.title = element_text(size=20, hjust=0.25),
-        strip.text = element_text(size=15), 
+        plot.title = element_text(hjust=0.25),
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA))+
   labs(fill = expression(Incubation), colour="Donor")+
-  # ggtitle(expression(Growth~capability~of~complex~cultures~under~O[2]*~stress))+
-  scale_x_discrete(labels=c("minimal", "low", "median", "high", "max"))+
-  scale_fill_manual(values=c( "pink4","skyblue3"), labels=c("Stress", "Control"), name="Condition")+
-  ylab(expression(OD[600]))
-
+ stat_pvalue_manual(stat_test, label = "p.signif", hide.ns = T)+
+  scale_fill_manual(values=c("skyblue", "lightpink3"), labels=c( "Control","Stress"), name="Condition")+
+  ylab(expression(OD[600]))+
+ scale_x_discrete(labels=c("0.12", "0.09", "0.07", "0.04", "0"))+
+  xlab("Agar [%]")
 
 ggsave(filename = paste( "growth_o2.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/growth",
-       width = 17,
-       height = 7,
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 10,
+       height = 7.5,
        units = c("cm"))
 
 ```
+
+
 ```{r}
 names<-list("stress"= "Stress", 
             "post_stress_1"= "Post 1", 
@@ -223,3 +524,4 @@ ggsave(filename = paste( "growth_o2.jpeg"),
        units = c("cm"))
 
 ```
+

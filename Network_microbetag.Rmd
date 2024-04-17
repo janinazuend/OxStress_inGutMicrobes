@@ -1,0 +1,70 @@
+## Test Phyloseq
+```{r}
+##take the phyloseq with original silva annotation
+phyloseq <-readRDS("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/phyloseq_phylo.RDS")%>%
+  subset_samples(time %in% "stress")%>%
+  subset_samples(!donor_name %in% "D1" & !time %in% "post_stress_2")
+ 
+
+
+
+phyloseq %>%
+  rarefy_even_depth(rngseed = 123,
+                    sample.size = 5542) -> phyloseq_rare
+
+phyloseq_rare %>%
+  subset_samples(stress %in% "H2O2" & stress_level %in% c("high", "median", "control"))->h2o2_net
+
+phyloseq_rare %>%
+  subset_samples((stress %in% "O2" & stress_level %in% "max"))->o2_net
+
+
+phyloseq_rare %>%
+  subset_samples(stress %in% "H2O2" & stress_level %in% c("high", "median", "low" ,"control") & donor_name %in% "D2")->D2_net
+```
+
+```{r}
+as.data.frame(tax_table(D2_net))%>%
+  mutate(Species = ifelse(Species == "unknown", "", Species))%>%
+  mutate(Species = ifelse(Species != "", paste(Genus, Species), Species))%>%
+  mutate(Species = ifelse(Species == "", NA, Species))%>%
+  mutate(taxonomy= paste0(Kingdom, ";", Phylum, ";", Class, ";", Order, ";", Family, ";", Genus, ";", Species))%>%
+  rownames_to_column("ASV")->tax
+
+##remove the rows with zero
+otu<-as.data.frame(otu_table(D2_net))
+filtered_df = otu[rowSums(otu != 0)>0, ]%>%
+  rownames_to_column("ASV")
+
+left_join(filtered_df, tax)->merge
+
+write.xlsx(merge, "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/09_network/D2_h2o2.xlsx")
+```
+
+
+```{r}
+as.data.frame(tax_table(o2_net))%>%
+  mutate(Species = ifelse(Species == "unknown", "", Species))%>%
+  mutate(Species = ifelse(Species != "", paste(Genus, Species), Species))%>%
+  mutate(Species = ifelse(Species == "", NA, Species))%>%
+  mutate(taxonomy= paste0(Kingdom, ";", Phylum, ";", Class, ";", Order, ";", Family, ";", Genus, ";", Species))%>%
+  rownames_to_column("ASV")->tax
+
+##remove the rows with zero
+otu<-as.data.frame(otu_table(h2o2_net))
+filtered_df = otu[rowSums(otu != 0)>0, ]%>%
+  rownames_to_column("ASV")
+
+left_join(filtered_df, tax)->merge
+
+write.xlsx(merge, "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/09_network/02_network_o2.xlsx")
+```
+
+
+
+
+```{r}
+write.xlsx(as.data.frame(refseq(phyloseq_rare))%>%
+             rownames_to_column("ASV")%>%
+             subset(ASV %in% filtered_df$ASV), "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/09_network/01_network_refseq.xlsx")
+```

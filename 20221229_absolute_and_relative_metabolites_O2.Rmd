@@ -14,19 +14,19 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 # install.packages("ggbreak")
 # 
 # library(ggpmisc)
- library(tidyverse)
+ # library(tidyverse)
 # library(ggplot2)
 # library(tidyr)
 # # install.packages("devtools")
 # # devtools::install_github("slowkow/ggrepel")
 # library(ggrepel)
 # library(ggbreak)
- library(openxlsx)
+ # library(openxlsx)
 # library(readxl)
 # library(ggh4x)
 # library(ggpubr)
 # library(ggpubr)
- library(rstatix)
+ # library(rstatix)
 # library(dplyr)
 # library(scales)
 library(readxl)
@@ -109,6 +109,35 @@ for (i in 1:3) {
 
 
 ```
+#conditions to analyze
+```{r}
+highest_agar<-("Bacteroides fragilis")
+highest<-c("Lachnospira eligens","Agathobacter rectalis","Bacteroides intestinalis","Prevotella copri", "Bacteroides xylanisolvens" , "Bacteroides faecis", "Bacteroides uniformis","Bacteroides ovatus" ,
+"Phocaeicola vulgatus", "Dorea longicatena")
+lowest<- c("Anaerostipes caccae", 
+"Anaerostipes hadrus", 
+"Anaerotignum lactatifermentans" ,    
+"Bacteroides caccae",  
+"Bacteroides thetaiotaomicron" ,
+         
+ "Bifidobacterium adolescentis",
+"Bifidobacterium longum",
+"Blautia hansenii", 
+"Blautia hydrogenotrophica"  ,        
+ "Blautia obeum",  
+"Blautia producta", 
+"Clostridium sporogenes"  ,
+"Collinsella aerofaciens" ,           
+"Enterococcus faecalis",
+"Escherichia coli",   
+"Eubacterium limosum", 
+"Faecalibacterium duncaniae",
+"Lactiplantibacillus plantarum" ,
+"Parabacteroides merdae" ,            
+"Phascolarctobacterium faecium",
+"Roseburia intestinalis" , 
+"Ruminococcus gnavus"  )
+```
 
 ### get row names & recode variables
 ```{r}
@@ -116,15 +145,12 @@ for (i in 1:3) {
 write.xlsx(HPLC_values_wide, file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_pure/01_O2/O2_hplc_blank_corrected.xlsx")
 #export file with wel columns of the conditions analyzed
 write.xlsx(HPLC_values_wide[, c("assay","condition_agar", "well column", "condition")]%>%
+             subset((assay %in% c(lowest) & condition_agar %in% "lowest" )|
+          (assay %in% c(highest) & condition_agar %in% "agar with highest growth" )|
+           (assay %in% c(highest_agar) & condition_agar %in% "highest" ))%>%
             subset(condition %in% "aerobe"), file = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_pure/01_O2/sampling_O2.xlsx")
 ```
 
-
-
-# 2. Load the data from excel
-```{r}
-HPLC_values_wide<- read.csv("C:/Users/zuendj/Desktop/03_data R/oxidative stress/wide_metabolites_O2.csv", sep=",", header=T, check.names =F)
-```
 
 # 4. Calculate relative values: mM and total C
 ```{r}
@@ -180,35 +206,6 @@ for (i in 1:nrow(HPLC_values_relative_wide)){
 #   ggplot(aes(x=interaction(sample_ID), y=rel))+
 #   geom_bar(position="stack", stat="identity", aes(fill=metabolite))
 ```
-#conditions to analyze
-```{r}
-highest_agar<-("Bacteroides fragilis")
-highest<-c("Lachnospira eligens","Agathobacter rectalis","Bacteroides intestinalis","Prevotella copri",  "Bacteroides faecis", "Bacteroides uniformis","Bacteroides ovatus" ,"Dorea longicatena")
-lowest<- c("Anaerostipes caccae", 
-"Anaerostipes hadrus", 
-"Anaerotignum lactatifermentans" ,    
-"Bacteroides caccae",  
-"Bacteroides thetaiotaomicron" ,
-"Bacteroides xylanisolvens" ,         
- "Bifidobacterium adolescentis",
-"Bifidobacterium longum",
-"Blautia hansenii", 
-"Blautia hydrogenotrophica"  ,        
- "Blautia obeum",  
-"Blautia producta", 
-"Clostridium sporogenes"  ,
-"Collinsella aerofaciens" ,           
-"Enterococcus faecalis",
-"Escherichia coli",   
-"Eubacterium limosum", 
-"Faecalibacterium duncaniae",
-"Lactiplantibacillus plantarum" ,
-"Parabacteroides merdae" ,            
-"Phascolarctobacterium faecium",
-"Phocaeicola vulgatus", 
-"Roseburia intestinalis" , 
-"Ruminococcus gnavus"  )
-```
 
 
 # Select the conditions to analyze
@@ -227,8 +224,6 @@ HPLC_values_relative_wide%>%
 left_join(setNames(aggregate(HPLC_relative_select$total_C, by=list(HPLC_relative_select$condition, HPLC_relative_select$condition_agar, HPLC_relative_select$assay), FUN=sd, na.rm=T), c("condition", "condition_agar", "assay", "sd")),
 setNames(aggregate(HPLC_relative_select$total_C, by=list(HPLC_relative_select$condition, HPLC_relative_select$condition_agar, HPLC_relative_select$assay), FUN=mean, na.rm=T), c("condition", "condition_agar", "assay", "mean")))->mean
 
-
-
 #test for normality
 HPLC_relative_select[, c("assay", "condition","condition_agar", "total_C")]%>%
   group_by(condition_agar, assay, condition)%>%
@@ -237,6 +232,14 @@ HPLC_relative_select[, c("assay", "condition","condition_agar", "total_C")]%>%
 
 shapi[, c("assay", "condition_agar")]->shapi
 shapi$sig <- "non_normal"
+
+#get the MBC tolerance to order the plot - add 1 to the faculative anaerobes so that they are in the bottom row
+order_o2<- read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/O2_tolerances.xlsx")%>%
+  mutate(MBC = ifelse(bacteria == "Escherichia coli" |
+                      bacteria == "Lactiplantibacillus plantarum" |
+                        bacteria == "Enterococcus faecalis" |
+                        bacteria == "Bifidobacterium longum", 13, MBC))
+
 
 #t test
 HPLC_relative_select[, c("assay", "condition","condition_agar", "total_C")]%>%
@@ -248,17 +251,9 @@ HPLC_relative_select[, c("assay", "condition","condition_agar", "total_C")]%>%
   add_significance()%>%
   add_xy_position(fun="max")%>%
   mutate(xmin=0.5,
-         xmax=1.5)->stats
+         xmax=1.5)%>%
+  mutate(p.signif = ifelse(assay == shapi$assay | condition_agar == shapi$condition_agar, "ns", p.signif))->stats
 
-# left_join(stats, shapi)%>%  mutate(p.signif = case_when(
-#         sig == "non_normal" ~ "ns",
-#         TRUE ~ p.signif))->stats
-
-
-
-
-order_o2%>%
-  mutate(bacteria = ifelse(bacteria == "Eubacterium eligens", "Lachnospira eligens", bacteria))->order_o2
 
 mean%>%
   left_join(., setNames(order_o2, c("assay", "MIC", "MBC")))%>%
@@ -460,25 +455,36 @@ for (i in 1:nrow(stats_absolute)){
       !is.na(stats_absolute[i,"mean_conc_anaerobe_abs"]) == T &&
 
       (stats_absolute[i,"mean_conc_aerobe_abs"] > -1 &&
-        stats_absolute[i,"mean_conc_aerobe_abs"] < 0 &&
+        stats_absolute[i,"mean_conc_aerobe_abs"] <= 0 &&
         stats_absolute[i,"mean_conc_anaerobe_abs"] > -1 &&
-        stats_absolute[i,"mean_conc_anaerobe_abs"] < 0)
+        stats_absolute[i,"mean_conc_anaerobe_abs"] <= 0)
       ||
-       (stats_absolute[i,"mean_conc_aerobe_abs"] > 0 &&
+       (stats_absolute[i,"mean_conc_aerobe_abs"] >= 0 &&
         stats_absolute[i,"mean_conc_aerobe_abs"] < 1 &&
-        stats_absolute[i,"mean_conc_anaerobe_abs"] > 0 &&
+        stats_absolute[i,"mean_conc_anaerobe_abs"] >= 0 &&
         stats_absolute[i,"mean_conc_anaerobe_abs"] < 1)
       ||
-       (stats_absolute[i,"mean_conc_aerobe_abs"] < 0 &&
+       (stats_absolute[i,"mean_conc_aerobe_abs"] <= 0 &&
         stats_absolute[i,"mean_conc_aerobe_abs"] > -1 &&
-        stats_absolute[i,"mean_conc_anaerobe_abs"] > 0 &&
+        stats_absolute[i,"mean_conc_anaerobe_abs"] >= 0 &&
         stats_absolute[i,"mean_conc_anaerobe_abs"] < 1)
       ||
 
-      (stats_absolute[i,"mean_conc_aerobe_abs"] > 0 &&
+      (stats_absolute[i,"mean_conc_aerobe_abs"] >= 0 &&
         stats_absolute[i,"mean_conc_aerobe_abs"] < 1 &&
-        stats_absolute[i,"mean_conc_anaerobe_abs"] < 0 &&
-        stats_absolute[i,"mean_conc_anaerobe_abs"] > -1)) {
+        stats_absolute[i,"mean_conc_anaerobe_abs"] <= 0 &&
+        stats_absolute[i,"mean_conc_anaerobe_abs"] > -1)  ||
+
+      (stats_absolute[i,"mean_conc_aerobe_abs"] <= 0 &&
+        stats_absolute[i,"mean_conc_aerobe_abs"] > -1 &&
+        stats_absolute[i,"mean_conc_anaerobe_abs"] <= 0 &&
+        stats_absolute[i,"mean_conc_anaerobe_abs"] > -1)
+      ||
+
+      (stats_absolute[i,"mean_conc_aerobe_abs"] >= 0 &&
+        stats_absolute[i,"mean_conc_aerobe_abs"] < 1 &&
+        stats_absolute[i,"mean_conc_anaerobe_abs"] >= 0 &&
+        stats_absolute[i,"mean_conc_anaerobe_abs"] < 1)){
    stats_absolute[i,"p_corrected_low_conc"] = "ns"
   }
 }
@@ -500,7 +506,7 @@ selection$p_corrected_low_conc[selection$p_corrected_low_conc=="ns"]<-NA
 ```
 
 ```{r}
- # library(scales)
+ library(scales)
 
 selection%>%
   # filter(Bacteria %in% filter_tax)%>%
@@ -520,7 +526,7 @@ sub%>%
   mutate(Bacteria = reorder(Bacteria, MBC))%>%
   ggplot( aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(min, 0, max)))+
+  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(-120, 0, 120)), limits=c(-120, 120))+
   facet_grid(rows=vars(Bacteria), scales="free")+
     theme(strip.text.y = element_text(angle=0,  face="italic"),
         axis.title = element_blank(),
@@ -548,7 +554,7 @@ ggsave(filename = "O2_heatplot_selection_lowconc.jpeg",
 merge with total_C
 
 ```{r}
- # library(cowplot)
+ library(cowplot)
 total_C_plot %>%
   ggpubr::get_legend() %>%
   ggpubr::as_ggplot()-> totalC_legend 
@@ -585,7 +591,7 @@ plot_grid(
           panel.spacing = unit(0, "lines"), 
           legend.text = element_blank())+
             ylab("Total C [mM]")+
-            scale_fill_manual(values=c("indianred", "deepskyblue2"))+
+            scale_fill_manual(values=c("indianred", "cyan4"))+
     ggtitle("Total C"), 
   #plot3: total c
   diff_metabol_plot+
