@@ -7,12 +7,12 @@ title: "Alpha and Beta diveristy under Ox. stress"
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina Plüss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
 # install.packages('devtools')
-install.packages(
-  "microViz",
-  repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
-)
-devtools::install_github("tidyverse/tidyverse") 
-
+# install.packages(
+#   "microViz",
+#   repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
+# )
+# devtools::install_github("tidyverse/tidyverse")
+# # 
 # library(tidyverse)
 # library(openxlsx)
 # library(rstatix)
@@ -269,6 +269,8 @@ joined%>%
    subset(! (stress %in% "O2" & stress_comp %in% "H2O2"))%>%
   subset(! (stress %in% "H2O2" & stress_comp %in% "O2"))%>%
   subset(match %in% "true")->match
+
+
 ```
 #Taxa retained analysis needed?
 ## Analysis shared taxa
@@ -285,9 +287,8 @@ for (j in 1:length(donor_count)){
   
 sub %>% 
     subset_samples(donor_name %in% c(donor_count[j]))%>%
-     tax_glom(taxrank = "Genus")%>%
-    transform_sample_counts(function(x) {x/sum(x)}) %>%
-    filter_taxa(., function(x){mean(x) > 0}, TRUE)%>%
+    tax_glom(taxrank = "Strain")%>%
+    microbiome::transform("compositional") %>%
     psmelt()->df_abund
   
 
@@ -302,23 +303,23 @@ for(i in 1:length(condition_count)){
   
 df_abund%>%
   subset(time %in% c(condition_count[i]))%>%
-  subset(Abundance > 0.00001)-> culture
+  subset(Abundance > 0.001)-> culture
 
 df_abund%>%
   subset(time %in% c("feces"))%>%
-  subset(Abundance > 0.00001)-> feces
+  subset(Abundance > 0.001)-> feces
 
 rbind(culture, feces)-> all
 
-otu_all<-setNames(as.data.frame(unique(all$Genus)), c("Genus"))
+otu_all<-setNames(as.data.frame(unique(all$OTU)), c("OTU"))
 
 
 
 
-diff_feces<-setNames(as.data.frame(setdiff(otu_all$Genus, culture$Genus)), c("Genus"))
-diff_culture<-setNames(as.data.frame(setdiff(otu_all$Genus, feces$Genus)), c("Genus"))
+diff_feces<-setNames(as.data.frame(setdiff(otu_all$OTU, culture$OTU)), c("OTU"))
+diff_culture<-setNames(as.data.frame(setdiff(otu_all$OTU, feces$OTU)), c("OTU"))
 
-intersec<-setNames(as.data.frame(intersect(culture$Genus, feces$Genus)), c("Genus"))
+intersec<-setNames(as.data.frame(intersect(culture$OTU, feces$OTU)), c("OTU"))
 
 maintain[n,"donor_name"] = donor_count[j]
 maintain[n,"condition"] = condition_count[i]
@@ -329,19 +330,19 @@ maintain[n,c("Feces")]<-nrow(diff_feces)/(nrow(diff_culture)+nrow(diff_feces)+nr
 maintain[n,c("Shared_number")]<-nrow(intersec)
 maintain[n,c("Cultures_number")]<-nrow(diff_culture) 
 
-try(lol<-data.frame(Feces = diff_feces,
-           donor_name = rep(donor_count[j], length(diff_feces)),
-           time = rep(condition_count[i], length(diff_feces))), silent = T)
-# print(head(lol))
-
-loss<-rbind(loss, lol)
-
-try(lol<-data.frame(Feces = diff_culture,
-           donor_name = rep(donor_count[j], length(diff_feces)),
-           time = rep(condition_count[i], length(diff_feces))), silent = T)
-# print(head(lol))
-
-gain<-rbind(gain, lol)
+# try(lol<-data.frame(Feces = diff_feces,
+#            donor_name = rep(donor_count[j], length(diff_feces)),
+#            time = rep(condition_count[i], length(diff_feces))), silent = T)
+# # print(head(lol))
+# 
+# loss<-rbind(loss, lol)
+# 
+# try(lol<-data.frame(Feces = diff_culture,
+#            donor_name = rep(donor_count[j], length(diff_feces)),
+#            time = rep(condition_count[i], length(diff_feces))), silent = T)
+# # print(head(lol))
+# 
+# gain<-rbind(gain, lol)
 
 n=n+1
   }}
@@ -355,7 +356,17 @@ maintain%>%
   ggplot(aes(x=condition, y=value))+
    geom_bar(stat = "identity", width=0.9143, colour="black", size=0.1, aes(fill=sample))+
    scale_fill_manual(values=c("grey","burlywood4", "cyan4"))+
-  facet_grid(cols=vars(donor_name))
+   theme(text = element_text(size  = 15),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle=90, hjust=1, vjust=0.5),
+        legend.text = element_text(vjust=1, hjust=0),
+        strip.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), 
+        panel.spacing = unit(0.31, "cm"),
+        legend.text.align = 0)+
+    scale_x_discrete(labels = c("Feces","Pre-culture", "Stress", "Post-stress"))+
+  facet_grid(cols=vars(donor_name))->shared
 
 maintain%>%
    mutate(condition = factor (condition , levels = c("feces", "pre-stress", "stress", "post_stress_1")))%>%
@@ -378,7 +389,7 @@ maintain%>%
         panel.border=element_rect(fill=NA), 
         panel.spacing = unit(0.31, "cm"),
         legend.text.align = 0)+
-  ylab("Number of Genera")->shared
+  ylab("Number of Genera")
 shared
 
 mean(C$Shared)
@@ -389,31 +400,7 @@ left_join(setNames(aggregate(maintain$Shared, by = list(c(maintain$condition)), 
   mutate(sd= round(sd, digits=2)) )
 ```
 
-```{r}
 
-
-sub %>% 
-    tax_glom(taxrank = "Genus")%>%
-    transform_sample_counts(function(x) {x/sum(x)}) %>%
-    filter_taxa(., function(x){mean(x) > 0}, TRUE)%>%
-    psmelt() %>%
-  subset(time %in% "feces")->df_abund
-
-
-rbind(left_join(loss%>%
-            mutate(gainorloss = "loss"), df_abund[, c("donor_name", "Genus",  "Abundance")]),
-          left_join(gain%>%
-            mutate(gainorloss = "gain"), df_abund[, c("donor_name", "Genus",  "Abundance")]))->hoi
-hoi%>%
-  mutate(Genus= factor(Genus))%>%
- subset(Abundance > 0.01)%>% 
-  mutate(Genus = reorder(Genus, Abundance))%>%
-  ggplot(aes(y=Genus, x=time, fill = Abundance))+
-  geom_tile()+
-  facet_grid(cols=vars(donor_name), rows= vars(gainorloss), scales="free")
-
-unique(ab$Genus)
-```
 
 ##Beta dist. over all passages (over all controls)
 ```{r}
@@ -476,7 +463,7 @@ beta_plots%>%
   geom_point(aes(colour = comparison, y=min), alpha=0.6)+
   ylab("Bray")+
   # labs(colour="Donor")+
-  scale_x_discrete(labels = c("Feces","Pre-culture", "Stress", "Post-stress"))+
+  scale_x_discrete(labels = c("Feces","Pre-culture", "P1", "P2"))+
   facet_grid(cols=vars(donor_name))+
    scale_y_continuous(breaks=c(0, 0.5 ,0.75))->beta_controls
 
@@ -523,30 +510,42 @@ setNames(aggregate(long$value_all, by=list(long$comparison, long$time), FUN="sd"
 ```
 
 ```{r}
-plot_grid(alpha_controls+theme(axis.text.x =  element_blank(),
-                               axis.ticks.x =  element_blank()),
-          shared+theme(axis.text.x =  element_blank(),
-                               axis.ticks.x =  element_blank(),
-                       strip.text = element_blank(), 
-                       legend.position = "none"),
-          beta_controls+theme(axis.text.x =  element_blank(),
-                               axis.ticks.x =  element_blank(), 
-                              strip.text = element_blank(), 
+library(cowplot)
+library(ggh4x)
+plot_grid(controls + theme(axis.ticks.x =  element_blank(), 
+                           axis.title.x = element_blank(),
+                           axis.text.x =  element_blank(),
+                           legend.position = "none")+  
+            force_panelsizes(rows =unit(3, "cm")),
+          
+             
+          alpha_controls+theme(strip.text = element_blank(),
+                               axis.text.x =  element_blank(), 
+                               axis.ticks.x =  element_blank())+  
+            force_panelsizes(rows =unit(1.5, "cm")), 
+               
+         shared+theme(strip.text = element_blank(),
+                               axis.text.x =  element_blank(), 
+                               axis.ticks.x =  element_blank(), legend.position = "none")+  
+            force_panelsizes(rows =unit(1.5, "cm"))+
+                               ylab("Shared [%]"), 
+          
+          beta_controls+theme(strip.text = element_blank(),
                               legend.position = "none")+
-            scale_y_continuous(breaks=c(0, 0.5, 1), limits=c(0,1)), 
-          controls + theme(strip.text = element_blank(), 
-                           axis.title.x = element_blank()),
+          scale_y_continuous(breaks=c(0, 0.5, 1), limits=c(0,1))+  
+            force_panelsizes(rows =unit(1.5, "cm")), 
+      
+          
+          
           nrow=4, 
         align= "v"
-        # , 
-        # rel_heights = c(0.165, 0.105, 0.68)
           )
 
 
 ggsave(filename = paste( "controls.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 24,
-       height = 40,
+       width = 15,
+       height = 25,
        units = c("cm"))
 ```
 
@@ -692,7 +691,7 @@ match%>%
   stat_pvalue_manual(stat, label = "p.adj.signif", hide.ns = T, size=6)+
   scale_colour_manual(values=c("lightblue", "steelblue", "yellowgreen", "forestgreen", "lightpink1", "red3", "sienna1", "orange"))+
   scale_x_discrete(labels = c("control" = "0.12", "low"= "0.09", "median"="0.07", "high"="0.04"))+
-    force_panelsizes(rows = unit(5, "cm"), col = unit(6, "cm"))+
+    force_panelsizes(rows = unit(5, "cm"), col = unit(5, "cm"))+
   ylim(0, 0.6)
 
 
@@ -706,7 +705,7 @@ ggsave(filename = paste("agar_betadist.jpeg"),
 
 
 
-HO2 alpha diversity absolute
+#HO2 alpha diversity absolute
 ```{r}
 # library(stats)
 names<-list("diversity_shannon"= "Shannon", 
@@ -823,61 +822,38 @@ names<-list("diversity_shannon"= "Shannon",
 #O2: aerobic
 phyloseq_rare%>% 
   subset_samples( stress %in% "control" | (stress %in% "O2" ))%>%
-  phyloseq_alphas(phylo = TRUE) %>%
-  subset(time %in% "stress")%>%
-  gather(index, value, "observed":"diversity_shannon")-> sub
+  phyloseq_alphas(phylo = TRUE) -> sub
 
 ###results are all non-significant
 sub%>%
-  group_by(index, stress_level)%>%
+  subset(time %in% c("stress", "post_stress_1"))%>%
+  group_by(stress_level, time)%>%
   t_test(data= .,
-  formula = value ~ incubation)%>%
+  formula = observed ~ incubation)%>%
   add_significance()%>%
   mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max"))) %>%
   add_xy_position()%>%
   mutate(y.position = 4, xmin = 4.75, xmax=5.25)->stat_test
 
+##all are not significant = > t test can be used
+# stress_level_cond<-c("control", "low", "median", "high", "max")
+# incubation_cond<-c("anaerobe", "aerobe")
+# time_cond <-c("stress", "post_stress_1")
+# for (i in 1:5){
+#   for (j in 1:2){
+#     for (x in 1:2){
+# sub%>%
+#   subset(stress_level %in% stress_level_cond[i])%>%
+#   subset(incubation %in% incubation_cond[j])%>%
+#     subset(time %in% time_cond[x])->shapi
+#  print(shapiro_test(shapi$observed))
+#   }}}
 
 
-left_join( setNames(aggregate(sub$value, by=list(sub$index, sub$stress_level, sub$time, sub$incubation), FUN= "mean"), c("index", "stress_level", "time", "incubation","value")), setNames(aggregate(sub$value, by=list(sub$index, sub$stress_level, sub$time, sub$incubation), FUN= "sd"), c("index", "stress_level", "time", "incubation","sd")))%>%
+left_join( setNames(aggregate(sub$observed, by=list( sub$stress_level, sub$time, sub$incubation), FUN= "mean"), c( "stress_level", "time", "incubation","value")), setNames(aggregate(sub$observed, by=list(sub$stress_level, sub$time, sub$incubation), FUN= "sd"), c( "stress_level", "time", "incubation","sd")))%>%
      mutate(incubation = factor(incubation, levels =c("anaerobe", "aerobe")))%>%
-   mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max"))) %>%
-    subset(index %in% c("observed", "diversity_shannon")) ->means
-
-sub %>%
-  mutate(incubation = factor(incubation, levels =c("anaerobe", "aerobe")))%>%
-  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max"))) %>%
-  subset(index %in% c("observed", "diversity_shannon"))%>%
-  ggplot(aes(x=stress_level, y=value))+
-   scale_fill_manual(values=c("skyblue","pink3"), labels=c("Control", "Stress"))+
-  theme(text = element_text(size=15), 
-        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-   geom_boxplot(aes( fill=incubation), outlier.shape = NA, position = position_dodge2(preserve = "single"))+
-  # geom_boxplot(data = means, aes(lower = value-sd, upper = value+sd, middle = value, ymin = value-3*sd, ymax = value+3*sd, fill=incubation), outlier.shape = NA, position = 
-  stat_pvalue_manual(stat_test, label = "p.signif", hide.ns = T)+
-  geom_point(aes(colour=donor_name, group=incubation), position = position_jitterdodge(0.1))+
-  scale_x_discrete(labels=c("0.12", "0.09", "0.07", "0.04", "0"))+
-  labs(fill="Condition", colour="Donor")+
-  ylab("Alpha diversity")+
-  xlab("Agar [%]")+
-  facet_grid(rows=vars(index), scales="free",
-              labeller=facet_labeller
-             )+
-  guides(alpha = guide_legend(override.aes = list(fill = "darkgrey"))) 
-
-
-aggregate(sub$value, by = list(sub$incubation, sub$stress_level, sub$time, sub$index), FUN=mean)%>%
-  subset(Group.2 %in% "max")%>%
-  subset(Group.3 %in% "stress")%>%
-  subset(Group.4 %in% "observed")
+   mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))  ->means
   
-ggsave(filename =  "alpha_o2.jpeg",
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 10,
-       height = 7.5,
-       units = c("cm"))
 ```
 
 
@@ -1378,303 +1354,7 @@ sub %>%
 ```
 
 
-
-#Distance between control conditions: O2 - comparison of the different beta diversity measures
-```{r}
-phyloseq_rare %>%
-  subset_samples(stress %in% c("O2"))-> sub
-
-sub%>%
-  phyloseq::distance(method = "bray") -> bc
-
-ps_transformed %>%
-  ordinate(method = "PCoA",
-           distance = bc) -> ord
-sub %>% 
-  phyloseq_distance_boxplot(p = ., 
-                            dist = bc, 
-                            d = "incubation") -> out -> out # column in metadata for comparaisons
-
-setNames(as.data.frame(out$matrix),c("sample_name", "sample_name_comp", "value", "condition_comp", "comparison")) -> distances
-
-distances%>%
-  subset(comparison %in% c("anaerobe"))-> distances
-
-joined<-left_join(distances, sample.data.frame(sub)[,c(1,7:12)])
-
-sample_name<-setNames(sample.data.frame(sub)[,c("sample_name", "incubation", "donor_name", "time", "stress_level")], c("sample_name_comp", "incubation_comp","donor_comp", "time_comp", "stress_level_comp"))
-
-
-joined_2<-left_join(joined, sample_name)
- 
-
-for (i in 1:nrow(joined_2)){
-  if ((joined_2[i,c("condition_comp")] != joined_2[i,c("incubation_comp")]) & 
-      (joined_2[i,c("donor_name")] == joined_2[i,c("donor_comp")]) & 
-      (joined_2[i,c("time")] == joined_2[i,c("time_comp")]) &
-      (joined_2[i,c("stress_level")] == joined_2[i,c("stress_level_comp")])) {joined_2[i,c("match")]= "true"}
-}
-
-joined_2%>%
-  subset(match == c("true"))%>%
-  mutate(index = "bray")-> match_o2_bray
-```
-
-```{r}
-match_o2_bray%>%
-  group_by( time)%>%
-  t_test(data= .,
-  formula = value ~ stress_level)%>%
-  add_significance()%>%
-  add_xy_position()->stat_test
-
-match_o2_bray %>%
-  mutate(time = factor(time, levels = c("stress", "post_stress_1")))%>%
-  mutate(stress_level = factor(stress_level, c("control", "low", "median", "high", "max")))%>%
-  ggplot(aes(x=time, y=value))+
-  # scale_fill_manual(values=c("steelblue4", "steelblue3",  "coral2", "coral3"))+
- theme(text = element_text(size  = 15),
-        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(vjust=1, hjust=0),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), 
-       legend.text.align = 0)+
-   geom_boxplot( outlier.shape = NA, position = position_dodge2(preserve = "single"))+
-  geom_point(aes(colour=donor_name, group=time), position = position_jitterdodge(0.2), alpha =.9)+
-  ylab("Bray distance")+
-  labs(colour="Donor", fill="Stress level") +
-  #  stat_pvalue_manual(stat_test, label = "p.adj.signif", hide.ns = T)+
-  scale_x_discrete(labels = c("Stress", "Post-stress"))+
-  xlab(expression(O[2]~`[mM]`))+
-  facet_grid(cols=vars(stress_level))
-
-aggregate(match_o2_bray$value, by=list(match_o2_bray$time, match_o2_bray$stress_level), FUN=mean)
-aggregate(match_o2_bray$value, by=list(match_o2_bray$time, match_o2_bray$stress_level), FUN=sd)
-```
-
-
-```{r}
-phyloseq_rare %>%
-  # subset_samples(time %in% "stress")%>%
-  subset_samples(stress %in% c("O2"))-> sub
-
-# sub %>%
-#   microbiome::transform("clr") -> ps_transformed
-
-sub%>%
-  phyloseq::distance(method = "unifrac") -> bc
-
-ps_transformed %>%
-  ordinate(method = "PCoA",
-           distance = bc) -> ord
-sub %>% 
-  phyloseq_distance_boxplot(p = ., 
-                            dist = bc, 
-                            d = "incubation") -> out -> out # column in metadata for comparaisons
-
-setNames(as.data.frame(out$matrix),c("sample_name", "sample_name_comp", "value", "condition_comp", "comparison")) -> distances
-
-distances%>%
-  subset(comparison %in% c("anaerobe"))-> distances
-
-joined<-left_join(distances, sample.data.frame(sub)[,c(1,7:12)])
-
-sample_name<-setNames(sample.data.frame(sub)[,c("sample_name", "incubation", "donor_name", "time", "stress_level")], c("sample_name_comp", "incubation_comp","donor_comp", "time_comp", "stress_level_comp"))
-
-
-joined_2<-left_join(joined, sample_name)
- 
-
-for (i in 1:nrow(joined_2)){
-  if ((joined_2[i,c("condition_comp")] != joined_2[i,c("incubation_comp")]) & 
-      (joined_2[i,c("donor_name")] == joined_2[i,c("donor_comp")]) & 
-      (joined_2[i,c("time")] == joined_2[i,c("time_comp")]) &
-      (joined_2[i,c("stress_level")] == joined_2[i,c("stress_level_comp")])) {joined_2[i,c("match")]= "true"}
-}
-
-joined_2%>%
-  subset(match == c("true"))%>%
-  mutate(index = "unifrac")-> match_o2_unifrac
-```
-
-
-
-```{r}
-phyloseq_rare %>%
-  # subset_samples(time %in% "stress")%>%
-  subset_samples(stress %in% c("O2"))-> sub
-
-# sub %>%
-#   microbiome::transform("clr") -> ps_transformed
-
-sub%>%
-  phyloseq::distance(method = "jaccard", binary=F) -> bc
-
-ps_transformed %>%
-  ordinate(method = "PCoA",
-           distance = bc) -> ord
-sub %>% 
-  phyloseq_distance_boxplot(p = ., 
-                            dist = bc, 
-                            d = "incubation") -> out -> out # column in metadata for comparaisons
-
-setNames(as.data.frame(out$matrix),c("sample_name", "sample_name_comp", "value", "condition_comp", "comparison")) -> distances
-
-distances%>%
-  subset(comparison %in% c("anaerobe"))-> distances
-
-joined<-left_join(distances, sample.data.frame(sub)[,c(1,7:12)])
-
-sample_name<-setNames(sample.data.frame(sub)[,c("sample_name", "incubation", "donor_name", "time", "stress_level")], c("sample_name_comp", "incubation_comp","donor_comp", "time_comp", "stress_level_comp"))
-
-
-joined_2<-left_join(joined, sample_name)
- 
-
-for (i in 1:nrow(joined_2)){
-  if ((joined_2[i,c("condition_comp")] != joined_2[i,c("incubation_comp")]) & 
-      (joined_2[i,c("donor_name")] == joined_2[i,c("donor_comp")]) & 
-      (joined_2[i,c("time")] == joined_2[i,c("time_comp")]) &
-      (joined_2[i,c("stress_level")] == joined_2[i,c("stress_level_comp")])) {joined_2[i,c("match")]= "true"}
-}
-
-joined_2%>%
-  subset(match == c("true"))%>%
-  mutate(index = "wjaccard")-> match_o2_wjaccad
-```
-
-```{r}
-phyloseq_rare %>%
-  # subset_samples(time %in% "stress")%>%
-  subset_samples(stress %in% c("O2"))-> sub
-
-# sub %>%
-#   microbiome::transform("clr") -> ps_transformed
-
-sub%>%
-  phyloseq::distance(method = "jaccard", binary =T) -> bc
-
-ps_transformed %>%
-  ordinate(method = "PCoA",
-           distance = bc) -> ord
-sub %>% 
-  phyloseq_distance_boxplot(p = ., 
-                            dist = bc, 
-                            d = "incubation") -> out -> out # column in metadata for comparaisons
-
-setNames(as.data.frame(out$matrix),c("sample_name", "sample_name_comp", "value", "condition_comp", "comparison")) -> distances
-
-distances%>%
-  subset(comparison %in% c("anaerobe"))-> distances
-
-joined<-left_join(distances, sample.data.frame(sub)[,c(1,7:12)])
-
-sample_name<-setNames(sample.data.frame(sub)[,c("sample_name", "incubation", "donor_name", "time", "stress_level")], c("sample_name_comp", "incubation_comp","donor_comp", "time_comp", "stress_level_comp"))
-
-
-joined_2<-left_join(joined, sample_name)
- 
-
-for (i in 1:nrow(joined_2)){
-  if ((joined_2[i,c("condition_comp")] != joined_2[i,c("incubation_comp")]) & 
-      (joined_2[i,c("donor_name")] == joined_2[i,c("donor_comp")]) & 
-      (joined_2[i,c("time")] == joined_2[i,c("time_comp")]) &
-      (joined_2[i,c("stress_level")] == joined_2[i,c("stress_level_comp")])) {joined_2[i,c("match")]= "true"}
-}
-
-joined_2%>%
-  subset(match == c("true"))%>%
-  mutate(index = "jaccard")-> match_o2_jaccard
-```
-
-```{r}
-phyloseq_rare %>%
-  # subset_samples(time %in% "stress")%>%
-  subset_samples(stress %in% c("O2"))-> sub
-
-# sub %>%
-#   microbiome::transform("clr") -> ps_transformed
-
-sub%>%
-  phyloseq::distance(method = "wunifrac") -> bc
-
-ps_transformed %>%
-  ordinate(method = "PCoA",
-           distance = bc) -> ord
-sub %>% 
-  phyloseq_distance_boxplot(p = ., 
-                            dist = bc, 
-                            d = "incubation") -> out -> out # column in metadata for comparaisons
-
-setNames(as.data.frame(out$matrix),c("sample_name", "sample_name_comp", "value", "condition_comp", "comparison")) -> distances
-
-distances%>%
-  subset(comparison %in% c("anaerobe"))-> distances
-
-joined<-left_join(distances, sample.data.frame(sub)[,c(1,7:12)])
-
-sample_name<-setNames(sample.data.frame(sub)[,c("sample_name", "incubation", "donor_name", "time", "stress_level")], c("sample_name_comp", "incubation_comp","donor_comp", "time_comp", "stress_level_comp"))
-
-
-joined_2<-left_join(joined, sample_name)
- 
-
-for (i in 1:nrow(joined_2)){
-  if ((joined_2[i,c("condition_comp")] != joined_2[i,c("incubation_comp")]) & 
-      (joined_2[i,c("donor_name")] == joined_2[i,c("donor_comp")]) & 
-      (joined_2[i,c("time")] == joined_2[i,c("time_comp")]) &
-      (joined_2[i,c("stress_level")] == joined_2[i,c("stress_level_comp")])) {joined_2[i,c("match")]= "true"}
-}
-
-joined_2%>%
-  subset(match == c("true"))%>%
-  mutate(index = "wunifraq")-> match_o2_wunifraq
-```
-
-```{r}
-rbind(match_o2_bray, match_o2_unifrac)%>%
-  rbind(match_o2_wunifraq)%>%
-  rbind(match_o2_jaccard)%>%
-  rbind(match_o2_wjaccad)->match_idex_o2
-```
-
-```{r}
-
-match_idex_o2%>%
-  mutate(stress_level = factor(stress_level, levels=c("control","low", "median", "high", "max")))%>%
-  # mutate(time = factor(time, c("stress", "post_stress_1", "post_stress_2")))%>%
-  # subset(time %in% c("stress"))%>%
-  ggplot(aes(x=stress_level, y=value))+
-  theme(strip.text = element_text(size  = 20),
-          axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0)+
-   geom_boxplot( outlier.shape = NA, aes(fill=index))+
-  geom_point(aes(colour=donor_name, group=index), position = position_dodge(0.9))+
-   ggtitle(expression('Beta'~distances~between~O[2]~and~control))+
-  scale_x_discrete(labels=c("minimal", "low", "medium", "high", "max"))+
-  ylab("Distance")+
-  labs(colour="Donor", fill="Stress level") +
-  facet_grid(cols=vars(index), scale="free", rows=vars(time))->p
-
-p
-  
-
-
-ggsave(filename = paste(x, "O2_alpha_o2.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/O2/beta",
-       width = 25,
-       height = 10,
-       units = c("cm"))
-
-
-```
+##Vegan
 
 ```{r}
 
@@ -1707,10 +1387,41 @@ print(length(get_variable(sub,"incubation")))
 
 ```
 
+```{r}
+
+time <- c("stress", "post_stress_1")
+stress_level_cond <-c( "low", "median", "high")
+
+for (i in 1:length(time)){
+  for (j in 1:length(stress_level_cond)){
+  phyloseq_rare %>%
+  subset_samples(!Sample_id_compete %in% c("feces_dil_1", "feces"))%>%
+  subset_samples(stress %in% "H2O2") %>%
+    subset_samples(time %in% time[i]) %>%
+    subset_samples(stress_level %in% c("control",stress_level_cond[j]))->sub
+  
+
+
+sub%>%
+  phyloseq::distance(method = "bray") -> bc
+
+sub %>% 
+  physeq_betadisper(dm = bc,
+                    variable = "stress_level") -> betadisp    
+    
+print(length(get_variable(sub,"stress_level")))  
+    
+  print(c(time[i], stress_level_cond[j]) )
+  print(betadisp)
+  }}
+
+
+```
+
 
 ```{r}
 time <- c("stress")
-stress_level_cond <-c("median","high","max")
+stress_level_cond <-c("control","low","median","high","max")
 
 for (i in 1:length(time)){
   for (j in 1:length(stress_level_cond)){
@@ -1733,27 +1444,29 @@ print(length(get_variable(sub,"incubation")))
 ```
 
 ```{r}
-phyloseq_rare %>%
+time <- c("stress", "post_stress_1")
+stress_level_cond <-c("low","median","high")
+
+for (i in 1:length(time)){
+  for (j in 1:length(stress_level_cond)){
+  phyloseq_rare %>%
   subset_samples(!Sample_id_compete %in% c("feces_dil_1", "feces"))%>%
-  subset_samples(stress %in% "O2" ) %>%
-  subset_samples(time %in% "stress")%>%
-  # subset_samples(stress_level %in% c("high", "max"))%>%
-    subset_samples(incubation %in% "anaerobe")->sub
+  subset_samples(stress %in% "H2O2") %>%
+    subset_samples(time %in% time[i]) %>%
+    subset_samples(stress_level %in% c(stress_level_cond[j], "control"))->sub
   
- sub %>%
-  microbiome::transform("clr") -> ps_transformed
-
-ps_transformed%>%
-  phyloseq::distance(method = "euclidean") -> bc
+  sub %>%
+  phyloseq::distance(method = "bray") -> bc
     
-    vegan::adonis2(bc ~ get_variable(sub,"stress_level")  , p.adjust.methods= "BH")->adonis
+    vegan::adonis2(bc ~ get_variable(sub,"stress_level") + get_variable(sub,"donor_name"))->adonis
     
+print(length(get_variable(sub,"stress_level")))  
     
-    
-  print(c(time[i], stress_level_cond[j]))
+  print(c(time[i], stress_level_cond[j]) )
   print(adonis)
-
+  }}
 ```
+
 
 
 # PCoA -02 aerobic incubation anaerobic incubation

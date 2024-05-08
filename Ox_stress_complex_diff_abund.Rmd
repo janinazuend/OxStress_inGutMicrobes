@@ -13,7 +13,7 @@ knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_
  unloadNamespace("miaViz")
  unloadNamespace("mia")
 
-phyloseq_nonrare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_nonrare.RDS")
+phyloseq_rare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
 
 
 ```
@@ -27,7 +27,7 @@ phyloseq_nonrare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/
 ```
 
 ```{r}
-ox <- makeTreeSummarizedExperimentFromPhyloseq(phyloseq_nonrare) 
+ox <- makeTreeSummarizedExperimentFromPhyloseq(phyloseq_rare) 
 ```
 
 
@@ -88,12 +88,78 @@ all_oxygen_genus ->out
  
 
 out[,c(1,2,3,4,6,8,10, 14,15,16)]%>%
-  # subset(diff.btw > 2)
-   subset(we.eBH < 0.05)%>%
+
+   subset(we.ep < 0.05)%>%
   subset(V15 %in% "stress")->o
 
-unique(o$Family)
+filter_o2<-unique(o$Family)
 ```
+
+```{r}
+# library(scales)
+
+# filter_o2<-unique(o$Family)
+
+out[,c(1,2,3,4,6,8,10, 14,15,16)]%>%
+   subset( diff.btw > 0.75 )%>%
+ 
+   # subset(wi.ep < 0.05)%>%
+  subset(V15 %in% "stress")->o
+
+
+out[,c(1,2,3,4,6,8,10, 14,15,16)]%>%
+   subset( diff.btw < -0.75 | wi.ep < 0.05)%>%
+   subset(!Family %in% "Erysipelotrichaceae UCG-003")%>%subset(V15 %in% "stress")->oo
+
+
+dir<-rbind(data.frame(Family = unique(oo$Family),
+          direction = rep ("decreased", length(unique(oo$Family)))),
+data.frame(Family = unique(o$Family),
+          direction = rep ("increased", length(unique(o$Family)))))
+
+out%>%
+   mutate(diff.btw = (-1) * diff.btw)%>%
+  subset(Family %in% c(filter_o2))%>%
+  mutate(Family = reorder(Family, diff.btw))%>%
+  mutate(we.ep = ifelse(we.ep < 0.001 , "***", we.ep))%>%
+  mutate(we.ep = ifelse(we.ep < 0.05 & we.ep >= 0.01, "*", we.ep))%>%
+  mutate(we.ep = ifelse(we.ep < 0.01 & we.ep >= 0.001, "**", we.ep))%>%
+ 
+  mutate(we.ep = ifelse(!we.ep == c("*") & !we.ep == "**" & !we.ep == "***", NA, we.ep))%>%
+  # mutate(V14 = ifelse(V14  == "low","0.22 mM", V14))%>%
+  # mutate(V14 = ifelse(V14  == "median","0.71 mM", V14))%>%
+  #   mutate( V14 = ifelse(V14 == "high", "2.3 mM", V14))%>%
+   mutate(V14 = factor(V14, levels = c("control", "low",  "median", "high", "max")))%>%
+  mutate(V15 = factor( V15, levels=c("stress", "post_stress_1")))%>%
+
+
+  ggplot(aes(x=V15, y=Family, fill=diff.btw))+
+  geom_tile()+
+   facet_grid(cols=vars(V14), scales = "free", space="free")+
+ scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
+                      values = rescale(c(-6, 0, 6)), limits=c(-6, 6), 
+                      name="Clr-difference")+
+   theme(text = element_text(size=15),
+         axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
+        axis.text.y = element_text( face="italic"), 
+        panel.border=element_rect(fill=NA), 
+        panel.background = element_rect(fill="white"),
+        legend.text.align = 0, 
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+        panel.spacing = unit(0, "lines"))+
+    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  geom_text(aes(label=we.ep), size=5)
+
+ggsave(filename = paste("diff_abundo2.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 15,
+       height = 6,
+       units = c("cm"))
+
+```
+
 ```{r}
 out[,c(1,3,6,8,10, 14,15,16)]%>%
   subset(Family %in% c("Escherichia-Shigella","Enterobacteriaceae Family", "Bacteroides", "Anaerostipes"))%>%
@@ -173,28 +239,27 @@ print(uni)
 
 all_h2o2_genus %>%
 # out%>%
-  subset(wi.ep <0.05 & (diff.btw >1 | diff.btw <1) &
+  subset(we.ep <0.05  &
            V15 %in% "stress")-> sig_taxa
 
-all_h2o2_genus[, c("wi.ep", "wi.eBH", "diff.btw" ,"V14", "V15", "Family")] %>%
-    subset(Family %in% "Streptococcus")%>%
-  subset(wi.ep <0.05)%>%
-  filter(diff.btw<0)
+all_h2o2_genus[, c("we.ep", "wi.eBH", "diff.btw" ,"V14", "V15", "Family")] %>%
+    # subset(Family %in% "Streptococcus")%>%
+  subset(we.ep <0.05)
 
  filter<- unique(sig_taxa$Family)
 ```
 
 ```{r}
-# library(scales)
-filter_decreased<-c("Bacteroides", "Fusicatenibacter", "Anaerostipes", "Lachnospira",
+ library(scales)
+filter_decreased<-c("Bacteroides", "Fusicatenibacter", "Anaerostipes", 
                "Blautia", "Agathobacter",
-             "Dorea", "Faecalibacterium", "Lachnospiraceae ND3007 group", 
+             "Dorea", "Faecalibacterium", 
              "Lachnoclostridium", "Lachnospiraceae UCG-004", "Lachnospiraceae Family",
-             "[Eubacterium] hallii group",  "Collinsella", "[Ruminococcus] gauvreauii group",
-             "Parabacteroides", "Butyricicoccus")
+             "[Eubacterium] hallii group",   "[Ruminococcus] gauvreauii group",
+             "Parabacteroides")
 
-filter_increased<-c("Enterobacteriaceae Family", "Morganella","Escherichia-Shigella", "[Clostridium] innocuum group","Enterococcus", "Bifidobacterium","Hafnia-Obesumbacterium" , "Streptococcus")
-
+filter_increased<-c("Enterobacteriaceae Family", "Escherichia-Shigella","Enterococcus", "Bifidobacterium", "Lactobacillales Order")
+# , "Streptococcus"
 length(filter_decreased)
 
 dir<-rbind(data.frame(Family = filter_decreased,
@@ -204,11 +269,11 @@ data.frame(Family = filter_increased,
 
 
 left_join(all_h2o2_genus[, c("we.ep", "wi.ep", "diff.btw" ,"V14", "V15", "Family", "rab.all")], dir)%>%
-   mutate(wi.ep = ifelse(wi.ep < 0.001 , "***", wi.ep))%>%
-  mutate(wi.ep = ifelse(wi.ep < 0.05 & wi.ep >= 0.01, "*", wi.ep))%>%
-  mutate(wi.ep = ifelse(wi.ep < 0.01 & wi.ep >= 0.001, "**", wi.ep))%>%
+   mutate(we.ep = ifelse(we.ep < 0.001 , "***", we.ep))%>%
+  mutate(we.ep = ifelse(we.ep < 0.05 & we.ep >= 0.01, "*", we.ep))%>%
+  mutate(we.ep = ifelse(we.ep < 0.01 & we.ep >= 0.001, "**", we.ep))%>%
  
-  mutate(wi.ep = ifelse(!wi.ep == c("*") & !wi.ep == "**" & !wi.ep == "***", NA, wi.ep))%>%
+  mutate(we.ep = ifelse(!we.ep == c("*") & !we.ep == "**" & !we.ep == "***", NA, we.ep))%>%
   mutate(V14 = ifelse(V14  == "low","0.22 mM", V14))%>%
   mutate(V14 = ifelse(V14  == "median","0.71 mM", V14))%>%
     mutate( V14 = ifelse(V14 == "high", "2.3 mM", V14))%>%
@@ -232,7 +297,7 @@ left_join(all_h2o2_genus[, c("we.ep", "wi.ep", "diff.btw" ,"V14", "V15", "Family
         strip.background = element_blank(),
         panel.spacing = unit(0, "lines"))+
     scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
-  geom_text(aes(label=wi.ep), size=5)
+  geom_text(aes(label=we.ep), size=5)
 
 ggsave(filename = paste("diff_abundh2o2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",

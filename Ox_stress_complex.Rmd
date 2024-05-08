@@ -38,7 +38,9 @@ hplc$total_C<-0
 
 scfas<-c("ΔSuccinate", "ΔLactate" , "ΔFormate", "ΔAcetate","ΔPropionate","ΔButyrate")
 scfas_rel<-c("rel_succinate", "rel_lactate" , "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")
-c_counts<-c(4, 3, 1, 2, 3, 4)
+# c_counts<-c(4, 3, 1, 2, 3, 4)
+
+c_counts<-c(1, 1, 1, 1, 1, 1)
 
 for (i in 1:nrow(hplc)){
   
@@ -51,8 +53,8 @@ for (i in 1:nrow(hplc)){
     if (hplc[i,scfas[z]]<=0){
       hplc[i,scfas[z]]=0}
       }
-   
-  hplc[i,c("total_C")]<-  (3*hplc[i,c("ΔLactate")])+hplc[i,c("ΔFormate")]+(2*hplc[i,c("ΔAcetate")])+(3*hplc[i,c("ΔPropionate")])+4*(hplc[i,c("ΔSuccinate")])+4*(hplc[i,c("ΔButyrate")])
+   # hplc[i,c("total_C")]<-  (3*hplc[i,c("ΔLactate")])+hplc[i,c("ΔFormate")]+(2*hplc[i,c("ΔAcetate")])+(3*hplc[i,c("ΔPropionate")])+4*(hplc[i,c("ΔSuccinate")])+4*(hplc[i,c("ΔButyrate")])
+  hplc[i,c("total_C")]<-  (hplc[i,c("ΔLactate")])+hplc[i,c("ΔFormate")]+(hplc[i,c("ΔAcetate")])+(hplc[i,c("ΔPropionate")])+(hplc[i,c("ΔSuccinate")])+(hplc[i,c("ΔButyrate")])
   
   for (j in 1:length(scfas)){
     hplc[i,scfas_rel[j]] = hplc[i,scfas[j]] * c_counts[j]/ hplc[i, c("total_C")]
@@ -65,12 +67,43 @@ for (i in 1:nrow(hplc)){
 ##check if total metabolite production is different between aerobic and anerobic incubation
 ```{r}
 ##significant only under post stress
+# all are not significant except post-stress high = > t test can be used
+test_cond<-c("total_C", "rel_succinate", "rel_lactate", "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")
+stress_level_cond<-c("control", "low", "median", "high", "max")
+incubation_cond<-c("anaerobe", "aerobe")
+time_cond <-c("stress", "post_stress_1")
+stress_cond<-c("H2O2", "O2")
+
 hplc%>%
-  subset(stress %in% "O2")%>%
-  group_by(stress_level, time)%>%
- wilcox_test(ΔButyrate~incubation)%>%
-  subset( p < 0.05)
+  gather(metabolite, conc, "total_C":"rel_butyrate")->hplc_long
+
+for (i in 1:5){
+  for (j in 1:2){
+    for (x in 1:2){
+      for (z in 1:6){
+        for (k in 1:2){
+
+ hplc_long%>%
+  subset( time %in% c("stress", "post_stress_1"))%>%
+  subset(stress_level %in% stress_level_cond[i])%>%
+  subset(incubation %in% incubation_cond[j])%>%
+    subset(time %in% time_cond[x])%>%
+    subset(metabolite %in% test_cond[z])%>%
+            subset(stress %in% stress_cond[k])->shapi
+          rm(res)
+
+      try( shapiro_test(shapi$conc)-> res, silent=T)
+      try(res$time <-time_cond[x], silent=T)
+      try(res$stress_level<-stress_level_cond[i], silent=T)
+      try(res$metabolite <- test_cond[z], silent=T)
+           try(res$stress <- stress_cond[k], silent=T)
+try(if (res$p.value <0.05){print(res)}, silent=T)
+  }}}}}
+
 ```
+
+
+
 ##o2 line plots
 ```{r}
 hplc %>%
@@ -116,69 +149,14 @@ hplc %>%
 
 do.call(rbind, list(no, ctrl, low, median, high, max, ctrl_a, low_a, median_a, high_a, max_a)) -> combined_df
 
-  combined_df[, c("donor_name", "time", "stress_level", "stress","incubation", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
-  gather(scfa, conc, "ΔSuccinate":"total_C")->long
-
-names<-list("stress"= "Stress", 
-            "post_stress_1"= "Post 1", 
-            "post_stress_2"= "Post 2")
-    
-    
-left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress, long$incubation), FUN=mean), c("scfa", "time","stress_level", "stress", "incubation", "mean")),
-          setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress, long$incubation), FUN=sd), c("scfa", "time", "stress_level","stress","incubation", "sd")))%>%
-  subset(time %in% c("pre-stress" ,"stress", "post_stress_1"))%>%
-  mutate(scfa = ifelse(scfa == "total_C", "Total mM", scfa))%>%
-  mutate(stress_level = ifelse(stress_level == "control", "minimal", stress_level))%>%
-  mutate(stress_level = factor(stress_level, levels=c("minimal","low", "median", "high", "max")),
-         time = factor(time, levels=c("pre-stress" ,"stress", "post_stress_1")),
-         scfa = factor(scfa, levels=c("Total mM", "ΔAcetate", "ΔButyrate","ΔPropionate","ΔFormate",  "ΔSuccinate")))%>%
- ggplot(aes(x=time, y=mean))+
-  theme(strip.text.x = element_text(size  = 20),
-        strip.text.y = element_text(size  = 20, angle=0, hjust=0),
-          axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0,
-        strip.background = element_blank())+
-  geom_line(aes(colour=incubation, group=incubation), size=2)+
-  geom_ribbon(aes(ymin = mean-sd, ymax = mean + sd, fill=incubation, group=incubation),
-              alpha = 0.3)+
-  # ggtitle(expression('ΔMetabolite'))+
-  ylab("Metabolite [mM]")+
-  labs(colour="Donor", fill="Stress level")+
-  facet_grid(cols=vars(stress_level), rows=vars(scfa), scales= "free") +
-   scale_fill_manual(values=c( "lightpink3","skyblue3") , guide ="none")+
-  scale_colour_manual(values=c( "lightpink3", "skyblue3"), labels=c("Control", "Stress"), name="Condition")+
-   scale_x_discrete(labels=c("Pre", "Stress", "Post 1", "Post 2"))+
-  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
-             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
-             color = "grey", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=1) +
-   geom_hline(yintercept =0,  # Specify your desired category label
-              color = "grey", alpha=0.8, size=1) +
-   scale_y_continuous(breaks = c( 0, 7.5,   25, 45   ), expand = c(0, 0)) -> p
-
-p
 
 
-
-ggsave(filename = paste( "metabol_o2.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 25,
-       height = 22,
-       units = c("cm"))
-51.7/14*25
 
 ```
 
+#o2 line plots
 ```{r}
-combined_df[, c("donor_name", "time", "stress_level", "stress","incubation", "rel_succinate", "rel_formate", "rel_acetate","rel_propionate", "rel_butyrate")]%>%
+combined_df[, c("donor_name", "time", "stress_level", "stress","incubation","total_C", "rel_succinate", "rel_formate", "rel_acetate","rel_propionate", "rel_butyrate")]%>%
   gather(scfa, conc, "rel_succinate":"rel_butyrate")->long
 
 
@@ -186,18 +164,20 @@ left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stres
           setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress, long$incubation), FUN=sd), c("scfa", "time", "stress_level","stress","incubation", "sd")))%>%
   mutate(mean = mean *100,
          sd = sd * 100)%>%
-   subset(stress_level %in% "max")%>%
+   # subset(stress_level %in% "max")%>%
   subset(time %in% c("pre-stress" ,"stress", "post_stress_1"))%>%
-  subset(scfa %in% c("rel_acetate", "rel_butyrate","rel_propionate"))%>%
+  mutate(stress_level = factor(stress_level, levels= c("control", "low", "median", "high", "max")))%>%
   mutate(scfa = ifelse(scfa == "rel_acetate", "Acetate", scfa))%>%
   mutate(scfa = ifelse(scfa == "rel_propionate", "Propionate", scfa))%>%
   mutate(scfa = ifelse(scfa == "rel_butyrate", "Butyrate", scfa))%>%
-  # mutate(scfa = ifelse(scfa == "total_C", "Total C", scfa))%>%
+  mutate(scfa = ifelse(scfa == "rel_succinate", "Succinate", scfa))%>%
+  mutate(scfa = ifelse(scfa == "rel_formate", "Formate", scfa))%>%
+  mutate(scfa = ifelse(scfa == "rel_lactate", "Lactate", scfa))%>%
+  mutate(scfa = ifelse(scfa == "total_C", "Total C", scfa))%>%
   mutate(time = factor(time, levels=c("pre-stress" ,"stress", "post_stress_1")),
-         scfa = factor(scfa, levels=c( "Acetate", "Butyrate","Propionate")))%>%
+         scfa = factor(scfa, levels=c( "Total C","Acetate", "Butyrate","Propionate", "Succinate", "Lactate", "Formate")))%>%
  ggplot(aes(x=time, y=mean))+
-  theme(strip.text.x = element_blank(),
-        strip.text.y = element_text( angle=90, hjust=0.5),
+  theme(strip.text.y = element_text( hjust=0.5),
           text= element_text(size = 15), 
         axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
@@ -214,7 +194,7 @@ left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stres
   facet_grid(cols=vars(stress_level), rows=vars(scfa), scales= "free") +
    scale_fill_manual(values=c("lightpink3","skyblue3" ) , guide ="none")+
   scale_colour_manual(values=c( "lightpink3","skyblue3"), labels=c( "Stress", "Control"), name="Condition")+
-   scale_x_discrete(labels=c("Pre", "P1", "P2", "P3"))+
+   scale_x_discrete(labels=c("Pre-culture", "Stress", "Post-Stress"))+
   geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
              linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
   geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
@@ -229,10 +209,12 @@ left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stres
 
 ggsave(filename = paste( "metabol_o2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 10.1,
-       height = 10,
+       width = 13,
+       height = 13,
        units = c("cm"))
 ```
+
+
 #O2 bar plots - ananeobe
 ```{r}
  combined_df[, c("donor_name", "time", "stress_level", "stress","incubation", "rel_succinate", "rel_formate", "rel_acetate","rel_propionate", "rel_butyrate")]%>%
@@ -258,7 +240,8 @@ ggsave(filename = paste( "metabol_o2.jpeg"),
         axis.title.x = element_blank(),
         strip.background = element_rect(fill="white"),
         panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0, legend.position = "right")+
+        panel.border=element_rect(fill=NA), 
+        legend.text.align = 0, legend.position = "right")+
    scale_fill_manual(values=c("coral3", "cyan3", "skyblue3", "darkorange1", "violetred2", "cyan4", "#00A9FF", "#00B8E7", "#8494FF"), 
                      labels=c("rel_acetate"="Acetate", "rel_butyrate"="Butyrate","rel_propionate"="Propionate", 
                               "rel_formate"="Formate", "rel_succinate"="Succinate", "rel_lactate"="Lactate"))+
@@ -321,6 +304,62 @@ ggsave(filename = paste( "metabol_o2_bar_erobe.jpeg"),
        units = c("cm"))
 ```
 
+#hplc absolute -o2
+```{r}
+
+ combined_df[, c("donor_name", "time", "stress_level", "stress","incubation", "ΔAcetate" ,"ΔPropionate", "ΔButyrate","ΔFormate", "ΔSuccinate")]%>% 
+  subset(incubation %in% "aerobe")%>%
+  subset(!time %in% "post_stress_2")%>%
+  gather(scfa, conc, "ΔAcetate":"ΔSuccinate")->long
+
+
+
+
+    
+left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$incubation), FUN=median), c("scfa", "time","stress_level", "stress", "mean")),
+          setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$incubation), FUN=sd), c("scfa", "time", "stress_level","stress","sd")))%>%
+
+  mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high", "max")))%>%
+  mutate(time = factor(time , levels= c("pre-stress", "stress", "post_stress_1")))%>%
+
+
+  
+  dplyr::select(mean, time, scfa,   stress_level) %>%
+  group_by( time,  scfa,  stress_level) %>%
+   # dplyr::summarize(conc = (conc)) %>%
+
+  ggplot(aes(x=time, y=mean,  fill= scfa , stratum = scfa, alluvium = scfa))+
+             
+  xlab("Condition")+
+  ylab("[mM]")+
+  labs(fill= "Metabolite")+
+  theme(text=element_text(size=15),
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0, legend.position = "right")+
+   scale_fill_manual(values=c("coral3", "cyan3", "skyblue3", "darkorange1", "violetred2", "cyan4", "#00A9FF", "#00B8E7", "#8494FF"), 
+                     labels=c("ΔAcetate" ="Acetate" ,"ΔPropionate"="Propionate", "ΔButyrate"="Butyrate","ΔFormate"="Formate", "ΔSuccinate" ="Succinate","ΔLactate"="Lactate"))+
+  # geom_bar(position = "stack", aes(fill=scfa), stat = "identity")+
+  facet_grid2(cols=vars(stress_level))+
+    geom_flow(reverse = FALSE) +
+   geom_stratum(reverse = FALSE, width = 0.5, color = "transparent") +
+  scale_x_discrete(labels = c("Pre-culture", "Stress", "Post-stress"))->o2_metabol
+
+ggsave(filename = paste( "metabol_o2_bar.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 25,
+       height = 22,
+       units = c("cm"))
+  
+  # subset(stress_level %in% "high")%>%
+```
+
+
+
+##O2 total C
 ```{r}
     
 combined_df[, c("donor_name", "time", "stress_level", "stress","incubation", "total_C")]->long
@@ -328,12 +367,13 @@ combined_df[, c("donor_name", "time", "stress_level", "stress","incubation", "to
 
 left_join(setNames(aggregate(long$total_C, by=list( long$time, long$stress_level, long$stress, long$incubation), FUN=mean), c("time","stress_level", "stress", "incubation", "mean")),
           setNames(aggregate(long$total_C, by=list( long$time, long$stress_level, long$stress, long$incubation), FUN=sd), c("time", "stress_level","stress","incubation", "sd")))%>%
-   subset(stress_level %in% "max")%>%
+   # subset(stress_level %in% "max")%>%
   # mutate(scfa = ifelse(scfa == "total_C", "Total C", scfa))%>%
-  mutate(time = factor(time, levels=c("pre-stress" ,"stress", "post_stress_1", "post_stress_2")))%>%
+  subset(time %in% c("pre-stress" ,"stress", "post_stress_1"))%>%
+  mutate(time = factor(time, levels=c("pre-stress" ,"stress", "post_stress_1")))%>%
+  mutate(stress_level = factor(stress_level, levels=c("control" ,"low", "median", "high", "max")))%>%
  ggplot(aes(x=time, y=mean))+
-  theme(strip.text.x = element_blank(),
-        strip.text.y = element_text( angle=90, hjust=0.5),
+  theme(      strip.text.y = element_text( angle=90, hjust=0.5),
           text= element_text(size = 15), 
         axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
@@ -345,18 +385,17 @@ left_join(setNames(aggregate(long$total_C, by=list( long$time, long$stress_level
   geom_line(aes(colour=incubation, group=incubation), size=1)+
   geom_ribbon(aes(ymin = mean-sd, ymax = mean + sd, fill=incubation, group=incubation),
               alpha = 0.3)+
-  ylab("Total C [mM]")+
+  ylab("Total metabolites [mM]")+
   labs(colour="Donor", fill="Stress level")+
   facet_grid(cols=vars(stress_level),  scales= "free") +
    scale_fill_manual(values=c("lightpink3","skyblue3" ) , guide ="none")+
   scale_colour_manual(values=c( "lightpink3","skyblue3"), labels=c( "Stress", "Control"), name="Condition")+
-   scale_x_discrete(labels=c("Pre", "P1", "P2", "P3"))+
+   scale_x_discrete(labels=c("Pre-culture", "Stress", "Post-stress"))+
   geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
              linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
   geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
              color = "grey", alpha=0.8, size=0.7) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_2')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=0.7) +
+  
   geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
               color = "grey", alpha=0.8, size=0.7) +
    geom_hline(yintercept =0,  # Specify your desired category label
@@ -367,7 +406,7 @@ left_join(setNames(aggregate(long$total_C, by=list( long$time, long$stress_level
 
 ggsave(filename = paste( "totalC_o2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 10,
+       width = 13,
        height = 7.5,
        units = c("cm"))
 ```
@@ -376,8 +415,8 @@ ggsave(filename = paste( "totalC_o2.jpeg"),
 #fference acetate (increase) and butyrate (decrease) under max stress
 
 ```{r}
- hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "rel_succinate",  "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")]%>%
-   gather(scfa, conc, "rel_succinate":"rel_butyrate")%>%
+ hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "total_C","rel_succinate",  "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")]%>%
+   gather(scfa, conc, "total_C":"rel_butyrate")%>%
 # hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
 #   gather(scfa, conc, "ΔSuccinate":"total_C")%>%
   subset(stress %in% "O2")%>%
@@ -386,157 +425,27 @@ ggsave(filename = paste( "totalC_o2.jpeg"),
   formula = conc ~ incubation 
   )%>%
   add_significance()%>%
+  subset(!time %in% "post_stress_2")%>%
+  subset(p<0.05)
+
+
+ hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "total_C","rel_succinate",  "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")]%>%
+   gather(scfa, conc, "total_C":"rel_butyrate")%>%
+# hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
+#   gather(scfa, conc, "ΔSuccinate":"total_C")%>%
+  subset(stress %in% "H2O2")%>%
+  group_by(scfa, time)%>%
+  wilcox_test(data= .,
+  formula = conc ~ stress_level , ref.group = "control"
+  )%>%
+  add_significance()%>%
+  subset(!time %in% "post_stress_2")%>%
   subset(p<0.05)
 ```
 
-#controls
-```{r}
-hplc%>%
-  subset((time %in% "pre-stress" | stress_level %in% "control") | (stress_level %in% "control" & incubation %in% "anaerobe"))%>%
-  gather(scfa, conc, "ΔSuccinate":"ΔButyrate")%>%  
-  subset(!time %in% c("post_stress_2"))%>%
-  subset(scfa %in% c("ΔSuccinate","ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate"))->long
-
-left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time), FUN=mean), c("scfa", "time", "mean")),
-          setNames(aggregate(long$conc, by=list(long$scfa, long$time), FUN=sd), c("scfa", "time", "sd")))%>%
-
-   mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))%>%
-  ggplot(aes(x=time, y=mean))+
-   geom_line(aes(colour=scfa, group=scfa), size=2)+
-  geom_ribbon(aes(ymin = mean-sd, ymax = mean + sd, fill=scfa, group=scfa),
-              alpha = 0.3)+
-  theme(axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0)+
-  ylab("Metabolite [mM]")+xlab("")+
-  geom_hline(yintercept=0, linetype=2)+
-  ggtitle("Metabolite production in passaged cultures")+
-  labs(colour="Metabolite")+
-  guides(fill=F)
-
-
-long%>%
-  gather(scfa, conc, "rel_succinate":"rel_butyrate")->sub
-
-sub%>%
-  mutate(time = factor(time , levels= c("pre-stress", "stress", "post_stress_1")))%>%
-  mutate(donor_name = factor(donor_name))%>%
-  
-  dplyr::select(conc, time, scfa, donor_name) %>%
-  group_by( time, donor_name, scfa) %>%
-  dplyr::summarize(conc = mean(conc)) %>%
-  mutate(scfa = factor(scfa, levels= c("rel_acetate", "rel_butyrate","rel_propionate", 
-                              "rel_formate", "rel_succinate", "rel_lactate")))%>%
-  ggplot(aes(x=time, y=conc,  fill= scfa , stratum = scfa, alluvium = scfa))+
-             
-  xlab("Condition")+
-  ylab("Metabolite fraction")+
-  labs(fill= "Metabolite")+
-  theme(text=element_text(size=15),
-        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
-        axis.ticks.x = element_blank(),
-        axis.title.x = element_blank(),
-        strip.background = element_rect(fill="white"),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0, legend.position = "right")+
-   scale_fill_manual(values=c("coral3", "cyan3", "skyblue3", "darkorange1", "violetred2", "cyan4", "#00A9FF", "#00B8E7", "#8494FF"), 
-                     labels=c("rel_acetate"="Acetate", "rel_butyrate"="Butyrate","rel_propionate"="Propionate", 
-                              "rel_formate"="Formate", "rel_succinate"="Succinate", "rel_lactate"="Lactate"))+
-  # geom_bar(position = "stack", aes(fill=scfa), stat = "identity")+
-  facet_grid(cols=vars(donor_name))+
-  geom_flow(reverse = FALSE) +
-  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
-  scale_x_discrete(labels = c("Pre-culture", "Stress", "Post-stress"))+
-    force_panelsizes(rows = unit(8.5, "cm"), col = unit(1.75, "cm"))  ->hplc_plot
-
-ggsave(filename = paste( "metabolites_controls.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width =20,
-       height = 15,
-       units = c("cm"))
-  
-```
-
-```{r}
-hplc%>%
-  subset((time %in% "pre-stress" & stress_level %in% "control") | (stress_level %in% "control" & incubation %in% "anaerobe"))%>%
-  gather(scfa, conc, "ΔSuccinate":"ΔButyrate")%>%
-  subset(scfa %in% c("ΔSuccinate","ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate"))%>%
-  group_by(scfa)%>%
-  t_test(data= .,
-  formula = conc ~ time ,  p.adjust.method = "bonferroni"
-  )%>%
-  add_significance()
-```
-
-# calculate the difference h2o2
-
-```{r}
-###ad control value to all stress-level
-hplc%>%
-  subset(stress %in% "H2O2" & stress_level %in% "control")->low
-low$stress_level <- "low"
-low$stress <- "control"
-
-hplc%>%
-  subset(stress %in% "H2O2" & stress_level %in% "control")->median
-median$stress_level <- "median"
-median$stress <- "control"
-
-
-hplc%>%
-  subset(stress %in% "H2O2" & stress_level %in% "control")->high
-high$stress_level <- "high"
-high$stress <- "control"
-
-rbind(subset(hplc, stress %in% "H2O2" & !stress_level %in% "control"), low, median, high)->hplc_comparison
-
-names<-list("stress"= "Stress", 
-            "post_stress_1"= "Post 1", 
-            "post_stress_2"= "Post 2")
-
-
-# hplc_comparison[, c("donor_name", "time", "stress_level", "stress", "rel_succinate", "rel_lactate" , "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")]%>%
-#   gather(scfa, conc, "rel_succinate":"rel_butyrate")%>%
-  hplc_comparison[, c("donor_name", "time", "stress_level", "stress", "ΔSuccinate", "ΔLactate","ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
-  gather(scfa, conc, "ΔSuccinate":"total_C")%>%
-  pivot_wider(values_from = conc, names_from = stress)%>%
-  mutate(diff = H2O2-control)%>%
-    subset(time %in% c("pre-stress", "stress", "post_stress_1"))%>%
-  mutate(stress_level = factor(stress_level, levels=c( "low", "median", "high")),
-         time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))%>%
- ggplot(aes(x=stress_level, y=diff))+
-  theme(strip.text = element_text(size  = 20),
-          axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0)+
-  geom_boxplot( outlier.shape = NA, position = position_dodge2(preserve = "single"))+
-  geom_jitter(aes(colour=donor_name),  width = 0.1)+
-  ggtitle(expression('ΔMetabolite'))+
-  ylab("ΔMetabolite")+
-  labs(colour="Donor", fill="Stress level")+
-  facet_grid(cols=vars(time), rows=vars(scfa), scales= "free") +
-  geom_hline(yintercept=0, linetype=2)
 
 
 
-ggsave(filename = paste( "alpha_h2o2_delta.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/metabolites",
-       width = 25,
-       height = 25,
-       units = c("cm"))
-
-```
 
 ##h2o2 line plots
 
@@ -579,9 +488,6 @@ rbind(low, median, high,
 hplc_comparison[, c("donor_name", "time", "stress_level", "stress", "rel_succinate", "rel_lactate","rel_formate", "rel_acetate","rel_propionate", "rel_butyrate")]%>%
 gather(scfa, conc, "rel_succinate":"rel_butyrate")->long
 
-names<-list("stress"= "Stress", 
-            "post_stress_1"= "Post 1", 
-            "post_stress_2"= "Post 2")
     
     
 left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress), FUN=mean), c("scfa", "time","stress_level", "stress", "mean")),
@@ -589,13 +495,16 @@ left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stres
   # subset(stress_level %in% "high")%>%
   mutate(mean= mean*100)%>%
   mutate(sd = sd *100)%>%
-  mutate(stress_level = factor(stress_level, levels = c("low", "median", "high")))%>%
+  # mutate(stress_level = factor(stress_level, levels = c("low", "median", "high")))%>%
   mutate(scfa = ifelse(scfa == "rel_acetate", "Acetate", scfa))%>%
   mutate(scfa = ifelse(scfa == "rel_propionate", "Propionate", scfa))%>%
   mutate(scfa = ifelse(scfa == "rel_butyrate", "Butyrate", scfa))%>%
-    mutate(scfa = ifelse(scfa == "rel_succinate", "Succinate", scfa))%>%
+  mutate(scfa = ifelse(scfa == "rel_succinate", "Succinate", scfa))%>%
   mutate(scfa = ifelse(scfa == "rel_formate", "Formate", scfa))%>%
   mutate(scfa = ifelse(scfa == "rel_lactate", "Lactate", scfa))%>%
+  mutate(stress_level = ifelse(stress_level  == "low","0.22 mM", stress_level))%>%
+  mutate(stress_level = ifelse(stress_level  == "median","0.71 mM", stress_level))%>%
+  mutate( stress_level = ifelse(stress_level == "high", "2.3 mM", stress_level))%>%
   subset(time %in% c("pre-stress" ,"stress", "post_stress_1"))%>%
   mutate(time = factor(time, levels=c("pre-stress" ,"stress", "post_stress_1")),
          scfa = factor(scfa, levels=c( "Acetate", "Butyrate","Propionate","Formate",  "Lactate","Succinate")))%>%
@@ -615,10 +524,63 @@ left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stres
   # ggtitle(expression('ΔMetabolite'))+
   ylab("Metabolite [%]")+
   labs(colour="Donor", fill="Stress level")+
-  facet_grid(cols=vars(scfa), rows=vars(stress_level), scales= "free") +
+  facet_grid(cols=vars(stress_level), rows=vars(scfa), scales= "free") +
    scale_fill_manual(values=c("skyblue3", "lightpink3") , guide ="none")+
   scale_colour_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"), name="Condition")+
-   scale_x_discrete(labels=c("Pre", "P1", "P2", "P3"))+
+   scale_x_discrete(labels=c("Pre-culture", "Stress", "Post-stress"))+
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
+  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
+             color = "grey", alpha=0.8, size=0.7) +
+  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.7)  -> p
+
+p
+
+
+
+ggsave(filename = paste( "metabol_h2o2..jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 13,
+       height = 17,
+       units = c("cm"))
+51.7/14*25
+
+
+
+hplc_comparison[, c("donor_name", "time", "stress_level", "stress", "total_C")]->long
+
+    
+    
+left_join(setNames(aggregate(long$total_C, by=list( long$time, long$stress_level, long$stress), FUN=mean), c( "time","stress_level", "stress", "mean")),
+          setNames(aggregate(long$total_C, by=list(long$time, long$stress_level, long$stress), FUN=sd), c( "time", "stress_level","stress","sd")))%>%
+  # subset(stress_level %in% "high")%>%
+  mutate(stress_level = ifelse(stress_level  == "low","0.22 mM", stress_level))%>%
+  mutate(stress_level = ifelse(stress_level  == "median","0.71 mM", stress_level))%>%
+  mutate( stress_level = ifelse(stress_level == "high", "2.3 mM", stress_level))%>%
+  subset(time %in% c("pre-stress" ,"stress", "post_stress_1"))%>%
+  mutate(time = factor(time, levels=c("pre-stress" ,"stress", "post_stress_1"))
+        )%>%
+ ggplot(aes(x=time, y=mean))+
+  theme(text= element_text(size  = 15),
+        strip.text.x = element_text(size=11),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), 
+        legend.text.align = 0,
+        strip.background = element_blank())+
+  geom_line(aes(colour=stress, group=stress), size=0.7)+
+  geom_ribbon(aes(ymin = mean-sd, ymax = mean + sd, fill=stress, group=stress),
+              alpha = 0.3)+
+  # ggtitle(expression('ΔMetabolite'))+
+  ylab("Total metabolites [mM]")+
+  labs(colour="Donor", fill="Stress level")+
+  facet_grid(cols=vars(stress_level),scales= "free") +
+   scale_fill_manual(values=c("skyblue3", "lightpink3") , guide ="none")+
+  scale_colour_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"), name="Condition")+
+   scale_x_discrete(labels=c("Pre-culture", "Stress", "Post-stress"))+
   geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
              linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
   geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
@@ -632,12 +594,67 @@ p
 
 ggsave(filename = paste( "metabol_h2o2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 16.5,
-       height = 10,
+       width = 13,
+       height = 7,
        units = c("cm"))
 51.7/14*25
 
 ```
+#hplc absolute - h2o2
+```{r}
+
+hplc_comparison[, c("donor_name", "time", "stress_level", "stress", "ΔAcetate" ,"ΔPropionate", "ΔButyrate","ΔFormate", "ΔSuccinate","ΔLactate")]%>%
+gather(scfa, conc, "ΔAcetate":"ΔLactate")->long
+
+    
+    
+left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress), FUN=median), c("scfa", "time","stress_level", "stress", "mean")),
+          setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress), FUN=sd), c("scfa", "time", "stress_level","stress","sd")))%>%
+  
+  subset(!time %in% "post_stress_2")%>%
+  subset(stress %in% "H2O2")%>%
+  mutate(time = factor(time , levels= c("pre-stress", "stress", "post_stress_1")))%>%
+
+  
+  dplyr::select(mean, time, scfa,   stress_level) %>%
+  group_by( time,  scfa,  stress_level) %>%
+   # dplyr::summarize(conc = (conc)) %>%
+  mutate(scfa = factor(scfa, levels= c("ΔAcetate" ,"ΔPropionate", "ΔButyrate","ΔFormate", "ΔSuccinate","ΔLactate")))%>%
+   mutate(stress_level = ifelse(stress_level  == "low","0.22 mM", stress_level))%>%
+  mutate(stress_level = ifelse(stress_level  == "median","0.71 mM", stress_level))%>%
+    mutate( stress_level = ifelse(stress_level == "high", "2.3 mM", stress_level))%>%
+  mutate(stress_level = factor(stress_level, levels = c("0.22 mM", "0.71 mM",  "2.3 mM")))%>%
+  ggplot(aes(x=time, y=mean,  fill= scfa , stratum = scfa, alluvium = scfa))+
+             
+  xlab("Condition")+
+  ylab("[mM]")+
+  labs(fill= "Metabolite")+
+  theme(text=element_text(size=15),
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background = element_rect(fill="white"),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA), legend.text.align = 0, legend.position = "right")+
+   scale_fill_manual(values=c("coral3", "cyan3", "skyblue3", "darkorange1", "violetred2", "cyan4", "#00A9FF", "#00B8E7", "#8494FF"), 
+                     labels=c("ΔAcetate" ="Acetate" ,"ΔPropionate"="Propionate", "ΔButyrate"="Butyrate","ΔFormate"="Formate", "ΔSuccinate" ="Succinate","ΔLactate"="Lactate"))+
+  # geom_bar(position = "stack", aes(fill=scfa), stat = "identity")+
+  facet_grid2(cols=vars(stress_level))+
+    geom_flow(reverse = FALSE) +
+   geom_stratum(reverse = FALSE, width = 0.5, color = "transparent") +
+  scale_x_discrete(labels = c("Pre-culture", "Stress", "Post-stress"))->h2o2_metabol
+
+ggsave(filename = paste( "metabol_h2o2_bar.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 25,
+       height = 22,
+       units = c("cm"))
+  
+  # subset(stress_level %in% "high")%>%
+```
+
+
+
 #H2O2 bar plots
 ```{r}
  hplc_comparison[, c("donor_name", "time", "stress_level", "stress", "rel_succinate","rel_lactate", "rel_formate", "rel_acetate","rel_propionate", "rel_butyrate")]%>%
@@ -875,34 +892,35 @@ ggsave(filename = paste( "totalC_h2o2.jpeg"),
 ```{r}
 
 # wilcox test with BH correction
-# hplc[, c("donor_name", "time", "stress_level", "stress", "rel_formate", "rel_acetate","rel_lactate","rel_propionate","rel_butyrate")]%>%
-#   gather(scfa, conc, "rel_formate":"rel_butyrate")-> sub
+hplc[, c("donor_name", "time", "stress_level", "stress", "total_C" , "rel_formate", "rel_lactate","rel_acetate","rel_propionate","rel_butyrate")]%>%
+  gather(scfa, conc, "total_C":"rel_butyrate")-> sub
 
 
-hplc[, c("donor_name", "time", "stress_level", "stress", "ΔSuccinate", "ΔFormate", "ΔAcetate", "ΔLactate","ΔPropionate", "ΔButyrate", "total_C")]%>%
- gather(scfa, conc, "ΔSuccinate":"total_C")->sub
-
-aggregate(sub$conc, by=list(sub$time, sub$stress_level, sub$stress, sub$scfa), FUN="sd")%>%
-  subset(Group.2 %in% c("high", "control"))%>%
-  subset(Group.3 %in% "H2O2")%>%
-  subset(Group.1 %in% "stress")
-  
-# hplc[, c("donor_name", "time", "stress_level", "stress", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
-#  gather(scfa, conc, "ΔSuccinate":"total_C")%>%  
+# hplc[, c("donor_name", "time", "stress_level", "stress", "ΔSuccinate", "ΔFormate", "ΔAcetate", "ΔLactate","ΔPropionate", "ΔButyrate", "total_C")]%>%
+#  gather(scfa, conc, "ΔSuccinate":"total_C")->sub
+# 
+# aggregate(sub$conc, by=list(sub$time, sub$stress_level, sub$stress, sub$scfa), FUN="sd")%>%
+#   subset(Group.2 %in% c("high", "control"))%>%
+#   subset(Group.3 %in% "H2O2")%>%
+#   subset(Group.1 %in% "stress")
+#   
+# # hplc[, c("donor_name", "time", "stress_level", "stress", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
+# #  gather(scfa, conc, "ΔSuccinate":"total_C")%>%  
+sub%>%
   subset(stress %in% c("H2O2")) %>%
+  subset(stress_level %in% c("control", "high"))%>%
   group_by(scfa, time)%>%
   wilcox_test(data= .,
   formula = conc ~ stress_level, ref.group = "control", p.adjust.method = "BH")%>%
   add_significance()%>%
-  # subset(group2 %in% "high")%>%
-  subset(time %in% "stress")%>%
+  add_significance()%>%
   subset(p < 0.05)
 
-hplc[, c("donor_name", "time", "stress_level", "stress","ΔButyrate")]%>%
+hplc[, c("donor_name", "time", "stress_level", "stress","rel_lactate")]%>%
   subset(stress %in% c("H2O2") & stress_level %in% c("control", "median") & !donor_name %in% "D1") %>%
   group_by(time)%>%
   t_test(data= .,
-    formula = `ΔButyrate` ~ stress_level, p.adjust.method = "BH")%>%
+    formula = `rel_lactate` ~ stress_level, p.adjust.method = "BH")%>%
   add_significance()%>%
   # subset(group2 %in% "high")%>%
   # subset(time %in% "stress")%>%
@@ -910,199 +928,6 @@ hplc[, c("donor_name", "time", "stress_level", "stress","ΔButyrate")]%>%
 
 
 ```
-
-```{r}
-
-hplc%>%
-  subset((time %in% "stress" & stress %in% "O2"))%>%
-  gather(scfa, conc, "rel_succinate":"rel_butyrate")%>%
-   ggplot(aes(x=donor_name, y=conc, fill=scfa))+
-  geom_bar(stat = "identity")+
-  # geom_boxplot()+
-  # geom_point(aes(colour=donor_name, group=incubation), position=position_dodge2(0.9), width=0.01)+
-  facet_grid(cols=vars(stress_level, incubation), scales="free_x")+
-  xlab("Condition")+
-  ylab("relative Δmetabolite")+
-  labs(fill= "Metabolite")+
-  ggtitle("Relative metabolite production")+
-  theme(axis.text.x = element_text(size=15, angle=90, vjust=0.5, hjust=1),
-        axis.ticks.x = element_blank(),
-            legend.text = element_text(size = 15),
-            legend.title = element_text(size= 20),
-            plot.title = element_text(size=20),
-          strip.text.x = element_text(size=15),
-        axis.text.y = element_text(size=15),
-        axis.title.y= element_text(size = 20),
-        axis.title.x = element_blank())+
-   scale_fill_manual(values=c("coral3", "cyan3", "skyblue3", "darkorange1", "violetred2", "cyan4", "#00A9FF", "#00B8E7", "#8494FF"), 
-                     labels=c("rel_acetate"="Acetate", "rel_butyrate"="Butyrate","rel_propionate"="Propionate", "rel_formate"="Formate", "rel_succinate"="Succinate", "rel_lactate"="Lactate", "rel_isobutyrate"="IsoBut", "rel_valerate"="Valerate", "rel_isovalerate"="IsoVal"))
-```
-
-# calculate the difference o2
-```{r}
-###ad control value to all stress-level
-hplc[, c("donor_name", "time", "stress_level", "stress", "incubation","rel_succinate",  "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")]%>%
-  gather(scfa, conc, "rel_succinate":"rel_butyrate")%>%
-  # hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "ΔSuccinate", "ΔLactate","ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate")]%>%
-  # gather(scfa, conc, "ΔSuccinate":"ΔButyrate")%>%
-  subset(stress %in% "O2" & 
-           stress_level %in% "max")%>%
-  pivot_wider(values_from = conc, names_from = incubation)%>%
-  mutate(diff = aerobe-anaerobe)%>%
-  mutate(stress_level = factor(stress_level, levels=c( "control","low", "median", "high", "max")),
-         time = factor(time, levels=c( "stress", "post_stress_1", "post_stress_2")))%>%
- ggplot(aes(x=stress_level, y=diff))+
-  theme(strip.text = element_text(size  = 20),
-          axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0)+
-  geom_boxplot( outlier.shape = NA, position = position_dodge2(preserve = "single"))+
-  geom_jitter(aes(colour=donor_name),  width = 0.1)+
-  ggtitle(expression('ΔMetabolite'))+
-  ylab("ΔMetabolite")+
-  labs(colour="Donor", fill="Stress level")+
-  facet_grid(cols=vars(time), rows=vars(scfa), scales= "free") +
-  geom_hline(yintercept=0, linetype=2)
-
-
-
-ggsave(filename = paste( "alpha_o2_delta.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/metabolites",
-       width = 25,
-       height = 25,
-       units = c("cm"))
-
-```
-##o2 line plots
-
-```{r}
-hplc %>%
-  subset(stress %in% "O2")->no
-
-hplc %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "control")->ctrl
-
-hplc %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "low")->low
-
-hplc %>%
-  subset(time %in% "pre-stress" )%>%
-  mutate(stress_level = "median")->median
-
-hplc %>%
-  subset(time %in% "pre-stress" )%>%
-  mutate(stress_level = "high")->high
-
-hplc %>%
-  subset(time %in% "pre-stress" )%>%
-  mutate(stress_level = "max")->max
-
-hplc %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "control", incubation = "aerobe")->ctrl_a
-
-hplc %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "low", incubation = "aerobe")->low_a
-
-hplc %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "median", incubation = "aerobe")->median_a
-hplc %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "high", incubation = "aerobe")->high_a
-hplc %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "max", incubation = "aerobe")->max_a
-
-do.call(rbind, list(no, ctrl, low, median, high, max, ctrl_a, low_a, median_a, high_a, max_a)) -> combined_df
-  combined_df[, c("donor_name", "time", "stress_level", "stress","incubation", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
-  gather(scfa, conc, "ΔSuccinate":"total_C")->long
-
-names<-list("stress"= "Stress", 
-            "post_stress_1"= "Post 1", 
-            "post_stress_2"= "Post 2")
-    
-    
-left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress, long$incubation), FUN=mean), c("scfa", "time","stress_level", "stress", "incubation", "mean")),
-          setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stress_level, long$stress, long$incubation), FUN=sd), c("scfa", "time", "stress_level","stress","incubation", "sd")))%>%
-  mutate(scfa = ifelse(scfa == "total_C", "Total mM", scfa))%>%
-  mutate(stress_level = ifelse(stress_level == "control", "minimal", stress_level))%>%
-  mutate(stress_level = factor(stress_level, levels=c("minimal","low", "median", "high", "max")),
-         time = factor(time, levels=c("pre-stress" ,"stress", "post_stress_1", "post_stress_2")),
-         scfa = factor(scfa, levels=c("Total mM", "ΔAcetate", "ΔButyrate","ΔPropionate","ΔFormate",  "ΔSuccinate")))%>%
- ggplot(aes(x=time, y=mean))+
-  theme(strip.text.x = element_text(size  = 20),
-        strip.text.y = element_text(size  = 20, angle=0, hjust=0),
-          axis.text.y= element_text(size = 20), 
-        axis.title.y = element_text(size=20), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(size=20, angle = 90, vjust= 0.5, hjust=1),
-        legend.text = element_text(size = 20, vjust=1, hjust=0),
-        legend.title = element_text(size= 20),
-        plot.title = element_text(size=20), panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA), legend.text.align = 0,
-        strip.background = element_blank())+
-  geom_line(aes(colour=incubation, group=incubation), size=2)+
-  geom_ribbon(aes(ymin = mean-sd, ymax = mean + sd, fill=incubation, group=incubation),
-              alpha = 0.3)+
-  # ggtitle(expression('ΔMetabolite'))+
-  ylab("Metabolite [mM]")+
-  labs(colour="Donor", fill="Stress level")+
-  facet_grid(cols=vars(stress_level), rows=vars(scfa), scales= "free") +
-   scale_fill_manual(values=c("skyblue3", "lightpink3") , guide ="none")+
-  scale_colour_manual(values=c("skyblue3", "lightpink3"), labels=c("Control", "Stress"), name="Condition")+
-   scale_x_discrete(labels=c("Pre", "Stress", "Post 1", "Post 2"))+
-  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
-             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
-             color = "grey", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_2')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=1) +
-   geom_hline(yintercept =0,  # Specify your desired category label
-              color = "grey", alpha=0.8, size=1) +
-   scale_y_continuous(breaks = c( 0, 7.5,   25, 45   ), expand = c(0, 0)) -> p
-
-p
-
-
-
-ggsave(filename = paste( "metabol_o2.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/metabolites",
-       width = 25,
-       height = 22,
-       units = c("cm"))
-51.7/14*25
-
-```
-#stats O2
-#fference acetate (increase) and butyrate (decrease) under max stress
-
-```{r}
- hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "rel_succinate",  "rel_formate", "rel_acetate","rel_propionate","rel_butyrate")]%>%
-   gather(scfa, conc, "rel_succinate":"rel_butyrate")%>%
-# hplc[, c("donor_name", "time", "stress_level", "stress", "incubation", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
-#   gather(scfa, conc, "ΔSuccinate":"total_C")%>%
-  subset(stress %in% "O2")%>%
-  group_by(scfa, stress_level, time)%>%
-  wilcox_test(data= .,
-  formula = conc ~ incubation 
-  )%>%
-  add_significance()%>%
-  subset(p<0.05)
-```
-
-
-
 
 
 

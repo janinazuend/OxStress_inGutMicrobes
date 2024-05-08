@@ -31,21 +31,25 @@ blast<-read.table("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/
 
 summary(blast$OTU)
 
-left_join(strain_panel[, c("pure_culture_id","bacteria", "sensitivity")]
+left_join(strain_panel[, c("pure_culture_id","bacteria", "sensitivity", "Genus")]
           , blast[,c("pure_culture_id","OTU")])%>%
-  subset(!bacteria %in% c("Roseburia intestinalis", "Blautia hydrogenotrophica"))%>%
+  # subset(bacteria %in% c("Roseburia intestinalis", "Blautia hydrogenotrophica"))%>%
   subset(!is.na(OTU))-> pure_culture_asv_match
 
 
 pure_culture_asv_match$ASV_name <- paste0(pure_culture_asv_match$OTU, " (", pure_culture_asv_match$bacteria, ")")
 
-pure_culture_asv_match%>%
-  left_join(.,phyloseq_rare%>%
+
+  left_join(phyloseq_rare%>%
               physeq_glom_rename( 
                      speedyseq = T)%>%
               microbiome::transform("clr") %>% 
-              psmelt())->df_pure_culture_abundances
+              psmelt()%>%
+              dplyr::select(time, stress_level, incubation, Abundance, OTU, stress, donor_name) ,   pure_culture_asv_match  )%>%
+    subset(!is.na(bacteria))->df_pure_culture_abundances
 
+
+pure_culture_asv_match$bacteria
 ```
 
 ```{r}
@@ -58,6 +62,7 @@ setNames(aggregate(sub$Abundance, by=list(sub$donor_name, sub$bacteria, sub$time
 left_join(sub, means[, c("donor_name", "bacteria","time","mean")])->df_filter 
 
 cut_off =0
+
 
 rbind(df_filter%>%
          subset(donor_name %in% "D2")%>%
@@ -80,31 +85,162 @@ rbind(df_filter%>%
          subset(donor_name %in% "D1")%>%
          subset(mean > cut_off) )->filtered_abund
    
-filtered_abund[,c("bacteria", "Abundance", "incubation", "donor_name", "stress_level")]%>% 
+filtered_abund[,c("bacteria", "Abundance", "incubation", "donor_name", "stress_level", "Genus")]%>% 
   pivot_wider(names_from = incubation, values_from = Abundance)%>%
+  # subset(stress_level %in% "max")%>%
   mutate(stress_level = factor (stress_level, c("control","low", "median", "high", "max")))%>%
   mutate(diff = (aerobe - anaerobe))%>%
    left_join(., read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/O2_tolerances.xlsx"))%>%
    ggplot(aes(y=diff, x=MBC))+
-  geom_jitter(alpha=0.6, width=0.1, aes(colour=bacteria))+
+  geom_jitter(alpha=0.8, width=0.1, aes(colour=Genus))+
   scale_shape_manual(values=c(11,12,13,14,15,16,17))+
-   stat_correlation(mapping = use_label(c("R", "p")), size=3)+
+   stat_correlation(mapping = use_label(c("R", "p")), size=4)+
    stat_poly_line(color="darkgrey") +
   geom_hline(yintercept = 0, linetype="dashed", colour="indianred4", size=1)+
-   theme(panel.border=element_rect(fill=NA), 
+   theme(text=element_text(size=15),
+         panel.border=element_rect(fill=NA), 
+        panel.background = element_rect(fill="white"),
+        legend.text.align = 0,
+        
+        strip.background = element_blank())+
+  facet_grid(cols=vars(stress_level))+
+  
+  scale_color_manual(values=c("#1f78b4","#a6cee3", "#8dd3c7","#33a02c", "pink3",  "#fb9a99",  "#6a3d9a", "darkgoldenrod2", "#b15928",  "#b36966", "#A8AF51" , "#CE6C4E", "#E6BAAC"        ))  +                    ylab("Clr-difference")  +xlab(expression(O[2]*` Tolerance [x]`))+
+  force_panelsizes(cols=unit(4, "cm"))
+
+
+ggsave(filename = paste("correlation_02t.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 30,
+       height =7,
+       units = c("cm"))
+
+```
+
+```{r}
+
+df_pure_culture_abundances%>%
+  subset(time %in% c("stress"))%>%
+  subset(stress %in% "H2O2" & stress_level %in% c("control", "median", "high", "low"))->sub
+
+setNames(aggregate(sub$Abundance, by=list(sub$donor_name, sub$bacteria, sub$stress_level, sub$time, sub$Genus), FUN=mean), c("donor_name", "bacteria","stress_level" ,"time","Genus" ,"mean"))%>%
+  subset(stress_level %in% "control")->means
+
+left_join(sub, means[, c("donor_name", "bacteria","mean", "time")])->df_filter
+
+
+cut_off =0
+
+ rbind(df_filter%>%
+         subset(donor_name %in% "D2")%>%
+         subset(mean > cut_off), df_filter%>%
+         subset(donor_name %in% "D3")%>%
+         subset(mean > cut_off)) %>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D4")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D5")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D6")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D7")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D1")%>%
+         subset(mean > cut_off) )->filtered_abund
+
+ 
+ 
+ names<-list("diff_low"="0.22 mM",
+             "diff_median"="0.71 mM",
+             "diff_high"="2.3 mM")
+ 
+   
+filtered_abund[,c("bacteria", "Abundance", "stress_level", "time","donor_name", "Genus")]%>% 
+ 
+  pivot_wider(names_from = stress_level, values_from = Abundance)%>%
+  mutate(diff_median = (median - control) )%>%
+   mutate(diff_low = (low - control) )%>%
+  mutate(diff_high = (high - control) )%>%
+   left_join(., read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx"))%>%
+  gather(assay, tolerance, "MIC":"MBC")%>%
+  subset(assay %in% "MBC")%>%
+  mutate(tolerance = ifelse(tolerance == 7, 0.021, tolerance))%>%
+   mutate(tolerance = ifelse(tolerance == 8, 0.069, tolerance))%>%
+   mutate(tolerance = ifelse(tolerance == 9, 0.222, tolerance))%>%
+     mutate(tolerance = ifelse(tolerance == 10, 0.710, tolerance))%>%
+      mutate(tolerance = ifelse(tolerance == 11, 2.3, tolerance))%>%
+  gather(stress_level, diff, "diff_median":"diff_high")%>%
+  mutate(stress_level =factor(stress_level, levels=c("diff_low", "diff_median", "diff_high")))%>%
+  
+   ggplot(aes(y=diff, x=tolerance))+
+  geom_jitter( width = 0.1, alpha=0.6, aes(colour=Genus))+
+   stat_correlation(mapping = use_label(c("R", "p")), size=4)+
+   stat_poly_line(color="darkgrey") +
+  geom_hline(yintercept = 0, linetype="dashed", colour="indianred4", size=1)+
+   theme(text= element_text(size=15), 
+         panel.border=element_rect(fill=NA), 
         panel.background = element_rect(fill="white"),
         legend.text.align = 0, 
         strip.background = element_blank(),
         panel.spacing = unit(0, "lines"))+
-  facet_grid(cols=vars(stress_level))
+  xlab(expression(H[2]*O[2]*`-tolerance of pure cultures [mM]`))+ ylab("Clr-difference")+
+  # guides(colour = guide_legend(nrow = 5))+
+  
+  scale_color_manual(values=c("#1f78b4","#a6cee3", "#8dd3c7","#33a02c", "pink3",  "#fb9a99",  "#6a3d9a", "darkgoldenrod2", "#b15928",  "#b36966", "#A8AF51" , "#CE6C4E", "#E6BAAC"        ))  +         
+   facet_grid(cols=vars(stress_level), labeller =facet_labeller)+
+  ylab("Clr-difference")+xlab(expression(H[2]*O[2]*` Tolerance [mM]`))+
+  force_panelsizes(cols=unit(4, "cm"))
+  
 
-ggsave(filename = paste("correlation_02t.jpeg"),
+ggsave(filename = paste("correlation_H202t.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 22,
-       height =22,
+       width = 25,
+       height =7,
        units = c("cm"))
 
+#####
+#heatplot
+  
+filtered_abund[,c("bacteria", "Abundance", "stress_level","time", "donor_name")]%>% 
+  pivot_wider(names_from = stress_level, values_from = Abundance)%>%
+   left_join(., read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx"))%>%
+  gather(assay, tolerance, "MIC":"MBC")%>%
+  subset(assay %in% "MBC")%>%
+  mutate(what = "diff")%>%
+  mutate(diff_median = (median - control) )->sub
+
+
+sub%>%
+  rbind(., sub%>%
+          mutate(donor_name = "tolerance")%>%
+          mutate(diff_median = tolerance)%>%
+          mutate(what = "tol"))->sub_sub
+
+sub_sub%>%
+  ggplot(aes(y=bacteria, x=donor_name))+
+  
+  new_scale_fill() +
+  
+  geom_tile(data = filter(sub_sub, what == "diff"), aes(fill = diff_median)) +
+  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(-7, 0, 6)), limits=c(-7, 6))+
+  
+  new_scale_fill() +
+  geom_tile(data = filter(sub_sub, what == "tol"), aes(fill = diff_median)) +
+  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey")+
+ facet_grid(cols=vars(what, time), scales = "free", space="free")+
+  theme(panel.border=element_rect(fill=NA), 
+        panel.background = element_rect(fill="white"),
+        legend.text.align = 0, 
+        strip.background = element_blank(),
+        panel.spacing = unit(0, "lines"))
+ 
+
 ```
+
 
 ```{r}
 
@@ -145,6 +281,7 @@ sub_sub%>%
         axis.title   = element_blank())+
   facet_grid(cols=vars(time))
 ```
+
 ```{r}
 
 
@@ -201,6 +338,10 @@ ggsave(filename = paste( "corr.jpeg"),
 
 
 ```{r}
+
+read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel_metabol.xlsx") 
+
+
 df_pure_culture_abundances%>%
   subset(time %in% c("stress"))%>%
   subset(stress %in% "H2O2" & stress_level %in% c("control", "median", "high", "low"))->sub
@@ -246,7 +387,7 @@ filtered_abund[,c("ASV_name","bacteria", "Abundance", "stress_level", "time","do
   gather(stress_level, diff, "diff_median":"diff_high")%>%
   mutate(stress_level =factor(stress_level, levels=c("diff_low", "diff_median", "diff_high")))%>%
    ggplot(aes(y=diff, x=tolerance))+
-  geom_jitter( width = 0.1, alpha=0.6, aes(colour=bacteria))+
+  geom_jitter( width = 0.1, alpha=0.6, aes(colour=Genus))+
    stat_correlation(mapping = use_label(c("R", "p")), size=3)+
    stat_poly_line(color="darkgrey") +
   geom_hline(yintercept = 0, linetype="dashed", colour="indianred4", size=1)+

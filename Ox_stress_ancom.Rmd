@@ -1,0 +1,326 @@
+
+
+```{r setup, echo =FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
+
+```
+
+
+
+## 1. Get the phyloseq object 
+```{r}
+ unloadNamespace("miaViz")
+ unloadNamespace("mia")
+
+phyloseq_rare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
+
+phyloseq_rare%>%
+  subset_samples (time %in% "stress" & stress %in% "O2" & stress_level %in% "max")->sub
+
+
+sample_data(sub)
+```
+
+```{r}
+set.seed(123)
+
+stress_level_cond <-c("control", "low", "median", "high","max")
+time_cond<-c("stress", "post_stress_1")
+
+all_oxygen_genus <-data.frame(matrix(ncol=5, nrow=0))
+
+for (i in (1:length(stress_level_cond))){
+    for (j in (1:length(time_cond))){
+
+  phyloseq_rare%>%
+  subset_samples(time %in% time_cond[j] & stress %in% "O2" & stress_level %in% stress_level_cond[i])->sub      
+
+ library(ANCOMBC)
+
+ 
+test_ancomb <- ancombc2(data = sub, tax_level = "Genus", fix_formula = "incubation + donor_name",  p_adj_method = "BH")
+
+result<-test_ancomb$res%>%
+  dplyr::select(taxon, lfc_incubationanaerobe, p_incubationanaerobe)
+
+unloadNamespace("ANCOMBC")
+
+
+result$time <- paste(time_cond[j])
+result$stress_level<-paste(stress_level_cond[i])
+
+
+all_oxygen_genus <- rbind(all_oxygen_genus, result)
+
+      }}
+all_oxygen_genus ->out
+
+
+out%>%
+  subset(time %in% "stress" )%>%
+  subset(p_incubationanaerobe <0.05)->sig
+
+unique(sig$taxon)->filter
+
+```
+
+```{r}
+library(scales)
+out%>%
+  subset(taxon %in% filter)%>%
+  mutate(lfc = (-1) * lfc_incubationanaerobe)%>%
+  # mutate(Family = reorder(Family, diff.btw))%>%
+  mutate(sig = ifelse(p_incubationanaerobe < 0.001 , "***", NA))%>%
+  mutate(sig = ifelse(p_incubationanaerobe < 0.05 & p_incubationanaerobe >= 0.01, "*", sig))%>%
+  mutate(sig = ifelse(p_incubationanaerobe < 0.01 & p_incubationanaerobe >= 0.001, "**", sig))%>%
+  mutate(stress_level = factor(stress_level, levels = c("control", "low",  "median", "high", "max")))%>%
+  mutate(time = factor( time, levels=c("stress", "post_stress_1")))%>%
+  mutate(taxon = factor(taxon))%>%
+  mutate(taxon = reorder(taxon, lfc))%>%
+  ggplot(aes(x=time, y=taxon, fill=lfc))+
+  geom_tile()+
+   facet_grid(cols=vars(stress_level), scales = "free", space="free")+
+ scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
+                       values = rescale(c(-2, 0, 2)), limits=c(-2, 2), 
+                      name="Clr-difference")+
+   theme(text = element_text(size=15),
+         axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
+        axis.text.y = element_text( face="italic"), 
+        panel.border=element_rect(fill=NA), 
+        panel.background = element_rect(fill="white"),
+        legend.text.align = 0, 
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+        panel.spacing = unit(0, "lines"))+
+    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  geom_text(aes(label=sig), size=5)
+
+ggsave(filename = paste( "ancom_O2_box.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 17,
+       height = 17,
+       units = c("cm"))
+
+```
+
+
+
+#On Genus level- O2
+```{r}
+tax_level ="Genus"
+
+
+phyloseq_rare%>%
+  physeq_glom_rename(taxrank = tax_level, 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+   psmelt()->df_abund 
+  
+  
+  
+# left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=mean), c("time", "stress_level", "stress", tax_level,"incubation", "abund")),
+#             setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=sd), c("time", "stress_level", "stress",tax_level,"incubation", "sd")))->means
+
+
+calculate_q1 <- function(x) {
+  return(quantile(x, 0.25))
+}
+calculate_q3 <- function(x) {
+  return(quantile(x, 0.75))
+}
+
+left_join(left_join(setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q1), c("time", "stress_level", "stress",tax_level,"incubation", "q1" )), 
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=calculate_q3), c("time", "stress_level", "stress",tax_level,"incubation", "q3" ))),
+setNames(aggregate(df_abund$Abundance, by=list(df_abund$time, df_abund$stress_level, df_abund$stress, df_abund[[tax_level]], df_abund$incubation), FUN=median), c("time", "stress_level", "stress", tax_level,"incubation", "abund")))->means
+
+
+means %>%
+  subset(!time %in% c("pre-stress", "feces"))->no
+
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "control")->ctrl
+
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "low")->low
+
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "median")->median
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "high")->high
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "max")->max
+
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "control", incubation = "aerobe")->ctrl_a
+
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "low", incubation = "aerobe")->low_a
+
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "median", incubation = "aerobe")->median_a
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "high", incubation = "aerobe")->high_a
+means %>%
+  subset(time %in% "pre-stress")%>%
+  mutate(stress_level = "max", incubation = "aerobe")->max_a
+
+combined_df <- do.call(rbind, list(no, ctrl, low, median, high, max, ctrl_a, low_a, median_a, high_a, max_a))
+
+
+combined_df%>%
+   # subset(stress_level %in% c("max", "median"))%>%
+   mutate(stress_level = factor(stress_level, levels =c("control", "low", "median", "high","max")))%>%
+   subset(time %in% c("pre-stress", "stress", "post_stress_1"))%>%
+  subset(stress %in% c("O2", "control"))%>%
+  subset(Genus %in% c(filter))%>%
+  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))%>%
+  ggplot(aes(x=time, y=abund))+
+  # geom_hline(yintercept=0)+
+  geom_line(aes(colour=incubation, group=incubation), size =1)+
+  geom_ribbon(aes(ymin =q3, ymax = q1, fill=incubation, group=incubation),
+              alpha = 0.3)+
+  facet_grid(cols=vars(stress_level), rows = vars(Genus), scale="free")+
+  theme(text = element_text(size=15), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
+        strip.text.y = element_text(angle = 0, face="italic", hjust=0),
+        strip.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        # strip.text.x = element_blank(),
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA))+
+  scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
+  scale_colour_manual(values=c("lightpink3","skyblue3"), labels=c("Stress", "Control"))+
+  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
+             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
+  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
+             color = "grey", alpha=0.8, size=0.7) +
+  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
+              color = "grey", alpha=0.8, size=0.7) +
+  scale_x_discrete(labels=c('pre-stress' = "Pre-culture", 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  labs(colour="Condition")+
+  ylab("Clr-abundance")
+
+ggsave(filename = paste( "increase_O2_box.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 17,
+       height = 40,
+       units = c("cm"))
+
+146/25*21
+146/25*7 
+```
+
+
+
+
+```{r}
+set.seed(123)
+
+
+time_cond<-c("stress", "post_stress_1")
+
+all_h2o2_genus <-data.frame(matrix(ncol=8, nrow=0))
+
+# for (i in (1:length(stress_level_cond))){
+    for (j in (1:length(time_cond))){
+
+  phyloseq_rare%>%
+  subset_samples(time %in% time_cond[j] & stress %in% "H2O2" )->sub   
+
+
+ library(ANCOMBC)
+
+ 
+test_ancomb <- ancombc2(data = sub, tax_level = "Genus", fix_formula = "stress_level + donor_name",  p_adj_method = "BH")
+
+result<-test_ancomb$res%>%
+  dplyr::select(taxon, lfc_stress_levellow,lfc_stress_levelmedian, lfc_stress_levelhigh,p_stress_levellow, p_stress_levelmedian, p_stress_levelhigh)
+
+unloadNamespace("ANCOMBC")
+
+
+result$time <- paste(time_cond[j])
+
+
+all_h2o2_genus <- rbind(all_h2o2_genus, result)
+
+    }
+  # }
+all_h2o2_genus ->out
+
+
+```
+
+```{r}
+left_join(out%>%
+  dplyr::select(taxon, time, lfc_stress_levellow, lfc_stress_levelmedian, lfc_stress_levelhigh)%>%
+  gather(stress_level, lfc, "lfc_stress_levellow":"lfc_stress_levelhigh")%>%
+  mutate(stress_level = ifelse(stress_level == "lfc_stress_levellow", "low", stress_level ))%>%
+  mutate(stress_level = ifelse(stress_level == "lfc_stress_levelmedian", "median", stress_level ))%>%
+  mutate(stress_level = ifelse(stress_level == "lfc_stress_levelhigh", "high", stress_level )),
+  out%>%
+  dplyr::select(taxon, time, p_stress_levellow, p_stress_levelmedian, p_stress_levelhigh)%>%
+  gather(stress_level, p, "p_stress_levellow":"p_stress_levelhigh")%>%
+  mutate(stress_level = ifelse(stress_level == "p_stress_levellow", "low", stress_level ))%>%
+  mutate(stress_level = ifelse(stress_level == "p_stress_levelmedian", "median", stress_level ))%>%
+  mutate(stress_level = ifelse(stress_level == "p_stress_levelhigh", "high", stress_level ))
+  
+)->h2o2_long
+  
+  
+  
+  h2o2_long%>%
+  subset(time %in% "stress" & p < 0.05)->sig_h2o2
+
+
+
+h2o2_long%>%
+  subset(taxon %in% c(unique(sig_h2o2$taxon)))%>%
+  # mutate(Family = reorder(Family, diff.btw))%>%
+  mutate(sig = ifelse(p < 0.001 , "***", NA))%>%
+  mutate(sig = ifelse(p < 0.05 & p >= 0.01, "*", sig))%>%
+  mutate(sig = ifelse(p < 0.01 & p >= 0.001, "**", sig))%>%
+  mutate(stress_level = factor(stress_level, levels = c( "low",  "median", "high")))%>%
+  mutate(time = factor( time, levels=c("stress", "post_stress_1")))%>%
+  mutate(taxon = factor(taxon))%>%
+  mutate(taxon = reorder(taxon, lfc))%>%
+  ggplot(aes(x=time, y=taxon, fill=lfc))+
+  geom_tile()+
+   facet_grid(cols=vars(stress_level), scales = "free", space="free")+
+ scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
+                        values = rescale(c(-5.5, 0, 5.5)), limits=c(-5, 5), 
+                      name="Clr-difference")+
+   theme(text = element_text(size=15),
+         axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
+        axis.text.y = element_text( face="italic"), 
+        panel.border=element_rect(fill=NA), 
+        panel.background = element_rect(fill="white"),
+        legend.text.align = 0, 
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+        panel.spacing = unit(0, "lines"))+
+    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  geom_text(aes(label=sig), size=5)
+
+ggsave(filename = paste( "ancom_h2O2_box.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 17,
+       height = 17,
+       units = c("cm"))
+
+```
+

@@ -231,6 +231,17 @@ rbind(MIC_H2O2_replicates_outlier_corr%>%
   write.xlsx(., "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_growthdata_blank_outlier_corr.xlsx")
 ```
 
+```{r}
+MIC_H2O2_replicates_outlier_corr%>%
+  mutate(control = `1`)%>%
+  gather( condition, OD,`1`:`12`)%>%
+  mutate(condition = factor(condition, levels =c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")))%>%
+  mutate(rel = OD/control)%>%
+  ggplot(aes(y=rel, x= condition))+
+  geom_point(aes(colour=bacteria))
+```
+
+
 ## Define the MIC/MBC values
 
 ```{r}
@@ -307,7 +318,11 @@ tolerances_h2o2 <- data.frame(bacteria = MBC_replicates_wide$bacteria,
                                   MBC = as.numeric(MBC_vector)
                               )
 
-write.xlsx(tolerances_h2o2, "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx")
+write.xlsx(tolerances_h2o2%>%
+             mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens" ,
+                             "Bacteroides dorei" = "Phocaeicola dorei",
+                           "Bacteroides vulgatus" = "Phocaeicola vulgatus",
+                          "Lachnospira sp" = "Lachnospiraceae bacterium")  )     , "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx")
 ```
 
 
@@ -341,8 +356,11 @@ rel_long%>%
 ```
 
 ```{r}
+library("ggnewscale")
 
 rel_long%>%
+  mutate(bacteria = ifelse(bacteria == "Prevotella copri", "Segatella copri", bacteria))%>%
+  mutate(bacteria = ifelse(bacteria == "Ruminococcus gnavus", "Mediterraneibacter gnavus", bacteria))%>%
   mutate(OD = OD * 100)%>%
   mutate(bacteria = fct_reorder(bacteria, tolerance))%>%
   mutate(assay = ifelse(assay=="MIC", "a_MIC", assay))%>%
@@ -351,7 +369,7 @@ rel_long%>%
   mutate(OD = ifelse(OD > 120 , 120, OD))->sub
 
 sub%>%
-  mutate(tolerance = tolerance +1)%>%
+  mutate(tolerance = tolerance )%>%
   ggplot(aes(x = condition, y = assay, fill = OD, pattern_type = condition)) + 
   labs(x=expression(paste(H[2]*O[2])))+
   theme(text = element_text(size=8), 
@@ -396,15 +414,14 @@ sub%>%
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
   
   facet_grid(rows =vars( bacteria), scales = "free", space = "free")+
-  geom_point(data = subset(sub, tolerance == condition & assay %in% "a_MIC"), aes(x = tolerance, y = assay), shape=16, colour="seagreen2", size=2)+
-   geom_point(data = subset(sub, condition == tolerance+1 ), aes(x = condition, y = assay), shape=16, colour="indianred", size=2)+
-  geom_point(data = subset(sub, condition == tolerance+1 ), aes(x = condition, y = assay), shape=16, colour="indianred", size=2)->growth_h2o2
+   geom_point(data = subset(sub, condition == tolerance), aes(x = condition, y = assay), shape=0, colour="seagreen2", size=2.1)+
+  geom_point(data = subset(sub, condition == tolerance ), aes(x = condition, y = assay), shape=0, colour="seagreen2", size=2.1)->growth_h2o2
 
 # show(p + theme(legend.position = "none"))
 growth_h2o2
 ggsave(filename = "MIC_MBC_h2o2.png", 
-       path = "C:/Users/zuendj/Desktop/03_data R/oxidative stress/output_reanalysis", 
-       width =10,
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final", 
+       width =9.5,
        height = 18,
        units = c("cm")#, 
        #bg="transparent"
@@ -431,7 +448,11 @@ unique(rel_long$bacteria))
 
 rel_long%>%
   left_join(., 
-            read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel_metabol.xlsx")[, c("bacteria", "Phylum", "Genus")])->phylogeny
+            read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel_metabol.xlsx")[, c("bacteria", "Phylum", "Genus")])%>%
+   mutate(bacteria = ifelse(bacteria == "Prevotella copri", "Segatella copri", bacteria))%>%
+  mutate(bacteria = ifelse(bacteria == "Ruminococcus gnavus", "Mediterraneibacter gnavus", bacteria))%>%
+   mutate(Genus = ifelse(bacteria ==  "Segatella copri", "Segatella", Genus))%>%
+  mutate(Genus = ifelse(bacteria ==  "Mediterraneibacter gnavus", "Mediterraneibacter",  Genus))->phylogeny
 
 rbind(phylogeny%>%
         mutate(type= "toler"), 
@@ -462,7 +483,7 @@ guides(fill = guide_legend(nrow = 6))+
   new_scale_fill() +
    geom_tile(data = subset(sub., assay %in% c("MIC", "MBC")), aes(fill = tolerance ), colour="black") +
    # scale_fill_gradientn(colours= c( "indianred","#b36966", "#5e5d5d","cyan4")  , na.value= "white",   )+
-    scale_fill_steps(n.breaks=5)+
+    scale_fill_steps(n.breaks=7)+
    # 
   facet_grid(rows=vars(type), scales="free", space="free")+
    theme(text= element_text(size=15),
@@ -476,7 +497,7 @@ guides(fill = guide_legend(nrow = 6))+
         axis.text.x = element_text(angle=60, hjust=1, face="italic"),
         strip.background = element_blank(), 
         strip.text = element_blank(),
-         # legend.key.height  = unit(0.2, 'cm'),legend.key.width  = unit(0.4, 'cm'),
+          # legend.key.height  = unit(0.2, 'cm'),legend.key.width  = unit(0.4, 'cm'),
         legend.position = "top")+
 scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post-stress', "a_Genus"="Genus", "b_Phylum"="Phylum"))+
   force_panelsizes(cols=unit(23, "cm"))
@@ -486,8 +507,8 @@ scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post-stress', "a_Genus"="
 ggsave(filename = "H2O2_species_rolerances.png",   
          path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
        device = "png", bg= "transparent", 
-         width = 26,
-         height = 11,
+         width = 28,
+         height = 13,
          units = c("cm"))
 
 ```
