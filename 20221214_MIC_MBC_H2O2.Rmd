@@ -318,8 +318,13 @@ tolerances_h2o2 <- data.frame(bacteria = MBC_replicates_wide$bacteria,
                                   MBC = as.numeric(MBC_vector)
                               )
 
+
+
+
 write.xlsx(tolerances_h2o2%>%
              mutate(bacteria = recode(bacteria, "Eubacterium eligens" = "Lachnospira eligens" ,
+                                      "Ruminococcus gnavus"= "Mediterraneibacter gnavus",
+                                      "Prevotella copri"= "Segatella copri",
                              "Bacteroides dorei" = "Phocaeicola dorei",
                            "Bacteroides vulgatus" = "Phocaeicola vulgatus",
                           "Lachnospira sp" = "Lachnospiraceae bacterium")  )     , "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx")
@@ -477,7 +482,7 @@ sub.%>%
   
   new_scale_fill() +
    geom_tile(data = subset(sub., assay %in% c("a_Genus")), aes(fill = Genus ), colour="black") +
-   scale_fill_manual(values=c("#1f78b4","#a6cee3", "#80b1d3","#8dd3c7","#33a02c", "pink3","#e31a1c", "#ff7f00",   "#fb9a99",  "#6a3d9a", "#cab2d6","#fdbf6f", "darkgoldenrod2", "#b15928",  "#fb8072", "#5c342c", "#b36966", "#A8AF51" , "#484939", "#CE6C4E", "#E6BAAC",  "#B1A7CD"))+
+   scale_fill_manual(values=c("#1f78b4","#a6cee3", "#80b1d3","#8dd3c7","#33a02c", "pink3","#e31a1c", "#ff7f00",   "#fb9a99",  "#6a3d9a", "#cab2d6","#fdbf6f", "darkgoldenrod2", "#b15928",  "#fb8072", "#5c342c", "#b36966", "#A8AF51" , "#484939", "#CE6C4E", "#E6BAAC",  "#B1A7CD", "darksalmon", "lightgreen"))+
 guides(fill = guide_legend(nrow = 6))+
   
   new_scale_fill() +

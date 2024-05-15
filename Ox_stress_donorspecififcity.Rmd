@@ -74,32 +74,9 @@ rbind(df_filter%>%
 filtered_abund%>%
  pivot_wider(names_from = incubation, values_from = Abundance)%>%
 mutate(diff = aerobe - anaerobe)%>%
-  subset(diff > 0.5 | diff < -0.5)%>%
-  subset(stress_level %in% "max")%>%
-   mutate(Genus = factor(Genus))%>%
-  mutate(Genus = reorder(Genus, diff))%>%
-  ggplot(aes(x=donor_name, y=Genus, fill=diff))+
-  geom_tile()+
-  facet_grid(cols=vars(stress_level), scales = "free", space="free")+
- scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
-                         values = rescale(c(-4, 0, 4)), limits=c(-4, 4), 
-                      name="Clr-difference")+
-   theme(text = element_text(size=15),
-         axis.title = element_blank(),
-        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
-        axis.text.y = element_text( face="italic"), 
-        panel.border=element_rect(fill=NA), 
-        panel.background = element_rect(fill="lightgrey"),
-        legend.text.align = 0, 
-        strip.text.y = element_blank(),
-        strip.background = element_blank(),
-        panel.spacing = unit(0, "lines"), 
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))
+  subset(stress_level %in% "max")->diff_o2
 
-filtered_abund%>%
- pivot_wider(names_from = incubation, values_from = Abundance)%>%
-mutate(diff = aerobe - anaerobe)%>%
+diff_o2%>%
   subset(diff > 0.5 | diff < -0.5)->sub
 
 setNames(aggregate(sub$diff, by=list(sub$Genus, sub$time), FUN=mean, na.rm =T), c("Genus","time" ,"med"))->means
@@ -315,33 +292,9 @@ rbind(df_filter%>%
 
 filtered_abund%>%
  pivot_wider(names_from = stress_level, values_from = Abundance)%>%
-mutate(diff = median - control)%>%
+mutate(diff = median - control)->diff_h2o2
   
-   subset(diff > 0.5 | diff < -0.5)%>%
-   mutate(Genus = factor(Genus))%>%
-  mutate(Genus = reorder(Genus, diff))%>%
-  ggplot(aes(x=donor_name, y=Genus, fill=diff))+
-  geom_tile()+
-  facet_grid( cols=vars(time), scales = "free", space="free")+
- scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
-                         values = rescale(c(-7, 0, 7)), limits=c(-7, 7), 
-                      name="Clr-difference")+
-   theme(text = element_text(size=15),
-         axis.title = element_blank(),
-        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
-        axis.text.y = element_text( face="italic"), 
-        panel.border=element_rect(fill=NA), 
-        panel.background = element_rect(fill="lightgrey"),
-        legend.text.align = 0, 
-        strip.text.y = element_blank(),
-        strip.background = element_blank(),
-        panel.spacing = unit(0, "lines"), 
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))
-
-filtered_abund%>%
- pivot_wider(names_from = stress_level, values_from = Abundance)%>%
-mutate(diff = median - control)%>%
+diff_h2o2%>%
   subset(diff > 0.5 | diff < -0.5)->sub
 
 setNames(aggregate(sub$diff, by=list(sub$Genus, sub$time), FUN=mean, na.rm =T), c("Genus","time", "med"))->means
@@ -382,3 +335,126 @@ setNames(aggregate(sub$diff, by=list(sub$Genus, sub$time), FUN=mean, na.rm =T), 
        height = 10,
        units = c("cm"))
 ```
+##combination
+
+```{r}
+# library(scales)
+tax_level ="Genus"
+
+phyloseq_rare%>%
+  physeq_glom_rename(taxrank = tax_level, 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+   psmelt()->df_abund 
+
+df_abund%>%
+  subset(Genus %in% filt)%>%
+  subset(time %in% c("stress", "post_stress_1"))%>%
+  subset((stress_level %in% c("median", "control") & stress %in% c("H2O2")) | (stress_level %in% c("max") & stress %in% c("O2")))%>%
+  dplyr::select(Genus, donor_name, stress_level, time, incubation, stress, Abundance)->clr_diff
+ 
+
+
+setNames(aggregate(clr_diff$Abundance, by=list(clr_diff$donor_name, clr_diff$Genus, clr_diff$time), FUN=mean), c("donor_name", "Genus" ,"time","mean"))->means
+
+left_join(clr_diff, means[, c("donor_name", "Genus","time","mean")])->df_filter 
+cut_off = 2
+
+rbind(df_filter%>%
+         subset(donor_name %in% "D2")%>%
+         subset(mean > cut_off), df_filter%>%
+         subset(donor_name %in% "D3")%>%
+         subset(mean > cut_off)) %>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D4")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D5")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D6")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D7")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D1")%>%
+         subset(mean > cut_off) )->filtered_abund
+
+```
+
+```{r}
+filtered_abund%>%
+  subset(stress %in% "H2O2")%>%
+ pivot_wider(names_from = stress_level, values_from = Abundance)%>%
+mutate(diff = median - control)->diff_h2o2
+
+
+filtered_abund%>%
+  subset(stress %in% "O2")%>%
+ pivot_wider(names_from = incubation, values_from = Abundance)%>%
+mutate(diff = aerobe - anaerobe)%>%
+  subset(stress_level %in% "max")->diff_o2
+
+```
+
+```{r}
+rbind(diff_o2%>%
+  select(Genus, donor_name, time, diff)%>%
+  mutate(stress = "O2"),
+
+diff_h2o2%>%
+  select(Genus, donor_name, time, diff)%>%
+  mutate(stress = "H2O2"))-> combination
+ 
+setNames(aggregate(combination$diff, by = list(combination$Genus, combination$stress, combination$time), FUN=median), c("Genus", "stress", "time", "mean"))%>%
+  left_join(., combination)->sub
+
+frequency <- sub$Genus %>%
+  table() %>%
+  as.data.frame() %>%
+  setNames(c("Genus", "freq"))
+
+
+sub%>%
+  left_join(., frequency)%>%
+  filter(freq >12)%>%
+  mutate(time = ifelse( time =="stress", "Stress", time))%>%
+  # subset(time %in% "Stress")%>%
+  mutate(time = ifelse( time =="post_stress_1", "Post-stress", time))%>%
+ mutate(time = factor (time, levels= c("Stress", "Post-stress")))%>%
+  mutate(Genus = factor(Genus))%>%
+  mutate(Genus = reorder(Genus, diff))%>%
+  ggplot(aes(y=diff, x=Genus))+
+  geom_bar( aes(y=mean,  fill=stress), stat = "identity",  colour="black", position = position_dodge())+
+  geom_point(aes(colour=donor_name, group=stress), size=1, alpha=.80, position = position_dodge(0.9))+
+  facet_grid( rows=vars(Genus), cols=vars(time), scales = "free", space="free")+
+ # scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
+ #                         values = rescale(c(-7, 0, 7)), limits=c(-7, 7), 
+ #                      name="Clr-difference")+
+   theme(text = element_text(size=15),
+         axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
+        axis.text.y = element_text( face="italic"), 
+        panel.border=element_rect(fill=NA), 
+        panel.background = element_rect(fill="white"),
+        legend.text.align = 0, 
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+        panel.spacing = unit(0, "lines"), 
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
+  geom_hline(yintercept = 0)+
+    coord_flip()+
+    scale_colour_manual(values=c("lightblue", "steelblue", "yellowgreen", "forestgreen", "lightpink1", "red3", "sienna1", "orange"), name="Donor")+
+   ylab("Clr-difference")+
+scale_fill_manual(values= c("indianred", "lightblue"), name="Stress", labels = c(expression(paste(H[2]*O[2])), expression(paste(O[2]))))
+  
+  
+    ggsave(filename = paste( "o2_h2O2_box.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 15,
+       height = 19.5,
+       units = c("cm"))
+```
+
