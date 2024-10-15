@@ -1,0 +1,137 @@
+```{r setup, echo =FALSE}
+.libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
+knitr::opts_chunk$set(echo = TRUE)
+
+# Install Packages:
+# install.packages("rlang")
+# install.packages("tidyr")
+# install.packages("ggbreak")
+
+# library(ggpmisc)
+ library(tidyverse)
+# library(ggplot2)
+# library(tidyr)
+# install.packages("devtools")
+# devtools::install_github("slowkow/ggrepel")
+# library(ggrepel)
+# library(ggbreak)
+ library(openxlsx)
+# library(readxl)
+# library(ggh4x)
+# library(ggpubr)
+# library(ggpubr)
+# library(rstatix)
+library(ggnewscale)
+
+```
+
+# 1. Read all the data into one df
+```{r}
+# setwd("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/06_oxygen_measurements/unisense_O2_sensor/24_all_conditions")
+o2 <- read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/06_oxygen_and_redox_measurements/unisense_O2_sensor/24_all_conditions/Measurements_all_jz.xlsx", sheet = "R_import")
+```
+
+```{r}
+o2%>%gather(replicate, conc, "rep1":"rep2")%>%
+  subset(volume_ml == 1)%>%
+  mutate(well.nr = factor(well.nr, levels=c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")))->gathered
+
+setNames(aggregate(gathered$conc, by =list(gathered$time, gathered$`well.nr`), FUN=mean), c("time", "well.nr", "mg"))->mean
+
+mean %>%
+  rbind(., mean %>%
+              subset(time ==1)%>%
+              mutate(time =0)%>%
+              mutate(mg=0))->mean_zero
+
+# mean_zero%>%
+gathered%>%
+  ggplot(aes(x=time, y=conc))+
+   # geom_line(aes(colour=agar, group=agar))+
+  geom_line(aes(colour=well.nr, group=well.nr))+
+  ylab("mg/ml")+
+  geom_point()
+  
+
+
+ggsave(filename = "O2.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex",
+       width =16,
+       height = 16,
+       units = c("cm"))   
+
+
+# install.packages("DescTools")
+# library(DescTools)
+
+
+gathered%>%
+  left_join(., mean)%>%
+  mutate(time= factor(time, levels = c("1", "6", "24")))%>%
+  ggplot(aes(x=well.nr, y=mg))+
+   # geom_line(aes(colour=agar, group=agar))+
+  geom_line(aes(colour=time, group=time))+
+  ylab("mg/ml")+
+  geom_point(aes(y=conc))
+```
+```{r}
+result_matrix <- matrix(nrow=0, ncol=2)
+levels<- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
+
+for (i in 1:12){
+gathered%>%
+  subset(well.nr %in% levels[i])->sub
+
+  sub%>%ggplot(aes(y=conc, x=time))+
+    geom_point()+
+    geom_smooth(method="loess")->plot
+  
+  show(plot)
+  
+model<-loess(conc~time, data=sub)
+
+mod.fun<-function(x) predict(model,newdata=x)
+x<-integrate(mod.fun,1,24)
+
+result <- c(levels[i], x$value)
+
+result_matrix<- rbind(result_matrix, result)
+}
+```
+
+
+```{r}
+o2%>%gather(replicate, conc, "rep1":"rep2")%>%
+  subset(volume_ml %in% c(2))->gathered
+
+setNames(aggregate(gathered$conc, by =list(gathered$time, gathered$`agar.concentration`), FUN=mean), c("time", "agar", "mg"))->mean
+
+mean %>%
+  rbind(., mean %>%
+              subset(time ==1)%>%
+              mutate(time =0)%>%
+              mutate(mg=0))->mean_zero
+
+mean_zero%>%
+  mutate(agar = round(agar, digits =3))%>%
+  mutate(agar = factor(agar))%>%
+  ggplot(aes(x=time, y=mg))+
+  geom_line(aes(colour=agar, group=agar))+
+  ylab("mg/ml")
+  
+
+
+ggsave(filename = "O2_2mL.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex",
+       width =16,
+       height = 16,
+       units = c("cm"))   
+
+
+# install.packages("DescTools")
+# library(DescTools)
+
+
+
+```
+

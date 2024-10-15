@@ -28,6 +28,56 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R", cho = TRUE,
 library(ggh4x)
 ```
 
+```{r}
+
+o2_vector <- c(
+  "Faecalibacterium prausnitzii",
+  "Fusicatenibacter saccharivorans",
+  "Lachnospira eligens",
+  "Agathobacter rectalis",
+  "Anaerotignum lactatifermentans",
+  "Bacteroides fragilis",
+  "Bifidobacterium adolescentis",
+  "Blautia hydrogenotrophica",
+  "Dorea longicatena",
+  "Eubacterium limosum",
+  "Faecalibacterium duncaniae",
+  "Roseburia intestinalis",
+  "Segatella copri",
+  "Anaerostipes hadrus",
+  "Bacteroides uniformis",
+  "Bacteroides xylanisolvens",
+  "Blautia hansenii",
+  "Butyricicoccus pullicaecorum",
+  "Collinsella aerofaciens",
+  "Mediterraneibacter gnavus",
+  "Phocaeicola dorei",
+  "Phocaeicola vulgatus",
+  "Bacteroides intestinalis",
+  "Blautia obeum",
+  "Blautia producta",
+  "Enterocloster aldenensis",
+  "Roseburia faecis",
+  "Anaerostipes caccae",
+  "Clostridium sporogenes",
+  "Bacteroides caccae",
+  "Bacteroides cellulosilyticus",
+  "Bacteroides faecis",
+  "Bacteroides ovatus",
+  "Bacteroides thetaiotaomicron",
+  "Parabacteroides distasonis",
+  "Parabacteroides merdae",
+  "Phascolarctobacterium faecium",
+  "Bifidobacterium longum",
+  "Enterococcus faecalis",
+  "Escherichia coli",
+  "Lactiplantibacillus plantarum"
+)
+
+```
+
+
+
 # 1. Load the Data - aerobic
 ```{r}
 #########################################
@@ -401,15 +451,16 @@ setNames(aggregate(sub$OD_rel, by =list(sub$bacteria, sub$condition, sub$Genus),
                 colour = "black")+
   theme(text = element_text(size  = 15),
         axis.text.x = element_text(angle=90, hjust=1, vjust=0.5),
-        legend.text = element_text(vjust=1, hjust=0),
+        legend.text = element_text(vjust=1, hjust=0,face="italic"),
         strip.background = element_rect(fill="white"),
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA), 
         panel.spacing = unit(0.31, "cm"),
+      
         legend.text.align = 0,
         legend.key.height  = unit(0.5, 'cm'))+
   # scale_colour_manual(values=c("#a6cee3","indianred","cyan4","#b2df8a"))+
-  scale_colour_manual(values=c("#1f78b4","#a6cee3", "#80b1d3","#8dd3c7","#33a02c", "pink3","#e31a1c", "#ff7f00",   "#fb9a99",  "#6a3d9a", "#cab2d6","#fdbf6f", "darkgoldenrod2", "#b15928",  "#fb8072", "#5c342c", "#b36966", "#A8AF51" , "#484939", "#CE6C4E", "#E6BAAC",  "#B1A7CD"), name="Genus")+
+  scale_colour_manual(values=c("#1f78b4","#a6cee3", "#80b1d3","#8dd3c7","#33a02c", "pink3","#e31a1c", "#ff7f00",   "#fb9a99",  "#6a3d9a", "#cab2d6","#fdbf6f", "darkgoldenrod2", "#b15928",  "#fb8072", "#5c342c", "#b36966", "#A8AF51" , "#484939", "#CE6C4E", "#E6BAAC",  "#B1A7CD", "darksalmon", "lightgreen"), name="Genus")+
   scale_x_discrete(labels = c("1" = "0.15", 
                               "2"= "0.13", 
                               "3"="0.11", 
@@ -427,7 +478,7 @@ setNames(aggregate(sub$OD_rel, by =list(sub$bacteria, sub$condition, sub$Genus),
 
 
    
-ggsave(filename = paste("agar_pure.jpeg"),
+ggsave(filename = paste("agar_pure..jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
        width = 17,
        height = 15,
@@ -595,13 +646,13 @@ read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_
   set_names(., c("bacteria", "agar_condition"))
   
 
-left_join(OD_relative_to_anaerobe, df_final_replicates_O2)%>%
-  mutate(bacteria = ifelse(bacteria == "Bacteroides dorei", "Phocaeicola dorei", bacteria))%>%
-  left_join(.,read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_pure/01_O2/sampling_O2.xlsx")[, c("assay", "well.column")]%>%
-  set_names(., c("bacteria", "agar_condition")))%>% 
+left_join(OD_relative_to_anaerobe%>%
+           
   mutate(bacteria = ifelse(bacteria == "Prevotella copri", "Segatella copri", bacteria))%>%
   mutate(bacteria = ifelse(bacteria == "Ruminococcus gnavus", "Mediterraneibacter gnavus", bacteria))%>%
-  mutate(bacteria = factor(bacteria))%>%
+  mutate(bacteria = ifelse(bacteria == "Bacteroides dorei", "Phocaeicola dorei", bacteria))%>%
+  mutate(bacteria = factor(bacteria)) , df_final_replicates_O2%>% 
+    mutate(bacteria = ifelse(bacteria == "Bacteroides dorei", "Phocaeicola dorei", bacteria)))%>% 
   mutate(condition = as.numeric(paste(condition)))%>% 
   mutate(MBC = ifelse(bacteria == "Escherichia coli" |
                       bacteria == "Lactiplantibacillus plantarum" |
@@ -619,7 +670,7 @@ o2_long%>%
    mutate(MBC= MBC+1)%>%
   ggplot(aes(x = condition, y = assay)) + 
   labs(x=c("Agar [%]"))+
-  theme(text = element_text(size=8), 
+  theme(text = element_text(size=10), 
         axis.title.x = element_text(vjust=-0.8),
         axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_blank(),
@@ -632,22 +683,15 @@ o2_long%>%
           panel.spacing = unit(0, "lines"))+
   scale_x_continuous(labels=c("0.15","0.13", "0.11", "0.09" , "0.08", "0.07", "0.06", "0.05", "0.04", "0.035",  "0.03","0"),
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
-   scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
+   scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post-stress'), limits=rev)+
   labs(fill = expression(OD~`[%]`), colour="")+
-  ggtitle(expression(Growth~capability~under~oxygenation))+
+ 
   
-  new_scale_fill() +
-  
-   geom_raster(data = filter(o2_long, assay == "a_MIC"), aes(fill = ratio)) +
+   geom_raster(aes(fill = ratio)) +
   scale_fill_steps(
      breaks = c( 20, 40,  60,80 , 100, 120),
     name = expression(OD~`[%]`),
-    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred1" ) +
-  new_scale_fill() +
- geom_raster(data = filter(o2_long, assay == "MBC"), aes(fill = ratio)) +
-  scale_fill_steps(
-     breaks = c(20, 40,  60,80  ,100, 120),
-    name = expression(OD~`[%]`),
+
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
   # geom_point(data = subset(o2_long, agar_condition == condition & assay == "a_MIC"), aes(x = condition, y = assay), shape=16, colour="seagreen3", alpha=0.7, size=2)+
   geom_point(data = subset(o2_long, condition == MIC & assay == "a_MIC"), aes(x = condition, y = assay), shape=0, colour="seagreen2", size=2.1)+
@@ -669,10 +713,10 @@ write.csv(sub, file="C:/Users/zuendj/Desktop/03_data R/oxidative stress/gowth_da
 
 
 
-ggsave(filename = "MIC_MBC_o2_rel_to_ana.jpeg", 
+ggsave(filename = "MIC_MBC_o2_rel_to_ana..jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final", 
-       width = 9.5,
-       height = 18,
+       width = 12,
+       height = 22.8,
        units = c("cm"))
 
 ```
@@ -874,7 +918,7 @@ sub%>%
                mutate(bacteria = factor (bacteria, levels = c(order))), colour= "black",aes(fill = tolerance )) +
   scale_fill_continuous(
 
-    name = "Relative tolerance",
+    name = "Scaled tolerance",
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5))+
   
 
@@ -898,6 +942,11 @@ ggsave(filename = "species_rolerances..png",
          width = 50,
          height = 19,
          units = c("cm"))
+
+
+
+aggregate(both$tolerance, by =list(both$bacteria), FUN="mean")%>%
+  subset(x < 0.25)
 
 ```
 

@@ -27,28 +27,71 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 # library(ggpubr)
 # library(ggpubr)
 # library(rstatix)
-library(ggnewscale)
+# library(ggnewscale)
 
 ```
 
 # 1. Read all the data into one df
 ```{r}
 setwd("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_pure/02_H2O2/01_import")
-hplc_raw <- read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_pure/02_H2O2/01_import/20221220_final mic_hplc data_corrected blank_only_knon_metabolites.xlsx")
+hplc_raw <- read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_pure/02_H2O2/01_import/Final_import.xlsx")
 ```
 
 
+```{r}
+order <- c(
+  "Blautia obeum",
+  "Faecalibacterium duncaniae",
+  "Roseburia faecis",
+  "Faecalibacterium prausnitzii",
+  "Agathobacter rectalis",
+  "Anaerotignum lactatifermentans",
+  "Blautia hydrogenotrophica",
+  "Butyricicoccus pullicaecorum",
+  "Clostridium sporogenes",
+  "Dorea longicatena",
+  "Fusicatenibacter saccharivorans",
+  "Lachnospira eligens",
+  "Mediterraneibacter gnavus",
+  "Roseburia intestinalis",
+  "Segatella copri",
+  "Enterocloster aldenensis",
+  "Anaerostipes hadrus",
+  "Bacteroides cellulosilyticus",
+  "Bacteroides fragilis",
+  "Blautia hansenii",
+  "Blautia producta",
+  "Parabacteroides merdae",
+  "Anaerostipes caccae",
+  "Bacteroides intestinalis",
+  "Bacteroides thetaiotaomicron",
+  "Bacteroides uniformis",
+  "Bacteroides xylanisolvens",
+  "Phocaeicola dorei",
+  "Bacteroides caccae",
+  "Bacteroides faecis",
+  "Bacteroides ovatus",
+  "Bifidobacterium adolescentis",
+  "Bifidobacterium longum",
+  "Collinsella aerofaciens",
+  "Eubacterium limosum",
+  "Parabacteroides distasonis",
+  "Phascolarctobacterium faecium",
+  "Phocaeicola vulgatus",
+  "Enterococcus faecalis",
+  "Escherichia coli",
+  "Lactiplantibacillus plantarum")
+
+```
 
 ```{r}
-##exclude blank values
-hplc_raw%>%
-    # subset(remove_for_data_analysis != "yes")%>%
-  subset(condition != "blank")->subset
 
-# subset[is.na(subset[])] <- 0
+hplc_raw%>%
+  subset(!condition %in% c("blank", "blank "))->subset
+
 
 subset<-subset[, c("rep","assay","remove_for_data_analysis", "condition","Succinat_[mM]", "Lactat_[mM]", "Formiat_[mM]", "Acetat_[mM]", "Butyrat_[mM]",  "Succinate", "Lactate", "Formate", "Acetate", "Propionate", "Butyrate")]
-# names(subset)<-c("rep","assay", "condition", "abs_succinate", "abs_lactate", "abs_formate", "abs_acetate", "abs_propionate", "abs_butyrate")
+
 ```
 
 
@@ -98,20 +141,16 @@ for (i in 1:nrow(HPLC_wide_h2o2)){
 }
 
 HPLC_wide_h2o2%>%
-  mutate(total_C = ifelse(total_C == 0, NA, total_C))->HPLC_wide_h2o2_NA
+  mutate(total_mM = ifelse(total_mM == 0, NA, total_mM))->HPLC_wide_h2o2_NA
 
-# 
-#  HPLC_wide_h2o2 %>%
-#    mutate(total_C = ifelse(total_C == 0, NA, total_C))%>%
-#    mutate(total_C = ifelse(total_mM == 0, NA, total_mM))->HPLC_wide_h2o2
 ```
 
 ```{r}
 
   
-HPLC_wide_h2o2_NA[, c("assay","condition","butyrate_rel_C", "propionate_rel_C","acetate_rel_C", "formate_rel_C" , "lactate_rel_C", "succinate_rel_C" )]  %>%
+HPLC_wide_h2o2_NA[, c("assay","condition","butyrate_rel_mM", "propionate_rel_mM","acetate_rel_mM", "formate_rel_mM" , "lactate_rel_mM", "succinate_rel_mM" )]  %>%
   subset(condition %in% "control")%>%
-  gather(metabolite, rel_conc, "butyrate_rel_C":"succinate_rel_C")->controls
+  gather(metabolite, rel_conc, "butyrate_rel_mM":"succinate_rel_mM")->controls
   
 setNames(aggregate(controls$rel_conc, by=list(controls$metabolite, controls$assay), FUN=mean, na.rm =T), c("metabolite", "bacteria", "rel_conc"))->means_controls
 
@@ -120,16 +159,10 @@ setNames(aggregate(controls$rel_conc, by=list(controls$metabolite, controls$assa
 ```
 
 ```{r}
-means_controls%>%
-  left_join(., 
-            read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel_metabol.xlsx"))%>%
-  filter(rel_conc > 0)%>%
-  mutate(metabolite =factor(metabolite, levels=c("succinate_rel_C", "lactate_rel_C", "formate_rel_C", "butyrate_rel_C", "propionate_rel_C" ,"acetate_rel_C")))%>%
-  ggplot(aes(y=bacteria, x=rel_conc))+
-  geom_bar(position="stack", stat="identity", aes(fill=metabolite))+
-  theme()+
-  facet_grid(rows=vars(Family), scales="free", space="free")+
-  scale_fill_manual(values = c( "indianred", "indianred1", "darkgoldenrod2",  "cyan","cyan3","cyan4"))
+# unloadNamespace("ggnewscale")
+#  devtools::install_github("eliocamp/ggnewscale@v0.4.3")
+#  library(ggnewscale)
+
 
 means_controls%>%
   left_join(., 
@@ -143,52 +176,39 @@ rbind(phylogeny%>%
   rbind(., phylogeny %>%
         mutate(metabolite = "a_Phylum",
                type="a_Phylo"))%>%
-  filter(rel_conc > 0)%>%  mutate(bacteria = ifelse(bacteria == "Prevotella copri", "Segatella copri", bacteria))%>%
+  filter(rel_conc > 0)%>%  
+  mutate(bacteria = ifelse(bacteria == "Prevotella copri", "Segatella copri", bacteria))%>%
   mutate(bacteria = ifelse(bacteria == "Ruminococcus gnavus", "Mediterraneibacter gnavus", bacteria))%>%
    mutate(Genus = ifelse(bacteria ==  "Segatella copri", "Segatella", Genus))%>%
   mutate(Genus = ifelse(bacteria ==  "Mediterraneibacter gnavus", "Mediterraneibacter",  Genus))%>%
-  mutate(metabolite = ifelse(metabolite == "propionate_rel_C", "c_propionate_rel_C", metabolite))->sub
-
-
-# left_join(unique(sub%>%select(bacteria))%>%
-#             mutate(bacteria = ifelse(bacteria =="Bacteroides dorei", "Phocaeicola dorei", bacteria))%>%
-#                mutate(bacteria = ifelse(bacteria =="Bacteroides vulgatus", "Phocaeicola vulgatus", bacteria)),
-#           read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel_metabol.xlsx")[, c("Genus", "bacteria", "Phylum", "Species", "Family")])%>%
-#    mutate(Genus=factor(Genus))%>%
-#   group_by(Genus)%>%
-#   dplyr::summarise(n = n_distinct(Species))%>%
-#   mutate(genus = paste0(Genus, " (", n, ")"))->df
-
-
-
-setdiff(unique(sub$bacteria), 
-        unique(read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel_metabol.xlsx")$bacteria))
+  mutate(Genus = factor(Genus))%>%
+  mutate(metabolite = factor(metabolite, levels= c("a_Phylum",   "b_Genus", "acetate_rel_mM", "butyrate_rel_mM", "formate_rel_mM" ,"lactate_rel_mM", "propionate_rel_mM" ,"succinate_rel_mM")))%>%  
+   mutate(bacteria = factor(bacteria))->sub
 
 
 
 
   
-sub%>%  
-
-   mutate(genus = factor(bacteria))%>%
-  # mutate(bacteria = reorder(bacteria, Family))%>%
+ sub%>%
+   subset( metabolite %in% c("b_Genus", "succinate_rel_mM", "lactate_rel_mM", "formate_rel_mM", "butyrate_rel_mM", "propionate_rel_mM" ,"acetate_rel_mM"))%>%
   ggplot(aes(y=bacteria, x=metabolite))+
-  new_scale_fill() +
-   geom_tile(data = subset(sub, metabolite %in% c("a_Phylum")), aes(fill = Phylum )) +
-   scale_fill_manual(values = c(  "#a6cee3","indianred","cyan4","pink3"))+
-  guides(fill = guide_legend(nrow = 4))+
-  
-  new_scale_fill() +
+   
+  #  geom_tile(data = subset(sub, metabolite %in% c("a_Phylum")), aes(fill = Phylum )) +
+  #  scale_fill_manual(values = c(  "#a6cee3","indianred","cyan4","pink3"))+
+  # guides(fill = guide_legend(nrow = 4))+
+
     geom_tile(data = subset(sub, metabolite %in% c("b_Genus")), aes(fill = Genus )) +
-   scale_fill_manual(values=c("#1f78b4","#a6cee3", "#80b1d3","#8dd3c7","#33a02c", "pink3","#e31a1c", "#ff7f00",   "#fb9a99",  "#6a3d9a", "#cab2d6","#fdbf6f", "darkgoldenrod2", "#b15928",  "#fb8072", "#5c342c", "#b36966", "#A8AF51" , "#484939", "#CE6C4E", "#E6BAAC",  "#B1A7CD"))+
+   scale_fill_manual(values=c("#1f78b4","#a6cee3", "#80b1d3","#8dd3c7","#33a02c", "pink3","#e31a1c", "#ff7f00",   "#fb9a99",  "#6a3d9a", "#cab2d6","#fdbf6f", "darkgoldenrod2", "#b15928",  "#fb8072", "#5c342c", "#b36966", "#A8AF51" , "#484939", "#CE6C4E", "#E6BAAC",  "#B1A7CD", "darksalmon", "lightgreen"))+ 
   new_scale_fill() +
-  
    geom_tile(data = subset(sub, metabolite %in% c("succinate_rel_mM", "lactate_rel_mM", "formate_rel_mM", "butyrate_rel_mM", "propionate_rel_mM" ,"acetate_rel_mM")),
                 aes(fill = rel_conc )) +
    scale_fill_gradientn(colors = c( "white", "black"),  na.value= "white",  limits=c(0, 1), breaks = c(0, 0.5, 1), name= "Fraction")+
   
+
+  
+   
   facet_grid(rows=vars(Phylum), cols=vars(type), scales="free", space = "free")+
-  theme(tex= element_text(size=15),
+  theme(text= element_text(size=15),
         strip.text = element_blank(),
         axis.title = element_blank(),
         axis.text.y=element_text(face="italic", size=10),
@@ -200,26 +220,29 @@ sub%>%
         panel.spacing = unit(0, "lines"),
         axis.text.x = element_text(angle=90, hjust=1, vjust=0.5),
         legend.title =   element_text(size=15),
-        legend.key.height  = unit(0.2, 'cm'),legend.key.width  = unit(0.4, 'cm') , 
-        legend.position = "bottom")+
+        # legend.key.height  = unit(0.5, 'cm'),legend.key.width  = unit(0.5, 'cm') , 
+        legend.position = "bottom",
+        legend.text = element_text(face="italic"))+
   
   scale_x_discrete(labels = c('b_Genus' = 'Genus', 'a_Phylum' = 'Phylum',"succinate_rel_mM" = "Succinate", "lactate_rel_mM"="Lactate", "formate_rel_mM"="Formate", "butyrate_rel_mM"="Butyrate", "propionate_rel_mM" = "Propionate" ,"acetate_rel_mM"="Acetate"))
 
 
-ggsave(filename = "species_panel.png",   
+ggsave(filename = "species_panel..png",   
          path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
        device = "png", bg= "transparent", 
-         width =30,
-         height = 18,
+         width =35,
+         height = 20,
          units = c("cm"))
+
+
 ```
 
 
 # Test statistical differences in total metabolites
 ```{r}
 # library(ggpubr)
-left_join(setNames(aggregate(HPLC_wide_h2o2_NA$total_C, by=list(HPLC_wide_h2o2_NA$condition,  HPLC_wide_h2o2_NA$assay), FUN=sd, na.rm=T), c("condition",  "assay", "sd")),
-setNames(aggregate(HPLC_wide_h2o2_NA$total_C, by=list(HPLC_wide_h2o2_NA$condition,  HPLC_wide_h2o2_NA$assay), FUN=mean, na.rm=T), c("condition",  "assay", "mean"))) %>%
+left_join(setNames(aggregate(HPLC_wide_h2o2_NA$total_mM, by=list(HPLC_wide_h2o2_NA$condition,  HPLC_wide_h2o2_NA$assay), FUN=sd, na.rm=T), c("condition",  "assay", "sd")),
+setNames(aggregate(HPLC_wide_h2o2_NA$total_mM, by=list(HPLC_wide_h2o2_NA$condition,  HPLC_wide_h2o2_NA$assay), FUN=mean, na.rm=T), c("condition",  "assay", "mean"))) %>%
   mutate(assay = ifelse(assay == "Prevotella copri", "Segatella copri", assay))%>%
   mutate(assay = ifelse(assay == "Ruminococcus gnavus", "Mediterraneibacter gnavus", assay))->mean_h2o2
 
@@ -228,57 +251,42 @@ setNames(aggregate(HPLC_wide_h2o2_NA$total_C, by=list(HPLC_wide_h2o2_NA$conditio
 order_h2o2<- read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx")
 
 #t test
-HPLC_wide_h2o2[, c("assay", "condition", "total_C")]%>%
-  left_join(., setNames(order_h2o2, c("assay", "MIC", "MBC")))%>%
-  subset(condition %in% c("control",  "NIC"))%>%
-  # mutate(condition = factor(condition, levels=c("control", "NIC-1", "NIC")))%>%  
-  mutate(assay = ifelse(assay == "Prevotella copri", "Segatella copri", assay))%>%
+HPLC_wide_h2o2[, c("assay", "condition", "total_mM", "remove_for_data_analysis")]%>%
+   mutate(assay = ifelse(assay == "Prevotella copri", "Segatella copri", assay))%>%
   mutate(assay = ifelse(assay == "Ruminococcus gnavus", "Mediterraneibacter gnavus", assay))%>%
-  group_by(assay)%>%
-   mutate(assay = factor(assay))%>%
-  mutate(assay = reorder(assay, MBC))%>%
-  t_test(total_C ~ condition, ref.group = "control")%>%
-  add_significance()%>%
-  add_xy_position( x="condition")->stats
-
-
-unique(stats$assay)
-
-
-left_join(mean_h2o2, stats[, c("assay", "p.signif")])%>%
-  left_join(., setNames(order_h2o2, c("assay", "MIC", "MBC")))%>%
-  # mutate(condition = factor(condition, levels=c("control", "NIC-1", "NIC")))%>%
   subset(condition %in% c("control",  "NIC"))%>%
-  
-  #  mutate(assay = factor(assay))%>%
-  # mutate(assay = reorder(assay, MBC))%>%
+  subset(!assay %in% c("blank", "blank "))%>%
+   mutate(assay = factor(assay, levels=order))%>%
+  group_by(assay)%>%
+  t_test(total_mM ~ condition, ref.group = "control")%>%
+  add_significance()%>%
+  add_xy_position(x="condition")->stats
+
+
+
+
+mean_h2o2%>%
+  subset(!assay %in% c("blank", "blank "))%>%
+  mutate(assay = factor(assay, levels=order))%>%
+  subset(condition %in% c("control",  "NIC"))%>%
   mutate(condition = ifelse(condition =="NIC", "a_NIC", condition))%>%
   # mutate(condition = factor(condition), levels=c( "NIC", "control"))%>%
   ggplot(aes(y=mean, x=condition))+
   geom_col(aes(fill=condition, position = condition), position = position_dodge(0.8), width=0.7)+
   geom_errorbar(aes(ymin=mean - sd, ymax=mean +sd, group=condition), width=.7, position=position_dodge(.9) )+
-  stat_pvalue_manual(stats, label="p.signif", coord.flip = TRUE, vjust=0.5, hide.ns = T,  y.position=90, step.increase = 0.1)+
+  stat_pvalue_manual(stats, label="p.signif", coord.flip = TRUE, vjust=0.5, hide.ns = T,  y.position=50, step.increase = 0.1)+
   facet_grid(rows=vars(assay), scales = "free")+
   coord_flip()+
-  theme(text =element_text(size=8))+
+  theme(text =element_text(size=15),
+        strip.text.y = element_text(angle=0))+
   ylab("Total [mM]")+
-  scale_x_discrete(labels=c("a_NIC"="Stress", "control" = "Control"))-> total_C_h2o2
+  scale_x_discrete(labels=c("a_NIC"="Stress", "control" = "Control"))+
+  scale_fill_manual(values=c("cyan4", "indianred" ), labels=c("Control", "Stress"))-> total_C_h2o2
 
 
-left_join(mean_h2o2[, c("condition", "mean", "assay")]%>%
-            subset(condition %in% c("control", "NIC"))%>%
-            pivot_wider(names_from = condition, values_from = mean), stats[, c("assay", "p.signif")])%>%
-  mutate(ratio = ( `NIC`/ control)*100)%>%
-  mutate(p.signif = ifelse(p.signif == "ns", NA, p.signif))%>%
-  mutate(assay = ifelse(assay == "Prevotella copri", "Segatella copri", assay))%>%
-  mutate(assay = ifelse(assay == "Ruminococcus gnavus", "Mediterraneibacter gnavus", assay))%>%
-  ggplot(aes(y=assay, x="Total [mM]", fill=ratio))+
-  geom_tile()+
-  facet_grid(rows=vars(assay), scales="free", space="free")+
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(0, 100, 400)), limits=c(0, 400))+
-  geom_text(aes(label=p.signif))
+total_C_h2o2
 
-ggsave(filename = paste( "h2o2_pure cult_tot.jpeg"),
+ggsave(filename = paste( "h2o2_pure cult_tot..jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/metabolites",
        width = 20,
        height = 40,
@@ -291,7 +299,7 @@ ggsave(filename = paste( "h2o2_pure cult_tot.jpeg"),
 
 ```{r}
 #transform into long
-HPLC_h2o2_long <-  gather(HPLC_wide_h2o2, metabolite, concentration, "succinate_rel_C":"butyrate_rel_C", factor_key = T ) 
+HPLC_h2o2_long <-  gather(HPLC_wide_h2o2, metabolite, concentration, "succinate_rel_mM":"butyrate_rel_mM", factor_key = T ) 
 ```
 
 
@@ -315,7 +323,7 @@ shapi<-"init"
 
 ##filter out samples with no growth
 HPLC_h2o2_long%>%
-  subset(total_C >1)%>% #remove first col
+  subset(total_mM >1)%>% #remove first col
   filter(!is.na(concentration))->HPLC_h2o2_long #get only teh metabolites that are actually produced
 
 #loop for plots for all bacteria
@@ -414,6 +422,10 @@ for (i in 1:nrow(stats_all_h2o2)){
 
 # 4. Calculate means & SD 
 ```{r}
+
+# HPLC_h2o2_long%>%
+#   subset(!remove_for_data_analysis %in% "yes")->HPLC_h2o2_long
+
 left_join(
   setNames(aggregate(HPLC_h2o2_long$concentration, list(HPLC_h2o2_long$assay, HPLC_h2o2_long$metabolite, HPLC_h2o2_long$condition), FUN=mean, na.rm=T), c("Bacteria", "metabolite", "condition", "mean")),
 setNames(aggregate(HPLC_h2o2_long$concentration, list(HPLC_h2o2_long$assay, HPLC_h2o2_long$metabolite, HPLC_h2o2_long$condition), FUN=sd, na.rm=T),
@@ -427,6 +439,7 @@ means_h2o2[,c("Bacteria", "metabolite", "condition", "mean")]%>%
 
 ```{r}
 means_wide_h2o2%>%
+  
   mutate(NIC = mean_NIC - mean_control)%>%
   mutate(NIC_1 = `mean_NIC_1` - mean_control)%>%
   gather(condition, ratio, "NIC":"NIC_1")%>%
@@ -442,19 +455,20 @@ means_wide_h2o2%>%
 ```{r}
 
 HPLC_wide_h2o2%>%
-  gather(metabolite, concentration, "Succinat_[mM]": "Butyrat_[mM]")->abs_long
+  gather(metabolite, concentration, "Succinate": "Butyrate")%>%
+  mutate(concentration = as.numeric(concentration))->abs_long
 
 
 setNames(aggregate(abs_long$concentration, list(abs_long$assay,  abs_long$metabolite, abs_long$condition), FUN=mean, na.rm=T), c("Bacteria", "metabolite", "condition", "mean_conc"))%>%
   pivot_wider(names_from = condition, values_from = mean_conc)%>%
   setNames(c("Bacteria",   "metabolite","mean_conc_control", "NIC", "NIC_1"))%>%
   gather(condition, mean_abs, "NIC":"NIC_1")%>%
-  mutate(metabolite = ifelse(metabolite == "Acetat_[mM]", "acetate_rel_C", metabolite))%>%
-  mutate(metabolite = ifelse(metabolite == "Butyrat_[mM]", "butyrate_rel_C", metabolite))%>%
-  mutate(metabolite = ifelse(metabolite == "Propionat_[mM]", "propionate_rel_C", metabolite))%>%
-  mutate(metabolite = ifelse(metabolite == "Succinat_[mM]", "succinate_rel_C", metabolite))%>%
-  mutate(metabolite = ifelse(metabolite == "Lactat_[mM]", "lactate_rel_C", metabolite))%>%
-   mutate(metabolite = ifelse(metabolite == "Formiat_[mM]", "formate_rel_C", metabolite))->means_absolute_h2O2 #machtch names of metabolites with ratio_O2 to perform left_join
+  mutate(metabolite = ifelse(metabolite == "Acetate", "acetate_rel_mM", metabolite))%>%
+  mutate(metabolite = ifelse(metabolite == "Butyrate", "butyrate_rel_mM", metabolite))%>%
+  mutate(metabolite = ifelse(metabolite == "Propionate", "propionate_rel_mM", metabolite))%>%
+  mutate(metabolite = ifelse(metabolite == "Succinate", "succinate_rel_mM", metabolite))%>%
+  mutate(metabolite = ifelse(metabolite == "Lactate", "lactate_rel_mM", metabolite))%>%
+   mutate(metabolite = ifelse(metabolite == "Formate", "formate_rel_mM", metabolite))->means_absolute_h2O2 #machtch names of metabolites with ratio_O2 to perform left_join
 
 ```
 
@@ -517,28 +531,31 @@ for (i in 1:nrow(stats_absolute_h2o2)){
 # library(scales)
 stats_absolute_h2o2%>%
     subset(!is.na(ratio))%>%
-    left_join(., setNames(order_h2o2, c("Bacteria", "MIC", "MBC")))%>%
-  # mutate(condition = factor(condition, levels=c("control", "NIC-1", "NIC")))%>%
+   mutate(Bacteria = ifelse(Bacteria == "Prevotella copri", "Segatella copri", Bacteria))%>%
+  mutate(Bacteria = ifelse(Bacteria == "Ruminococcus gnavus", "Mediterraneibacter gnavus", Bacteria))%>%
+   
   subset(condition %in% c("control",  "NIC"))%>%
-  #  mutate(Bacteria = factor(Bacteria))%>%
-  # mutate(Bacteria = reorder(Bacteria, MBC))%>%
+   mutate(Bacteria = factor(Bacteria, levels=order))%>%
+  
   mutate(p_corrected_low_conc = ifelse(p_corrected_low_conc == "ns", "", p_corrected_low_conc))%>%
-  mutate(metabolite = factor(metabolite, levels= c("succinate_rel_C","lactate_rel_C", "formate_rel_C" ,"acetate_rel_C","butyrate_rel_C","propionate_rel_C")))%>%
+  mutate(metabolite = factor(metabolite, levels= c("succinate_rel_mM","lactate_rel_mM", "formate_rel_mM" ,"acetate_rel_mM","butyrate_rel_mM","propionate_rel_mM")))%>%
   mutate(ratio = ratio *100)->sub
 
 min <- min(sub$ratio)
 max <- max(sub$ratio)
 
-
+sub%>%
+  subset(p_corrected_low_conc = "*")
 
 sub%>%
-   mutate(Bacteria = ifelse(Bacteria == "Prevotella copri", "Segatella copri", Bacteria))%>%
-  mutate(Bacteria = ifelse(Bacteria == "Ruminococcus gnavus", "Mediterraneibacter gnavus", Bacteria))%>%
+  subset(Bacteria %in% "Blautia hydrogenotrophica")
+
+sub%>%
   ggplot(aes(x=metabolite, y=condition, fill=ratio))+
   geom_tile()+
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(-120, 0, 120)), limits=c(-120, 120))+
+  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(-150, 0, 150)), limits=c(-150, 150), breaks=c(-100,0, 100))+
   facet_grid(rows=vars(Bacteria))+
-    theme(text = element_text(size=8),
+    theme(text = element_text(size=10),
       strip.text.y = element_text(angle=0,  face="italic", hjust=0, size=8),
         axis.title = element_blank(),
         axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
@@ -548,9 +565,11 @@ sub%>%
         legend.text.align = 0, 
         strip.background = element_blank(),
         panel.spacing = unit(0, "lines"))+
-  scale_x_discrete(labels=c("succinate_rel_C"="Succinate",  "lactate_rel_C" ="Lactate" ,  "formate_rel_C"  ="Formate" , "acetate_rel_C"  = "Acetate" , "propionate_rel_C"="Propionate", "butyrate_rel_C" = "Butyrate"))+
+  scale_x_discrete(labels=c("succinate_rel_mM"="Succinate",  "lactate_rel_mM" ="Lactate" ,  "formate_rel_mM"  ="Formate" , "acetate_rel_mM"  = "Acetate" , "propionate_rel_mM"="Propionate", "butyrate_rel_mM" = "Butyrate"))+
   labs(fill="Delta [%]")+
   geom_text(aes(label=p_corrected_low_conc))-> diff_metabol_h2o2
+
+diff_metabol_h2o2
 
 ggsave(filename = "O2_heatplot_selection_lowconc.jpeg",   
          path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/metabolites", 
@@ -567,34 +586,32 @@ ggsave(filename = "O2_heatplot_selection_lowconc.jpeg",
 
 
 
-plot_grid(
-          total_C_h2o2+theme(text=element_text(size=8),
-                             legend.position = "none", 
-                            
-              
-                             axis.ticks.y=element_blank(),
+plot_grid(          total_C_h2o2+theme(text=element_text(size=10),
+                             legend.position = "none",
+                             axis.title = element_blank(),
+                                                         axis.ticks.y=element_blank(),
                              panel.border=element_rect(fill=NA), 
                              panel.background = element_rect(fill="white"),
                              legend.text.align = 0, 
                              strip.background = element_blank(),
                              panel.spacing = unit(0, "lines"), 
                           legend.title = element_blank(),
-                           strip.text = element_blank()), 
+                           strip.text.y = element_blank())+ scale_fill_manual(values=c("cyan4", "indianred" )), 
           
           
-          diff_metabol_h2o2+theme(text=element_text(size=8),
+          diff_metabol_h2o2+theme(text=element_text(size=10),
                                   legend.position = "none",
                                   axis.text.y = element_blank(),
-                                   axis.text.x = element_text(size=8),
+                                   axis.text.x = element_text(),
                                   axis.ticks = element_blank()), 
           
           
         align= "h", rel_widths = c(0.7, 1), rel_heights = c(1,1), axis = 'tblr')
 
-ggsave(filename = "metabolt_totalc.jpeg",   
+ggsave(filename = "metabolt_totalc..jpeg",   
          path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final", 
-         width = 11,
-         height = 18,
+         width = 14,
+         height = 23,
          units = c("cm"))
 ```
 

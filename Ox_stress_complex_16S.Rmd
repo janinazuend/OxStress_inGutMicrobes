@@ -7,36 +7,36 @@ title: "Alpha and Beta diveristy under Ox. stress"
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina Plüss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
 # install.packages('devtools')
-# install.packages(
-#   "microViz",
-#   repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
-# )
+install.packages(
+  "microViz",
+  repos = c(davidbarnett = "https://david-barnett.r-universe.dev", getOption("repos"))
+)
 # devtools::install_github("tidyverse/tidyverse")
-# # 
-# library(tidyverse)
-# library(openxlsx)
-# library(rstatix)
-# library(microViz)
-# library(ggpubr)
-# library(plyr)
-# library(metagMisc)
-# library(picante)
-# library(phyloseq)
-# library(ggh4x)
-# library(cowplot)
+
+library(tidyverse)
+library(openxlsx)
+library(rstatix)
+library(microViz)
+library(ggpubr)
+library(plyr)
+library(metagMisc)
+library(picante)
+library(phyloseq)
+library(ggh4x)
+library(cowplot)
 
 ```
 
 ```{r, echo =FALSE}
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_taxa_tests.R") 
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_normalisation.R") 
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_alpha.R") 
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_beta.R") 
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_heatmap.R")
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_taxa_tests.R")
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_varia.R")
-# source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_beta.R")
-#  source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_taxa_tests.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_normalisation.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_alpha.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_beta.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_heatmap.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_taxa_tests.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_varia.R")
+source("C:/Users/zuendj/Desktop/03_data R/divcom_functions/R/phyloseq_beta.R")
+ source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
 
 #get metadata file: load this function
 sample.data.frame <- function(ps) {
@@ -158,8 +158,8 @@ ps_strain_filt %>%
 
 #Export phyloseq for subsequent analysis 
 ```{r}
-# saveRDS(ps_strain_filt, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_nonrare.RDS")
-# saveRDS(phyloseq_rare, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
+saveRDS(ps_strain_filt, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_nonrare.RDS")
+saveRDS(phyloseq_rare, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
 ```
 
 #Export ref seq table
@@ -712,7 +712,7 @@ names<-list("diversity_shannon"= "Shannon",
             "observed"= "Observed")
 
 phyloseq_rare%>% 
-  phyloseq_alphas(phylo = TRUE)%>%
+  phyloseq_alphas(phylo = F)%>%
   subset(stress %in% "H2O2" & time %in% "stress")%>%
   left_join(., pd(t(as.data.frame(otu_table(phyloseq_rare))), phy_tree(phyloseq_rare))%>%
               rownames_to_column("sample_name"))%>%
@@ -774,6 +774,7 @@ phyloseq_rare%>%
               rownames_to_column("sample_name"))%>%
   mutate(stress_level = factor(stress_level, levels=c("control", "low", "median", "high")))%>%
   gather(index, value, "observed":"PD")->sub
+
 
 sub[, c("donor_name", "time", "stress_level", "index", "value")]%>%
   subset(!time %in% "pre-stress")%>%

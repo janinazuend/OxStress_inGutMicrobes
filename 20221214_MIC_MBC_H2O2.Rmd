@@ -28,6 +28,53 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R", cho = TRUE,
  library(ggnewscale)
 ```
 
+```{r}
+order <- c(
+  "Blautia obeum",
+  "Faecalibacterium duncaniae",
+  "Roseburia faecis",
+  "Faecalibacterium prausnitzii",
+  "Agathobacter rectalis",
+  "Anaerotignum lactatifermentans",
+  "Blautia hydrogenotrophica",
+  "Butyricicoccus pullicaecorum",
+  "Clostridium sporogenes",
+  "Dorea longicatena",
+  "Fusicatenibacter saccharivorans",
+  "Lachnospira eligens",
+  "Mediterraneibacter gnavus",
+  "Roseburia intestinalis",
+  "Segatella copri",
+  "Enterocloster aldenensis",
+  "Anaerostipes hadrus",
+  "Bacteroides cellulosilyticus",
+  "Bacteroides fragilis",
+  "Blautia hansenii",
+  "Blautia producta",
+  "Parabacteroides merdae",
+  "Anaerostipes caccae",
+  "Bacteroides intestinalis",
+  "Bacteroides thetaiotaomicron",
+  "Bacteroides uniformis",
+  "Bacteroides xylanisolvens",
+  "Phocaeicola dorei",
+  "Bacteroides caccae",
+  "Bacteroides faecis",
+  "Bacteroides ovatus",
+  "Bifidobacterium adolescentis",
+  "Bifidobacterium longum",
+  "Collinsella aerofaciens",
+  "Eubacterium limosum",
+  "Parabacteroides distasonis",
+  "Phascolarctobacterium faecium",
+  "Phocaeicola vulgatus",
+  "Enterococcus faecalis",
+  "Escherichia coli",
+  "Lactiplantibacillus plantarum"
+)
+
+```
+
 ##Load the Data
 ```{r}
 bacteria_MIC <- list.files(path = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/01_import/MIC")
@@ -367,7 +414,7 @@ rel_long%>%
   mutate(bacteria = ifelse(bacteria == "Prevotella copri", "Segatella copri", bacteria))%>%
   mutate(bacteria = ifelse(bacteria == "Ruminococcus gnavus", "Mediterraneibacter gnavus", bacteria))%>%
   mutate(OD = OD * 100)%>%
-  mutate(bacteria = fct_reorder(bacteria, tolerance))%>%
+  mutate(bacteria = factor(bacteria, levels=order))%>%
   mutate(assay = ifelse(assay=="MIC", "a_MIC", assay))%>%
   mutate(condition = as.numeric(paste(condition)))%>% 
   mutate(OD = ifelse(OD < 0 , 0, OD))%>%
@@ -377,16 +424,17 @@ sub%>%
   mutate(tolerance = tolerance )%>%
   ggplot(aes(x = condition, y = assay, fill = OD, pattern_type = condition)) + 
   labs(x=expression(paste(H[2]*O[2])))+
-  theme(text = element_text(size=8), 
+  theme(text = element_text(size=10), 
         axis.title.x = element_text(vjust=-0.8),
         axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
         axis.title.y= element_blank(),
         strip.text.y = element_text(angle=0,  hjust = 0, face="italic"),
         strip.background = element_blank(),
         axis.ticks.y = element_blank(),
-        plot.title = element_text(hjust=0.25),
-        panel.background = element_rect(fill="transparent"),
-        panel.spacing = unit(0, "lines"))+
+        panel.border=element_rect(fill=NA), 
+          panel.background = element_rect(fill="white"),
+          legend.text.align = 0, 
+          panel.spacing = unit(0, "lines"))+
   scale_x_continuous(labels=c("0 nM", 
                               "6.4 nM",  
                               "21 nM", 
@@ -400,34 +448,29 @@ sub%>%
                               "2.3 mM", "7.3 mM" ), 
                      breaks=c(1, 2, 3, 4, 5, 6, 7,  8 ,9 ,10, 11, 12))+
 
-  ggtitle(expression(Growth~capability~upon~H[2]*O[2]-spike))+
-     scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post'), limits=rev)+
+
+     scale_y_discrete(labels = c('a_MIC' = 'Stress', 'MBC' = 'Post-stress'), limits=rev)+
   
-   new_scale_fill() +
   
-   geom_raster(data = filter(sub, assay == "a_MIC"), aes(fill = OD)) +
-  scale_fill_steps(
-    breaks = c(  20,  40,  60,80,  100, 120),
-    name = expression(OD~`[%]`),
-    guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="indianred" ) +
   
-  new_scale_fill() +
- geom_raster(data = filter(sub, assay == "MBC"), aes(fill = OD)) +
+   geom_raster( aes(fill = OD)) +
   scale_fill_steps(
     breaks = c(  20,  40,  60,80,  100, 120),
     name = expression(OD~`[%]`),
     guide = guide_colorbar(title.position = "top", title.vjust = 0.5), low="#193854", high ="deepskyblue" ) +
   
+ 
+  
   facet_grid(rows =vars( bacteria), scales = "free", space = "free")+
-   geom_point(data = subset(sub, condition == tolerance), aes(x = condition, y = assay), shape=0, colour="seagreen2", size=2.1)+
-  geom_point(data = subset(sub, condition == tolerance ), aes(x = condition, y = assay), shape=0, colour="seagreen2", size=2.1)->growth_h2o2
+   geom_point(data = subset(sub, condition == tolerance), aes(x = condition, y = assay), shape=0, colour="seagreen2", size=2.4)+
+  geom_point(data = subset(sub, condition == tolerance ), aes(x = condition, y = assay), shape=0, colour="seagreen2", size=2.4)->growth_h2o2
 
 # show(p + theme(legend.position = "none"))
 growth_h2o2
-ggsave(filename = "MIC_MBC_h2o2.png", 
+ggsave(filename = "MIC_MBC_h2o2..jpeg", 
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final", 
-       width =9.5,
-       height = 18,
+       width =12,
+       height = 23,
        units = c("cm")#, 
        #bg="transparent"
        )
@@ -497,12 +540,11 @@ guides(fill = guide_legend(nrow = 6))+
         panel.border=element_rect(fill=NA), 
         panel.background = element_rect(fill="white"),
         rect = element_rect(fill = "transparent"),
-        # legend.text.align = 0, 
         panel.spacing = unit(0, "lines"),
         axis.text.x = element_text(angle=60, hjust=1, face="italic"),
         strip.background = element_blank(), 
         strip.text = element_blank(),
-          # legend.key.height  = unit(0.2, 'cm'),legend.key.width  = unit(0.4, 'cm'),
+        legend.text = element_text(face="italic"),
         legend.position = "top")+
 scale_y_discrete(labels = c('MIC' = 'Stress', 'MBC' = 'Post-stress', "a_Genus"="Genus", "b_Phylum"="Phylum"))+
   force_panelsizes(cols=unit(23, "cm"))

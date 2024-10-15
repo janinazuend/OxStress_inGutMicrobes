@@ -3,10 +3,14 @@
 .libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_sequencing_results/Janina", cho = TRUE, warning = FALSE, message = FALSE)
+# install.packages("ggalluvial")
+# install.packages("ggplot2")
+
 library(microViz)
- library(ggh4x)
+library(ggh4x)
 library(ggalluvial)
 library(gridExtra)
+library(ggplot2)
 ```
 
 
@@ -50,64 +54,7 @@ tax_palette_plot(myPal)
 
 
 ```
-#bar plots O2
-```{r}
 
-# myPal <- tax_palette(
-#   data = phyloseq_rare, rank = "Phylum", n = 10, pal = "greenArmytage",
-#   add = c(other = "lightgrey")
-# )
-# 
-# 
-# myPal["Bacteroidota"] <- "cyan4"
-# myPal["Firmicutes"] <- "indianred"
-# myPal["Proteobacteria"] <- "pink3"
-# myPal["Actinobacteriota"] <- "#a6cee3"
-# 
-# tax_palette_plot(myPal)
-# 
-# phyloseq_rare%>%
-#   subset_samples(Sample_id_compete %in% "feces")->phyloseq_controls
-#                    #   #with or without feces
-#                  
-# 
-# 
-# 
-#  
-#  filt<-c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella", "Enterococcus", "Enterobacteriaceae Family")
-#  
-#  phyloseq_controls%>% 
-#      ps_arrange(donor_name)%>%
-#       microViz::comp_barplot(
-#     tax_level = "Phylum",
-#     label = "donor_name",
-#     # tax_order = filt,
-#     sample_order = "default",
-#     other_name = "other", 
-#     n_taxa = 4,
-#     bar_width = 0.9,
-#     tax_transform_for_plot = "compositional", 
-#     merge_other = FALSE,
-#       palette = myPal
-#       ) +
-#     ylab("Proportion") +
-#     xlab( "")-> p_hist
-# p_hist+ theme(text = element_text(size=15),
-#                              axis.ticks.x = element_blank(), legend.position = "bottom",
-#               rect = element_rect(fill = "transparent"))-> p_hist
-# 
-# 
-# p_hist
-# 
-# 
-# 
-# ggsave(filename = "feces.png",   
-#          path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-#        device = "png", bg= "transparent", 
-#          width = 6.5,
-#          height = 10,
-#          units = c("cm"))
-```
 
 
 #bar plots O2
@@ -132,32 +79,6 @@ sample_data(phyloseq_controls)<-meta
  
  filt<-c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella", "Enterococcus", "Enterobacteriaceae Family")
  
- phyloseq_controls%>% 
-     ps_arrange(time)%>%
-      microViz::comp_barplot(
-    tax_level = "Genus",
-    label = "time",
-    tax_order = filt,
-    sample_order = "default",
-    other_name = "other", 
-    n_taxa = 19,
-    bar_width = 0.9,
-    tax_transform_for_plot = "compositional", 
-    merge_other = FALSE,
-     # palette = myPal
-      ) +
-    ylab("Proportion") +
-    xlab( "")-> p_hist
-
-
-p_hist +
-  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
-  theme(text= element_text(size=15),
-        axis.ticks.x = element_blank(),
-        axis.text.x=element_text(angle=90),
-        legend.text = element_text(vjust=1, hjust=0),
-        panel.spacing = unit(0.2, "cm"))  -> p_hist
-
 p_hist$data%>%
     mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella", "Enterococcus", "Enterobacteriaceae Family", "other")))%>%
   dplyr::select(Abundance, time, Genus, donor_name)%>% 
@@ -172,7 +93,8 @@ p_hist$data%>%
   theme(legend.position="bottom", 
         text = element_text(size = 15), 
         axis.text.x = element_text(angle=90, vjust=0.5, hjust=0.5), 
-        strip.background = element_rect(fill = "white", color = "black")) + 
+        strip.background = element_rect(fill = "white", color = "black"),
+        legend.text = element_text(face="italic")) + 
   ylab("Proportion") +
   scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
   scale_x_discrete(labels=c("Pre-culture", "Stress", "Post-stress"))+
@@ -375,7 +297,7 @@ grid.arrange(O2_control+theme(legend.position = "none",
           legend,
           nrow=4)->grid
 
-ggsave(grid, filename = paste( "O2.jpeg"),
+ggsave(grid, filename = paste( "O2_legend.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
        width = 35,
        height =22,
@@ -705,11 +627,18 @@ p_hist$data%>%
   theme(legend.position="bottom", 
         text = element_text(size = 15), 
         axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
-        strip.background = element_rect(fill = "white", color = "black")) + 
+        strip.background = element_rect(fill = "white", color = "black"),
+        legend.text = element_text(face="italic")) + 
   ylab("Proportion") +
   scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
   scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress", "s"))->H2O2_low
 
+ggsave(H2O2_low,
+       filename = paste( "H2O2..jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 30,
+       height =19,
+       units = c("cm"))
 
 ```
 #grid H2O2
@@ -755,7 +684,7 @@ grid.arrange(H2O2_control+theme(legend.position = "none",
 
 
 ggsave(p,
-       filename = paste( "H2O2.jpeg"),
+       filename = paste( "H2O2..jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
        width = 24,
        height =19,
@@ -842,18 +771,19 @@ p_hist$data%>%
         text = element_text(size = 15), 
         axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
         strip.background = element_rect(fill = "white", color = "black"),
-        legend.key.height  = unit(0.2, 'cm'), legend.key.width = unit(0.4, 'cm')) + 
+        legend.key.height  = unit(0.2, 'cm'), legend.key.width = unit(0.4, 'cm'),
+        legend.text = element_text(face="italic")) + 
   ylab("Proportion") +
   scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
-  guides(fill = guide_legend(nrow = 7))+
+  guides(fill = guide_legend(nrow = 4))+
   scale_x_discrete(labels=c("Feces", "Pre-culture", "P1", "P2"))->controls
 
 controls
 
 # +  force_panelsizes(rows =unit(4, "cm"), cols=unit(3.5, "cm"))
-ggsave(filename = paste( "legend controls.jpeg"),
+ggsave(filename = paste( "legend controls..jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 20,
+       width = 30,
        height = 15,
        units = c("cm"))
 ```

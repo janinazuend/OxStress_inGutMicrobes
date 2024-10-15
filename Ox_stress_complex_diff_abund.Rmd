@@ -1,3 +1,4 @@
+## Differential abundance analysis
 
 ```{r setup, echo =FALSE}
 .libPaths('C:\\Users\\zuendj\\Documents\\R4Libs')
@@ -13,7 +14,7 @@ knitr::opts_knit$set(root.dir = "P:/Shared_documents/Serafina PlÃ¼ss/20230320_
  unloadNamespace("miaViz")
  unloadNamespace("mia")
 
-phyloseq_rare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
+phyloseq_rare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_nonrare.RDS")
 
 
 ```
@@ -40,10 +41,7 @@ ox_gen <- ox %>% agglomerateByRank(rank = "Genus")
 ```{r}
 set.seed(123)
 
-oxygen <-ox_gen[ , ox_gen$stress %in% c("O2") 
-                 # &
-                 #    ox_gen$stress_level %in% c("max")
-                 ]
+oxygen <-ox_gen[ , ox_gen$stress %in% c("O2") ]
 
 
 stress_level_cond <-c("control", "low", "median", "high","max")
@@ -89,7 +87,7 @@ all_oxygen_genus ->out
 
 out[,c(1,2,3,4,6,8,10, 14,15,16)]%>%
 
-   subset(we.ep < 0.05)%>%
+   subset(wi.ep < 0.05)%>%
   subset(V15 %in% "stress")->o
 
 filter_o2<-unique(o$Family)
@@ -136,9 +134,9 @@ out%>%
   ggplot(aes(x=V15, y=Family, fill=diff.btw))+
   geom_tile()+
    facet_grid(cols=vars(V14), scales = "free", space="free")+
- scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
-                      values = rescale(c(-6, 0, 6)), limits=c(-6, 6), 
-                      name="Clr-difference")+
+ scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey",
+                      values = rescale(c(-3, 0, 3)), limits=c(-3, 3),
+                       name="Clr-difference")+
    theme(text = element_text(size=15),
          axis.title = element_blank(),
         axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
@@ -160,15 +158,7 @@ ggsave(filename = paste("diff_abundo2.jpeg"),
 
 ```
 
-```{r}
-out[,c(1,3,6,8,10, 14,15,16)]%>%
-  subset(Family %in% c("Escherichia-Shigella","Enterobacteriaceae Family", "Bacteroides", "Anaerostipes"))%>%
-  subset(V15 %in% "stress")%>%
-  mutate(V14 = factor(V14, levels =c("control", "low", "median", "high","max")))%>%
-  ggplot(aes(y=diff.btw, x=V14))+
-  geom_point()+
-  facet_grid(rows=vars(Family))
-```
+
 
 
 ###Aldex: H2O2
@@ -243,22 +233,31 @@ all_h2o2_genus %>%
            V15 %in% "stress")-> sig_taxa
 
 all_h2o2_genus[, c("we.ep", "wi.eBH", "diff.btw" ,"V14", "V15", "Family")] %>%
-    # subset(Family %in% "Streptococcus")%>%
-  subset(we.ep <0.05)
+  # subset(Family %in% "Bacteroides")
+  
+  # 
+    mutate(we.ep = we.ep *3)%>%
+  subset(we.ep <0.05)->sig_taxa
 
  filter<- unique(sig_taxa$Family)
+ 
 ```
 
+
 ```{r}
+
+unloadNamespace("miaViz")
+unloadNamespace("mia")
+
  library(scales)
 filter_decreased<-c("Bacteroides", "Fusicatenibacter", "Anaerostipes", 
                "Blautia", "Agathobacter",
              "Dorea", "Faecalibacterium", 
              "Lachnoclostridium", "Lachnospiraceae UCG-004", "Lachnospiraceae Family",
-             "[Eubacterium] hallii group",   "[Ruminococcus] gauvreauii group",
+             "[Eubacterium] hallii group",
              "Parabacteroides")
 
-filter_increased<-c("Enterobacteriaceae Family", "Escherichia-Shigella","Enterococcus", "Bifidobacterium", "Lactobacillales Order")
+filter_increased<-c("Enterobacteriaceae Family", "Escherichia-Shigella","Bifidobacterium")
 # , "Streptococcus"
 length(filter_decreased)
 
@@ -269,6 +268,7 @@ data.frame(Family = filter_increased,
 
 
 left_join(all_h2o2_genus[, c("we.ep", "wi.ep", "diff.btw" ,"V14", "V15", "Family", "rab.all")], dir)%>%
+  mutate(we.ep = we.ep *3)%>%
    mutate(we.ep = ifelse(we.ep < 0.001 , "***", we.ep))%>%
   mutate(we.ep = ifelse(we.ep < 0.05 & we.ep >= 0.01, "*", we.ep))%>%
   mutate(we.ep = ifelse(we.ep < 0.01 & we.ep >= 0.001, "**", we.ep))%>%

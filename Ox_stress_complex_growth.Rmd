@@ -190,6 +190,17 @@ order%>%
   geom_hline(yintercept=0, lty=2, colour="grey")->h2o2_observed
 h2o2_observed
 
+
+
+
+combined_df_control%>%
+  subset(stress_level %in% c("median") & time %in% "stress")%>%
+  select(donor_name, time, stress_level, observed, incubation)%>%
+  pivot_wider(names_from = incubation, values_from = observed)%>%
+  mutate(diff = stress - control)->sub
+
+mean(sub$diff)
+sd(sub$diff)
 ```
 
 #Distance between control conditions: H2O2
@@ -376,7 +387,8 @@ ggsave(filename = paste( "h2o2_growth_alpha.jpeg"),
 ```{r}
 ###wilcox test with adjusted p value, BH correction
 hplc%>%
-  subset(stress %in% "H2O2" & time %in% c("stress"))%>%
+  subset(stress %in% "H2O2" & time %in% c("stress", "post_stress_1"))%>%
+  group_by(time)%>%
   wilcox_test(data= .,
   formula = OD_blank_corr ~ stress_level, 
   ref.group = "control" ,

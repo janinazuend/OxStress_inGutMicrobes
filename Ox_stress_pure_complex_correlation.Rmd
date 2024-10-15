@@ -20,7 +20,7 @@ phyloseq_nonrare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/
 phyloseq_rare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
 ```
 
-
+# References: P:\Shared_documents\Janina_Zuend\08_phd\12_working_package_2\08_blast\pure_culture_bastung_results
 ```{r}
 strain_panel<-read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel.xlsx")
 
@@ -30,12 +30,13 @@ blast<-read.table("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/
 
 summary(blast$OTU)
 
-left_join(strain_panel[, c("pure_culture_id","bacteria", "Strain", "publivly.availably.sequence")]
-          , blast[,c("pure_culture_id","OTU")])-> pure_culture_asv_match
+left_join(strain_panel[, c("pure_culture_id","bacteria", "Genus", "publivly.availably.sequence")]
+          , blast[,c("pure_culture_id","OTU")])%>%
+  subset(!is.na(OTU))-> pure_culture_asv_match
 
 # %>%
 #   # subset(bacteria %in% c("Roseburia intestinalis", "Blautia hydrogenotrophica"))%>%
-#   subset(!is.na(OTU))
+#   
 
 
 pure_culture_asv_match$ASV_name <- paste0(pure_culture_asv_match$OTU, " (", pure_culture_asv_match$bacteria, ")")
@@ -127,7 +128,8 @@ mutate(time = factor(time, levels=c("stress" ,"post_stress_1" )))%>%
         panel.background = element_rect(fill="white"),
         legend.text.align = 0,
         # strip.text = element_blank(),
-        strip.background = element_blank())+
+        strip.background = element_blank(),
+        legend.text = element_text(face="italic"))+
    force_panelsizes(cols=unit(6, "cm"))+
   
   
@@ -219,7 +221,8 @@ filtered_abund[,c("bacteria", "Abundance", "stress_level", "time","donor_name", 
          panel.border=element_rect(fill=NA), 
         panel.background = element_rect(fill="white"),
         legend.text.align = 0, 
-        strip.background = element_blank())+
+        strip.background = element_blank(),
+        legend.text = element_text(face="italic"))+
   xlab(expression(H[2]*O[2]*`-tolerance of pure cultures [mM]`))+ ylab("Clr-difference")+
   # guides(colour = guide_legend(nrow = 5))+
   
@@ -245,339 +248,6 @@ ggsave(filename = paste("correlation_H202t..jpeg"),
 ```
 
 
-```{r}
-
-sub[,c("ASV_name","bacteria", "Abundance", "incubation", "donor_name", "time")]%>% 
-  pivot_wider(names_from = incubation, values_from = Abundance)%>%
-left_join(., read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/O2_tolerances.xlsx"))%>%
-  gather(assay, tolerance, "MIC":"MBC")%>%
-  subset(assay %in% "MBC")%>%
-  mutate(diff = (aerobe - anaerobe))->sub
 
 
-sub%>%
-  mutate(what = "diff")%>%
-  rbind(., sub%>%
-          mutate(donor_name = "tolerance")%>%
-          mutate(diff = tolerance)%>%
-          mutate(what = "tol"))%>%
-  mutate(ASV_name = as.factor(ASV_name))%>%
-  mutate(ASV_name = reorder(ASV_name, tolerance))->sub_sub
-
-sub_sub%>%
-  mutate(donor_name = factor(donor_name, levels=c("D5", "D6", "D1", "D4", "D7", "D2", "D3")))%>%
-  ggplot(aes(y=ASV_name, x=donor_name))+
-  
-  new_scale_fill() +
-    geom_tile(data = filter(sub_sub, what == "diff"), aes(fill = diff)) +
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(-5, 0, 4)), limits=c(-4, 4))+
-  
-  new_scale_fill() +
-  geom_tile(data = filter(sub_sub, what == "tol"), aes(fill = diff)) +
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey")+
- facet_grid(cols=vars(what), scales = "free", space="free")+
-  theme(panel.border=element_rect(fill=NA), 
-        panel.background = element_rect(fill="white"),
-        legend.text.align = 0, 
-        strip.background = element_blank(),
-        panel.spacing = unit(0, "lines"), 
-        axis.title   = element_blank())+
-  facet_grid(cols=vars(time))
-```
-
-```{r}
-
-
-# mat_donor<-setNames(aggregate(sub$diff, list(sub$donor_name, sub$ASV_name), FUN=mean), c("donor_name", "ASV_name", "diff"))
-# 
-# 
-# ####hclust donornames
-# mat_donor%>%
-#   pivot_wider(values_from = diff, names_from = ASV_name) ->sub_donor
-# 
-# sub_donor%>%
-#   column_to_rownames(var = 'donor_name') %>% 
-#   as.matrix()->df_diff_donor
-# 
-# diff_dendro <- hclust(d = dist(x = df_diff_donor[]), method = "ward")
-# 
-# 
-# # Create dendro
-# plot(diff_dendro)
-# diff_order_donor <- order.dendrogram(as.dendrogram(diff_dendro))
-```
-
-```{r}
-df_pure_culture_abundances%>%
-  subset(time %in% "stress")%>%
-  subset(stress %in% "O2")->sub
-  
-sub[,c("ASV_name","bacteria", "Abundance", "incubation", "donor_name", "stress_level")]%>%
-  pivot_wider(names_from = c(incubation, stress_level), values_from = Abundance)%>%
-  mutate(control = aerobe_control - anaerobe_control,
-         low = aerobe_low - anaerobe_low,
-        median = aerobe_median - anaerobe_median,
-        high = aerobe_high - anaerobe_high,
-        max = aerobe_max - anaerobe_max)%>%
-  gather(stress_level, diff, "control":"max")%>%
-  mutate(stress_level = factor(stress_level, levels = c("control", "low", "median", "high", "max")))%>%
-  ggplot(aes(x=stress_level, y=diff))+
-  geom_boxplot()+
-  geom_hline(yintercept = 0, colour="indianred4")+
-  stat_poly_line(color="darkgrey")+
-  facet_grid(rows=vars(ASV_name), scales="free")+
-  stat_correlation(mapping = use_label(c("R", "p")), size=8)+
-  theme(strip.text.x = element_text(angle=90))+
-  geom_smooth()
-   
-  
-ggsave(filename = paste( "corr.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 10,
-       height = 60,
-       units = c("cm"))
-```
-
-
-
-```{r}
-
-read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/00_experimentation/01_pure_culture/20240207_Strain_panel_metabol.xlsx") 
-
-
-df_pure_culture_abundances%>%
-  subset(time %in% c("stress"))%>%
-  subset(stress %in% "H2O2" & stress_level %in% c("control", "median", "high", "low"))->sub
-
-setNames(aggregate(sub$Abundance, by=list(sub$donor_name, sub$bacteria, sub$stress_level, sub$time), FUN=mean), c("donor_name", "bacteria","stress_level" ,"time","mean"))%>%
-  subset(stress_level %in% "control")->means
-
-left_join(sub, means[, c("donor_name", "bacteria","mean", "time")])->df_filter
-
-
-cut_off =0
-
- rbind(df_filter%>%
-         subset(donor_name %in% "D2")%>%
-         subset(mean > cut_off), df_filter%>%
-         subset(donor_name %in% "D3")%>%
-         subset(mean > cut_off)) %>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D4")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D5")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D6")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D7")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D1")%>%
-         subset(mean > cut_off) )->filtered_abund
-   
-   
-filtered_abund[,c("ASV_name","bacteria", "Abundance", "stress_level", "time","donor_name")]%>% 
-  pivot_wider(names_from = stress_level, values_from = Abundance)%>%
-  mutate(diff_median = (median - control) )%>%
-   mutate(diff_low = (low - control) )%>%
-  mutate(diff_high = (high - control) )%>%
-   left_join(., read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx"))%>%
-  gather(assay, tolerance, "MIC":"MBC")%>%
-  subset(assay %in% "MBC")%>%
-  gather(stress_level, diff, "diff_median":"diff_high")%>%
-  mutate(stress_level =factor(stress_level, levels=c("diff_low", "diff_median", "diff_high")))%>%
-   ggplot(aes(y=diff, x=tolerance))+
-  geom_jitter( width = 0.1, alpha=0.6, aes(colour=Genus))+
-   stat_correlation(mapping = use_label(c("R", "p")), size=3)+
-   stat_poly_line(color="darkgrey") +
-  geom_hline(yintercept = 0, linetype="dashed", colour="indianred4", size=1)+
-   theme(panel.border=element_rect(fill=NA), 
-        panel.background = element_rect(fill="white"),
-        legend.text.align = 0, 
-        strip.background = element_blank(),
-        panel.spacing = unit(0, "lines"))+
-  facet_grid(cols=vars(stress_level, time))
-
-ggsave(filename = paste("correlation_H202t.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 22,
-       height =10,
-       units = c("cm"))
-
-#####
-#heatplot
-  
-filtered_abund[,c("ASV_name","bacteria", "Abundance", "stress_level","time", "donor_name")]%>% 
-  pivot_wider(names_from = stress_level, values_from = Abundance)%>%
-   left_join(., read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/02_H2O2/H2O2_tolerances.xlsx"))%>%
-  gather(assay, tolerance, "MIC":"MBC")%>%
-  subset(assay %in% "MBC")%>%
-  mutate(what = "diff")%>%
-  mutate(diff_median = (median - control) )->sub
-
-
-sub%>%
-  rbind(., sub%>%
-          mutate(donor_name = "tolerance")%>%
-          mutate(diff_median = tolerance)%>%
-          mutate(what = "tol"))%>%
-  mutate(ASV_name = as.factor(ASV_name))%>%
-  mutate(ASV_name = reorder(ASV_name, tolerance))->sub_sub
-
-sub_sub%>%
-  ggplot(aes(y=ASV_name, x=donor_name))+
-  
-  new_scale_fill() +
-  
-  geom_tile(data = filter(sub_sub, what == "diff"), aes(fill = diff_median)) +
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(-7, 0, 6)), limits=c(-7, 6))+
-  
-  new_scale_fill() +
-  geom_tile(data = filter(sub_sub, what == "tol"), aes(fill = diff_median)) +
-  scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey")+
- facet_grid(cols=vars(what, time), scales = "free", space="free")+
-  theme(panel.border=element_rect(fill=NA), 
-        panel.background = element_rect(fill="white"),
-        legend.text.align = 0, 
-        strip.background = element_blank(),
-        panel.spacing = unit(0, "lines"))
-  
-```
-
-###line plots
-```{r}
-phyloseq_nonrare%>%
-  physeq_glom_rename(speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
-   psmelt()%>%
-  subset(stress %in% c("H2O2", "control"))->df_abund 
-
-
-
-##calculate the difference 
-df_abund%>%
-  rbind(df_abund%>%
-          subset(time %in% "pre-stress")%>%
-          mutate(stress_level = "median"))->df_abund
-
-left_join(pure_culture_asv_match, df_abund)%>%
-  subset(Genus %in% "Blautia")%>%
-  subset(stress_level %in% c( "median", "control") )%>%
-  mutate(time =factor(time, levels=c("pre-stress","stress", "post_stress_1", "post_stress_2")))%>%
-  ggplot(aes(x=time, y=Abundance))+
-  facet_grid(cols=vars(donor_name), rows=vars(bacteria))+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
-        strip.text.y = element_text(angle=0, face="italic", hjust=0.5),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  # scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
-  scale_colour_manual(values=c("skyblue3","lightpink3"), labels=c( "Control", "Stress"))+
-  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
-             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
-             color = "grey", alpha=0.8, size=0.7) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_2')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=0.7) +
-  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=0.7) +
-  scale_x_discrete(labels=c('pre-stress' = "Pre", 'stress' = "P1", 'post_stress_1' = "P2", 'post_stress_2' = "P3" ))+
-  labs(colour="Condition")+
-  geom_line(aes(colour=stress_level, group=stress_level), size=1)+
-  ylab("Clr-abundance")
-
-ggsave(filename = paste( "purecultures.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 30,
-       height = 40,
-       units = c("cm"))
-  
-
-```
-
-```{r}
-phyloseq_nonrare%>%
-  physeq_glom_rename(speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
-   psmelt()%>%
-  subset(stress %in% c("O2", "control"))->df_abund 
-
-
-
-##calculate the difference 
-df_abund%>%
-  rbind(df_abund%>%
-          subset(time %in% "pre-stress")%>%
-          mutate(stress_level = "max")%>%
-          mutate(incubation = "aerobe"))%>%
-  rbind(df_abund%>%
-          subset(time %in% "pre-stress")%>%
-          mutate(stress_level = "max")%>%
-          mutate(incubation = "anaerobe"))->df_abund
-
-
-# left_join(pure_culture_asv_match, df_abund)%>%
-df_abund%>%
-  subset(Genus %in% "Faecalibacterium")%>%
-  subset(stress_level %in% c( "max"))%>%
-  mutate(time =factor(time, levels=c("pre-stress","stress", "post_stress_1", "post_stress_2")))%>%
-  ggplot(aes(x=time, y=Abundance))+
-  facet_grid(cols=vars(donor_name), rows = vars(OTU))+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
-        strip.text.y = element_text(angle=90, face="italic", hjust=0.5),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  # scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
-  # scale_colour_manual(values=c("skyblue3","lightpink3"), labels=c( "Control", "Stress"))+
-  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
-             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
-  geom_hline(aes(yintercept = 0),  # Specify your desired category label
-             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
-             color = "grey", alpha=0.8, size=0.7) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_2')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=0.7) +
-  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=0.7) +
-  scale_x_discrete(labels=c('pre-stress' = "Pre", 'stress' = "P1", 'post_stress_1' = "P2", 'post_stress_2' = "P3" ))+
-  labs(colour="Condition")+
-  geom_line(aes(colour=incubation, group=incubation), size=1)+
-  ylab("Clr-abundance")
-
-ggsave(filename = paste( "Bacteroides.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 20,
-       height = 20,
-       units = c("cm"))
-  
-
-```
-
-```{r}
-strain_panel$Kingdom <- "Bacteria"
-
-tax_table_pure<-strain_panel[,c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")]
-rownames(tax_table_pure)<-strain_panel$pure_culture_id
-tax_table_pure<-as.matrix(tax_table_pure)
-
-sample_data<-strain_panel[,c("Strain", "classification")]
-
-otu_df<-data.frame(Sample = rep(1, nrow(strain_panel) ))
-rownames(otu_df)<- c(strain_panel$pure_culture_id)
-otu<-as.matrix(otu_df)
-
-
-
-phyloseq@tax_table
-```
 

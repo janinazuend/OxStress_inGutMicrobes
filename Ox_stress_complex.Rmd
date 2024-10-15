@@ -13,13 +13,13 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/wp2_complex",
 
  # install.packages("tidyverse")
  # 
-library(rstatix)
-
-library(openxlsx)
-library(ggplot2)
-library(tidyverse)
-library(ggh4x)
-library(ggalluvial)
+# library(rstatix)
+# 
+# library(openxlsx)
+# library(ggplot2)
+# library(tidyverse)
+# library(ggh4x)
+# library(ggalluvial)
 ```
 
 ```{r}
@@ -210,7 +210,7 @@ left_join(setNames(aggregate(long$conc, by=list(long$scfa, long$time, long$stres
 ggsave(filename = paste( "metabol_o2.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
        width = 13,
-       height = 13,
+       height = 14.5,
        units = c("cm"))
 ```
 
@@ -250,7 +250,7 @@ ggsave(filename = paste( "metabol_o2.jpeg"),
   geom_flow(reverse = FALSE) +
   geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
   scale_x_discrete(labels = c("Pre-culture", "Stress", "Post-stress"))+
-    force_panelsizes(rows = unit(3, "cm"), col = unit(1.75, "cm")) +
+  force_panelsizes(rows = unit(3, "cm"), col = unit(1.75, "cm")) +
   ggtitle("Metabolite fractions - O2 assay (anaerobe)")
 
 ggsave(filename = paste( "metabol_o2_bar.jpeg"),
@@ -286,8 +286,8 @@ ggsave(filename = paste( "metabol_o2_bar.jpeg"),
         strip.background = element_rect(fill="white"),
         panel.background = element_rect(fill="white"),
         panel.border=element_rect(fill=NA), legend.text.align = 0, legend.position = "right")+
-   scale_fill_manual(values=c("coral3", "cyan3", "skyblue3", "darkorange1", "violetred2", "cyan4", "#00A9FF", "#00B8E7", "#8494FF"), 
-                     labels=c("rel_acetate"="Acetate", "rel_butyrate"="Butyrate","rel_propionate"="Propionate", 
+   scale_fill_manual(values=c("coral3", "cyan3", "skyblue3", "darkorange1", "violetred2", "cyan4", "#00A9FF", "#00B8E7", "#8494FF"),
+                     labels=c("rel_acetate"="Acetate", "rel_butyrate"="Butyrate","rel_propionate"="Propionate",
                               "rel_formate"="Formate", "rel_succinate"="Succinate", "rel_lactate"="Lactate"))+
   # geom_bar(position = "stack", aes(fill=scfa), stat = "identity")+
   facet_grid2(cols=vars(donor_name), rows=vars(stress_level))+
@@ -895,17 +895,6 @@ ggsave(filename = paste( "totalC_h2o2.jpeg"),
 hplc[, c("donor_name", "time", "stress_level", "stress", "total_C" , "rel_formate", "rel_lactate","rel_acetate","rel_propionate","rel_butyrate")]%>%
   gather(scfa, conc, "total_C":"rel_butyrate")-> sub
 
-
-# hplc[, c("donor_name", "time", "stress_level", "stress", "ΔSuccinate", "ΔFormate", "ΔAcetate", "ΔLactate","ΔPropionate", "ΔButyrate", "total_C")]%>%
-#  gather(scfa, conc, "ΔSuccinate":"total_C")->sub
-# 
-# aggregate(sub$conc, by=list(sub$time, sub$stress_level, sub$stress, sub$scfa), FUN="sd")%>%
-#   subset(Group.2 %in% c("high", "control"))%>%
-#   subset(Group.3 %in% "H2O2")%>%
-#   subset(Group.1 %in% "stress")
-#   
-# # hplc[, c("donor_name", "time", "stress_level", "stress", "ΔSuccinate", "ΔFormate", "ΔAcetate","ΔPropionate", "ΔButyrate", "total_C")]%>%
-# #  gather(scfa, conc, "ΔSuccinate":"total_C")%>%  
 sub%>%
   subset(stress %in% c("H2O2")) %>%
   subset(stress_level %in% c("control", "high"))%>%

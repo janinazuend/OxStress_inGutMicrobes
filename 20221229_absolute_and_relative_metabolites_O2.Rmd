@@ -32,6 +32,57 @@ knitr::opts_knit$set(root.dir = "C:/Users/zuendj/Desktop/03_data R/oxidative str
 library(readxl)
 ```
 
+
+
+```{r}
+
+o2_vector <- c(
+  "Faecalibacterium prausnitzii",
+  "Fusicatenibacter saccharivorans",
+  "Lachnospira eligens",
+  "Agathobacter rectalis",
+  "Anaerotignum lactatifermentans",
+  "Bacteroides fragilis",
+  "Bifidobacterium adolescentis",
+  "Blautia hydrogenotrophica",
+  "Dorea longicatena",
+  "Eubacterium limosum",
+  "Faecalibacterium duncaniae",
+  "Roseburia intestinalis",
+  "Segatella copri",
+  "Anaerostipes hadrus",
+  "Bacteroides uniformis",
+  "Bacteroides xylanisolvens",
+  "Blautia hansenii",
+  "Butyricicoccus pullicaecorum",
+  "Collinsella aerofaciens",
+  "Mediterraneibacter gnavus",
+  "Phocaeicola dorei",
+  "Phocaeicola vulgatus",
+  "Bacteroides intestinalis",
+  "Blautia obeum",
+  "Blautia producta",
+  "Enterocloster aldenensis",
+  "Roseburia faecis",
+  "Anaerostipes caccae",
+  "Clostridium sporogenes",
+  "Bacteroides caccae",
+  "Bacteroides cellulosilyticus",
+  "Bacteroides faecis",
+  "Bacteroides ovatus",
+  "Bacteroides thetaiotaomicron",
+  "Parabacteroides distasonis",
+  "Parabacteroides merdae",
+  "Phascolarctobacterium faecium",
+  "Bifidobacterium longum",
+  "Enterococcus faecalis",
+  "Escherichia coli",
+  "Lactiplantibacillus plantarum"
+)
+
+```
+
+
 # 1. Read all the data into one df
 ```{r}
 setwd("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/02_hplc_pure/01_O2/01_import")
@@ -107,13 +158,15 @@ for (i in 1:3) {
   
 }
 
-
+colnames(aerobe)
+colnames(HPLC_values_wide)
 ```
 #conditions to analyze
 ```{r}
 highest_agar<-("Bacteroides fragilis")
-highest<-c("Lachnospira eligens","Agathobacter rectalis","Bacteroides intestinalis","Prevotella copri", "Bacteroides xylanisolvens" , "Bacteroides faecis", "Bacteroides uniformis","Bacteroides ovatus" ,
+highest<-c("Lachnospira eligens","Agathobacter rectalis","Bacteroides intestinalis","Segatella copri", "Bacteroides xylanisolvens" , "Bacteroides faecis", "Bacteroides uniformis","Bacteroides ovatus" ,
 "Phocaeicola vulgatus", "Dorea longicatena")
+
 lowest<- c("Anaerostipes caccae", 
 "Anaerostipes hadrus", 
 "Anaerotignum lactatifermentans" ,    
@@ -135,7 +188,10 @@ lowest<- c("Anaerostipes caccae",
 "Parabacteroides merdae" ,            
 "Phascolarctobacterium faecium",
 "Roseburia intestinalis" , 
-"Ruminococcus gnavus"  )
+"Mediterraneibacter gnavus" , "Phocaeicola dorei", "Butyricicoccus pullicaecorum", "Bacteroides cellulosilyticus","Enterocloster aldenensis", "Parabacteroides distasonis", "Fusicatenibacter saccharivorans", "Roseburia faecis", "Faecalibacterium prausnitzii")
+
+
+unique(HPLC_values_wide$assay)
 ```
 
 ### get row names & recode variables
@@ -215,62 +271,55 @@ HPLC_values_relative_wide%>%
  subset((assay %in% c(lowest) & condition_agar %in% "lowest" )|
           (assay %in% c(highest) & condition_agar %in% "agar with highest growth" )|
            (assay %in% c(highest_agar) & condition_agar %in% "highest" ))->HPLC_relative_select
+
+unique(HPLC_relative_select$assay)
 ``` 
 
 # Test statistical differences in total metabolites
 ```{r}
 #get means and sd
-left_join(setNames(aggregate(HPLC_relative_select$total_C, by=list(HPLC_relative_select$condition, HPLC_relative_select$condition_agar, HPLC_relative_select$assay), FUN=sd, na.rm=T), c("condition", "condition_agar", "assay", "sd")),
-setNames(aggregate(HPLC_relative_select$total_C, by=list(HPLC_relative_select$condition, HPLC_relative_select$condition_agar, HPLC_relative_select$assay), FUN=mean, na.rm=T), c("condition", "condition_agar", "assay", "mean")))->mean
+left_join(setNames(aggregate(HPLC_relative_select$total_mM, by=list(HPLC_relative_select$condition, HPLC_relative_select$condition_agar, HPLC_relative_select$assay), FUN=sd, na.rm=T), c("condition", "condition_agar", "assay", "sd")),
+setNames(aggregate(HPLC_relative_select$total_mM, by=list(HPLC_relative_select$condition, HPLC_relative_select$condition_agar, HPLC_relative_select$assay), FUN=mean, na.rm=T), c("condition", "condition_agar", "assay", "mean")))->mean
 
 #test for normality
-HPLC_relative_select[, c("assay", "condition","condition_agar", "total_C")]%>%
+HPLC_relative_select[, c("assay", "condition","condition_agar", "total_mM")]%>%
   group_by(condition_agar, assay, condition)%>%
-  shapiro_test(total_C)%>%
+  shapiro_test(total_mM)%>%
   subset(p<0.05)->shapi
 
 shapi[, c("assay", "condition_agar")]->shapi
 shapi$sig <- "non_normal"
 
-#get the MBC tolerance to order the plot - add 1 to the faculative anaerobes so that they are in the bottom row
-order_o2<- read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/01_OD_pure/01_O2/O2_tolerances.xlsx")%>%
-  mutate(MBC = ifelse(bacteria == "Escherichia coli" |
-                      bacteria == "Lactiplantibacillus plantarum" |
-                        bacteria == "Enterococcus faecalis" |
-                        bacteria == "Bifidobacterium longum", 13, MBC))
 
 
 #t test
-HPLC_relative_select[, c("assay", "condition","condition_agar", "total_C")]%>%
-  left_join(., setNames(order_o2, c("assay", "MIC", "MBC")))%>%
-  mutate(assay = factor(assay))%>%
-  mutate(assay = reorder(assay, MBC))%>%
+HPLC_relative_select[, c("assay", "condition","condition_agar", "total_mM")]%>%
+  mutate(assay = factor(assay, levels = o2_vector))%>%
   group_by(condition_agar, assay)%>%
-  t_test(total_C ~ condition)%>%
+  t_test(total_mM ~ condition)%>%
   add_significance()%>%
-  add_xy_position(fun="max")%>%
-  mutate(xmin=0.5,
-         xmax=1.5)%>%
+  add_xy_position(fun="max", x="condition")%>%
+  # mutate(xmin=0.5,
+  #        xmax=1.5)%>%
   mutate(p.signif = ifelse(assay == shapi$assay | condition_agar == shapi$condition_agar, "ns", p.signif))->stats
 
 
 mean%>%
-  left_join(., setNames(order_o2, c("assay", "MIC", "MBC")))%>%
-  mutate(assay = factor(assay))%>%
-  mutate(assay = reorder(assay, MBC))-> sub
+   mutate(assay = factor(assay, levels = o2_vector))-> sub
 
 sub%>%
   ggplot(aes(y=mean, x=condition))+
   theme(text=element_text(size=15),
-          strip.text.x = element_text(angle=90))+
+          strip.text.y = element_text(angle=0))+
   # geom_point()+
   geom_col(aes(fill=condition, position = condition), position = position_dodge(0.8), width=0.7)+
   geom_errorbar(aes(ymin=mean - sd, ymax=mean +sd, group=condition), width=.7,position = position_dodge(0.8))+
-  stat_pvalue_manual(stats, label="p.signif", coord.flip=T, hide.ns = T )+
+  stat_pvalue_manual(stats, label="p.signif", coord.flip=T, hide.ns = T, y.position = 50 )+
   facet_grid(rows=vars(assay), scales = "free")+
   labs(fill="Condition")+
   scale_x_discrete(labels=c( "Stress","Control"))+
-  coord_flip()-> total_C_plot
+  coord_flip()+
+  scale_fill_manual(values=c( "indianred", "cyan4"))-> total_C_plot
 
 total_C_plot
 
@@ -521,9 +570,7 @@ min<-min(sub$ratio)
 # unique(sub$Bacteria)
 
 sub%>%
-  left_join(., setNames(order_o2, c("Bacteria", "MIC", "MBC")))%>%
-  mutate(Bacteria = factor(Bacteria))%>%
-  mutate(Bacteria = reorder(Bacteria, MBC))%>%
+  mutate(Bacteria = factor(Bacteria, levels = o2_vector))%>%
   ggplot( aes(x=metabolite, y=Bacteria, fill=ratio))+
   geom_tile()+
   scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", values = rescale(c(-120, 0, 120)), limits=c(-120, 120))+
@@ -578,37 +625,34 @@ plot_grid(
   #plot 2: metabol
   total_C_plot+
     theme(legend.position = "none", 
-          plot.title = element_text(size=8),
-          text=element_text(size=8),
+          text=element_text(size=10),
           # axis.text.y=element_blank(), 
           axis.title.y=element_blank(), 
           axis.ticks.y=element_blank(),
-          strip.text.y = element_blank(), 
+          strip.text.y = element_blank(),
+          strip.text.x = element_blank(), 
           panel.border=element_rect(fill=NA), 
           panel.background = element_rect(fill="white"),
           legend.text.align = 0, 
           strip.background = element_blank(),
           panel.spacing = unit(0, "lines"), 
           legend.text = element_blank())+
-            ylab("Total C [mM]")+
-            # scale_fill_manual(values=c("indianred", "cyan4"))+
-    ggtitle("Total C"), 
+            ylab("Total C [mM]"), 
   #plot3: total c
   diff_metabol_plot+
-    theme(  text=element_text(size=8),
-            plot.title = element_text(size=8),
-            legend.position = "none", 
+    theme(text=element_text(size=10),
+          plot.title = element_text(size=8),
+          legend.position = "none", 
           axis.text.y=element_blank(),
           strip.text.y = element_text(face="italic", hjust=0),
-          axis.ticks = element_blank())+
-    ggtitle("Individual metabolites"),
+          axis.ticks = element_blank()),
   ##define plot grid 
         align= "h", rel_heights = c(1,1,1), rel_widths=c(0.7,1), nrow=1, axis = 'tblr')
 
-ggsave(filename = "metabolt_totalc_O2.jpeg",   
+ggsave(filename = "metabolt_totalc_O2..jpeg",   
          path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final", 
-         width = 11,
-         height = 18,
+         width = 14,
+         height = 23,
          units = c("cm"))
 ```
 
