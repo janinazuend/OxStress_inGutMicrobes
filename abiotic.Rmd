@@ -44,20 +44,31 @@ mean %>%
               mutate(time =0)%>%
               mutate(mg=0))->mean_zero
 
-# mean_zero%>%
+
 gathered%>%
+  left_join(., mean)%>%
+  mutate(well.nr = factor(well.nr, levels=c("1", "4", "6" ,"9","12")))%>%
+  subset(well.nr %in% c("1", "4","6" , "9", "12"))%>%
   ggplot(aes(x=time, y=conc))+
    # geom_line(aes(colour=agar, group=agar))+
-  geom_line(aes(colour=well.nr, group=well.nr))+
+  geom_line(aes(y=mg, colour=well.nr, group=well.nr))+
   ylab("mg/ml")+
-  geom_point()
+  geom_point(aes(colour=well.nr), alpha=0.7, size = 3)+
+  
+  xlab("Time [h]") + ylab(expression(paste(O[2]~'[mg/ml]'))) +
+  theme(text= element_text(size = 15), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA),
+        strip.background = element_blank())+
+  labs(colour="Agar")+
+  scale_colour_manual(values=c("#a6cee3", "#b2df8a", "#fb9a99",  "#fdbf6f", "grey"), labels= c("0.15 %", "0.09 %", "0.07 %","0.04 %","0 %"))
   
 
 
 ggsave(filename = "O2.jpeg",
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex",
-       width =16,
-       height = 16,
+       width =12,
+       height = 10,
        units = c("cm"))   
 
 
@@ -74,6 +85,42 @@ gathered%>%
   ylab("mg/ml")+
   geom_point(aes(y=conc))
 ```
+
+# h2o2
+# 1. Read all the data into one df
+```{r}
+# setwd("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/06_oxygen_measurements/unisense_O2_sensor/24_all_conditions")
+h2o2 <- read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/06_oxygen_and_redox_measurements/Redox_H2O2/redox_H2O2.xlsx")
+```
+
+```{r}
+h2o2%>%
+  mutate(conc = factor(conc, levels=c("7.3",  "2.3", "0.71","0.22", "0")))%>%
+  # subset(well.nr %in% c("1", "4", "12"))%>%
+  ggplot(aes(x=time, y=mV))+
+   # geom_line(aes(colour=agar, group=agar))+
+  geom_line(aes(y=mV, colour=conc, group=conc))+
+  ylab("Redox potential [mV]")+
+  geom_point(aes(colour=conc), alpha=0.7, size = 3)+
+  
+  xlab("Time [h]") +
+  theme(text= element_text(size = 15), 
+        panel.background = element_rect(fill="white"),
+        panel.border=element_rect(fill=NA),
+        strip.background = element_blank())+
+  labs(colour=expression(H[2]*O[2]))+
+  scale_colour_manual(values=c("grey", "#fdbf6f","#fb9a99", "#b2df8a","#a6cee3"   ), labels= c("7.3 mM", "2.3 mM", "0.71 mM","0.22 mM","0 mM"))
+  
+
+
+ggsave(filename = "H2O2.jpeg",
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex",
+       width =12,
+       height = 10,
+       units = c("cm"))   
+```
+
+
 ```{r}
 result_matrix <- matrix(nrow=0, ncol=2)
 levels<- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
