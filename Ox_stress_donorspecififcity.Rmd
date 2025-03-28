@@ -5,7 +5,7 @@ date: "2024-04-20"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
 phyloseq_nonrare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_nonrare.RDS")
 phyloseq_rare <-readRDS("C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
 ```
@@ -19,6 +19,7 @@ phyloseq_rare%>%
    microbiome::transform("clr") %>% 
    psmelt()->df_abund 
 ```
+
 ```{r}
 # devtools::install_github("gmteunisse/fantaxtic")
 # library(fantaxtic)
@@ -35,11 +36,28 @@ intersect(filt_abund, filt_prev)->filt
 ```
 
 
+### Plot for publication
+###h2o2 - clr difference sof all conditions 
 ```{r}
+# library(scales)
+facet_labeller <- function(variable,value){
+  return(names[value])}
+
+names<-list("diff_low"= "0.22 mM", 
+            "diff_median"= "0.71 mM",
+            "diff_high"="2.3 mM")
+
+tax_level ="Genus"
+
+phyloseq_rare%>%
+  physeq_glom_rename(taxrank = tax_level, 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+   psmelt()->df_abund 
+
 df_abund%>%
-  subset(Genus %in% filt)%>%
-  subset(stress %in% "O2" & time %in% c("stress", "post_stress_1"))%>%
-  subset(stress_level %in% "max")%>%
+  subset(stress %in% c("H2O2") & time %in% c("stress"))%>%
+   # subset(stress_level %in% c("median", "control"))%>%
   dplyr::select(Genus, donor_name, stress_level, time, incubation, Abundance)->clr_diff
  
 
@@ -47,7 +65,147 @@ df_abund%>%
 setNames(aggregate(clr_diff$Abundance, by=list(clr_diff$donor_name, clr_diff$Genus), FUN=mean), c("donor_name", "Genus" ,"mean"))->means
 
 left_join(clr_diff, means[, c("donor_name", "Genus","mean")])->df_filter 
-cut_off = 1
+cut_off = 0
+
+rbind(df_filter%>%
+         subset(donor_name %in% "D2")%>%
+         subset(mean > cut_off), df_filter%>%
+         subset(donor_name %in% "D3")%>%
+         subset(mean > cut_off)) %>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D4")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D5")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D6")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D7")%>%
+         subset(mean > cut_off) )%>%
+   rbind(., df_filter%>%
+         subset(donor_name %in% "D1")%>%
+         subset(mean > cut_off) )->filtered_abund
+   
+ # df_filter%>%
+filtered_abund%>%
+ pivot_wider(names_from = stress_level, values_from = Abundance)%>%
+  mutate(diff_median = median - control)%>%
+  mutate(diff_high = high - control)%>%
+  mutate(diff_low = low - control)%>%
+  select(Genus, donor_name,  time, diff_median, diff_high, diff_low)%>%
+  gather(stress_level, diff, "diff_median":"diff_low")->diff_h2o2
+
+diff_h2o2%>%
+  # subset(diff > 0.5 | diff < -0.5)%>%
+  left_join(., setNames(aggregate(diff_h2o2$diff, by=list(diff_h2o2$Genus, diff_h2o2$stress_level), FUN=mean, na.rm =T), c("Genus", "stress_level", "med")))->sub
+
+
+###taxa to be mentioned
+diff_h2o2%>%
+   subset(diff > 1 | diff < -1)%>%
+      group_by(Genus, stress_level) %>%
+  filter(n() >= 3)-> mention
+    
+filter_h2o2<-unique(mention$Genus)
+
+
+
+
+  
+sub%>% 
+  mutate(donor_name = factor(donor_name, levels = c("D1", "D2", "D3", "D4", "D5", "D6", "D7")))%>%
+  subset(Genus %in% c(filter_h2o2))%>%
+  mutate(stress_level = factor(stress_level, levels = c("diff_low" , "diff_median", "diff_high")))%>%
+  mutate(Genus = factor(Genus))%>%
+ mutate(Genus = reorder(Genus, med))%>%
+  ggplot(aes(y=diff, x=Genus))+
+  geom_bar(aes(fill=donor_name), stat = "identity", position = position_dodge(preserve = "single"))+
+  facet_grid(rows=vars(Genus), cols=vars(stress_level), scales = "free", space="free", label =facet_labeller)+
+   theme(text = element_text(size=15),
+         axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
+        axis.text.y = element_text( face="italic"), 
+        panel.border=element_rect(fill=NA), 
+        panel.background = element_rect(fill="white"),
+        legend.text.align = 0, 
+        strip.text.y = element_blank(),
+        strip.background = element_blank(),
+        panel.spacing = unit(0, "lines"), 
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_hline(yintercept = 0)+ geom_hline(yintercept = 1, linetype="dashed") + geom_hline(yintercept = -1, linetype="dashed")+
+    coord_flip()+
+   ylim(c(-9, 9))+
+    scale_fill_manual(values=c("lightblue", "steelblue", "yellowgreen", "forestgreen", "lightpink1", "red3", "sienna1", "orange"), name="Donor")+
+   ylab("Clr-difference")
+
+
+
+    
+    
+  
+  
+    ggsave(filename = paste( "donorspecififc_h2O2_.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 15,
+       height = 18,
+       units = c("cm"))
+    
+    
+###taxa to be mentioned
+diff_h2o2%>%
+   subset(diff > 1 )%>%
+      group_by(Genus, stress_level) %>%
+  filter(n() >= 3)-> mention
+    
+filter_h2o2<-unique(mention$Genus)
+
+
+    diff_h2o2%>%
+      subset(stress_level %in% "diff_median")%>%
+   subset(diff >  1)%>%
+      group_by(Genus, stress_level) %>%
+  filter(n() >= 3)%>%
+      subset(Genus %in% "Monoglobus")
+    
+unique(lit$Genus)
+```
+
+
+
+###o2 - clr difference sof all conditions 
+```{r}
+# library(scales)
+facet_labeller <- function(variable,value){
+  return(names[value])}
+
+names<-list("control" = "0.12%",
+            "low"= "0.09%", 
+            "median"= "0.07%",
+            "high"="0.04%",
+            "max"="0%")
+
+tax_level ="Genus"
+
+phyloseq_rare%>%
+  physeq_glom_rename(taxrank = tax_level, 
+                     speedyseq = T)%>%
+   microbiome::transform("clr") %>% 
+   psmelt()->df_abund 
+
+df_abund%>%
+  subset(stress %in% c("O2"))%>%
+subset(time %in%  c("stress"))%>%
+   # subset(stress_level %in% c("median", "control"))%>%
+  dplyr::select(Genus, donor_name, stress_level, time, incubation, Abundance)->clr_diff
+ 
+
+
+setNames(aggregate(clr_diff$Abundance, by=list(clr_diff$donor_name, clr_diff$Genus), FUN=mean), c("donor_name", "Genus" ,"mean"))->means
+
+left_join(clr_diff, means[, c("donor_name", "Genus","mean")])->df_filter 
+cut_off = 0
 
 rbind(df_filter%>%
          subset(donor_name %in% "D2")%>%
@@ -73,263 +231,31 @@ rbind(df_filter%>%
 
 filtered_abund%>%
  pivot_wider(names_from = incubation, values_from = Abundance)%>%
-mutate(diff = aerobe - anaerobe)%>%
-  subset(stress_level %in% "max")%>%
-  select(Genus, donor_name, stress_level, time, diff)%>%
-  pivot_wider(names_from = time, values_from = diff)->diff_o2
+  mutate(diff = aerobe - anaerobe)%>%
+  select(Genus, donor_name,  time, diff, stress_level)->diff_o2
 
 diff_o2%>%
-  subset(stress > 0.5 | stress < -0.5)%>%
-  gather(time, diff, "stress":"post_stress_1")->sub
+  # subset(diff > 0.5 | diff < -0.5)%>%
+  left_join(., setNames(aggregate(diff_o2$diff, by=list(diff_o2$Genus, diff_o2$stress_level), FUN=mean, na.rm =T), c("Genus", "stress_level", "med")))->sub
 
-setNames(aggregate(sub$diff, by=list(sub$Genus, sub$time), FUN=mean, na.rm =T), c("Genus","time" ,"med"))->means
-
-sub%>%subset(time %in% "stre")->order
-  
-  sub%>%
-   mutate(Genus = factor(Genus))%>%
-  mutate(Genus = reorder(Genus, diff))%>%
-  ggplot(aes(y=diff, x=Genus))+
-   geom_bar(data=means%>%
-   mutate(Genus = factor(Genus))%>%
-  mutate(Genus = reorder(Genus, med)), aes(y=med, x = Genus, fill=time), stat = "identity", colour="black", position =position_dodge())+
-  geom_point(aes(colour=donor_name, group = time), size=1, alpha=.8, position =position_dodge(0.9))+
-   facet_grid(rows=vars(Genus), scales = "free", space="free")+
- # scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
- #                         values = rescale(c(-7, 0, 7)), limits=c(-7, 7), 
- #                      name="Clr-difference")+
-   theme(text = element_text(size=15),
-         axis.title = element_blank(),
-        axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
-        axis.text.y = element_text( face="italic"), 
-        panel.border=element_rect(fill=NA), 
-        panel.background = element_rect(fill="white"),
-        legend.text.align = 0, 
-        strip.text.y = element_blank(),
-        strip.background = element_blank(),
-        panel.spacing = unit(0, "lines"), 
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
-  geom_hline(yintercept = 0)+
-    coord_flip()+
-    scale_fill_manual(values= c( "grey","white"), labels= c("Post-stress", "Stress"), name="")+
-    scale_colour_manual(values=c("lightblue", "steelblue", "yellowgreen", "forestgreen", "lightpink1", "red3", "sienna1", "orange"), name="Donor")
-  
-  
-  ggsave(filename = paste( "donorspecififc_O2_box..jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 13,
-       height = 14,
-       units = c("cm"))
-
-```
-#On Genus level- O2
-```{r}
-tax_level ="Genus"
-
-
-phyloseq_rare%>%
-  physeq_glom_rename(taxrank = tax_level, 
-                     speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
-  subset_samples(stress %in% c("O2", "control"))%>%
-   psmelt()->means 
-
-  
-means %>%
-  subset(!time %in% c("pre-stress", "feces"))->no
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "control")->ctrl
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "low")->low
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "median")->median
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "high")->high
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "max")->max
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "control", incubation = "aerobe")->ctrl_a
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "low", incubation = "aerobe")->low_a
-
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "median", incubation = "aerobe")->median_a
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "high", incubation = "aerobe")->high_a
-means %>%
-  subset(time %in% "pre-stress")%>%
-  mutate(stress_level = "max", incubation = "aerobe")->max_a
-
-combined_df <- do.call(rbind, list(no, ctrl, low, median, high, max, ctrl_a, low_a, median_a, high_a, max_a))
-
-
-###
-setNames(aggregate(combined_df$Abundance, by=list(combined_df$donor_name, combined_df$Genus, combined_df$time), FUN=mean), c("donor_name", "Genus" ,"time","mean"))->means
-left_join(combined_df, means[, c("donor_name", "Genus","time","mean")])->combined_df 
-###
-
-rbind(combined_df%>%
-         subset(donor_name %in% "D2")%>%
-         subset(mean > cut_off), combined_df%>%
-         subset(donor_name %in% "D3")%>%
-         subset(mean > cut_off)) %>%
-   rbind(., combined_df%>%
-         subset(donor_name %in% "D4")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., combined_df%>%
-         subset(donor_name %in% "D5")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., combined_df%>%
-         subset(donor_name %in% "D6")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., combined_df%>%
-         subset(donor_name %in% "D7")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., combined_df%>%
-         subset(donor_name %in% "D1")%>%
-         subset(mean > cut_off) )->filtered_abund_df
-
-
-filtered_abund_df%>%
-   subset(stress_level %in% c("max"))%>%
- 
-   # mutate(stress_level = factor(stress_level, levels =c("control", "low", "median", "high","max")))%>%
-   subset(time %in% c("pre-stress", "stress", "post_stress_1"))%>%
-  subset(stress %in% c("O2", "control"))%>%
-  subset(Genus %in% c(filt))%>%
-  mutate(time = factor(time, levels=c("pre-stress", "stress", "post_stress_1")))%>%
-  ggplot(aes(x=time, y=Abundance))+
-  # geom_hline(yintercept=0)+
-  geom_line(aes(colour=incubation, group=incubation), size =1)+
-  # geom_ribbon(aes(ymin =q3, ymax = q1, fill=incubation, group=incubation),
-  #             alpha = 0.3)+
-  facet_grid(cols=vars(donor_name), rows = vars(Genus), scale="free")+
-  theme(text = element_text(size=15), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(angle = 90, vjust= 0.5, hjust=1),
-        strip.text.y = element_text(angle = 0, face="italic", hjust=0),
-        strip.background = element_blank(),
-        axis.ticks.y = element_blank(),
-        # strip.text.x = element_blank(),
-        panel.background = element_rect(fill="white"),
-        panel.border=element_rect(fill=NA))+
-  scale_fill_manual(values=c( "lightpink3","skyblue3"), guide="none")+
-  scale_colour_manual(values=c("lightpink3","skyblue3"), labels=c("Stress", "Control"))+
-  geom_vline(aes(xintercept = which(levels(time) == 'stress')),  # Specify your desired category label
-             linetype = "dashed", color = "coral4", alpha=0.8, size=1) +
-  geom_vline(aes(xintercept = which(levels(time) == 'post_stress_1')),  # Specify your desired category label
-             color = "grey", alpha=0.8, size=0.7) +
-  geom_vline(aes(xintercept = which(levels(time) == 'pre-stress')),  # Specify your desired category label
-              color = "grey", alpha=0.8, size=0.7) +
-  scale_x_discrete(labels=c('pre-stress' = "Pre-culture", 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
-  labs(colour="Condition")+
-  ylab("Clr-abundance")
-
-ggsave(filename = paste( "increase_O2_box.jpeg"),
-       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 17,
-       height = 40,
-       units = c("cm"))
-
-146/25*21
-146/25*7 
-```
-
-###h2o2
-```{r}
-# library(scales)
-tax_level ="Genus"
-
-phyloseq_rare%>%
-  physeq_glom_rename(taxrank = tax_level, 
-                     speedyseq = T)%>%
-   microbiome::transform("clr") %>% 
-   psmelt()->df_abund 
-
-df_abund%>%
-  subset(Genus %in% filt)%>%
-  subset(stress %in% c("H2O2") & time %in% c("stress", "post_stress_1"))%>%
-  subset(stress_level %in% c("median", "control"))%>%
-  dplyr::select(Genus, donor_name, stress_level, time, incubation, Abundance)->clr_diff
- 
-
-
-setNames(aggregate(clr_diff$Abundance, by=list(clr_diff$donor_name, clr_diff$Genus), FUN=mean), c("donor_name", "Genus" ,"mean"))->means
-
-left_join(clr_diff, means[, c("donor_name", "Genus","mean")])->df_filter 
-cut_off = 1
-
-rbind(df_filter%>%
-         subset(donor_name %in% "D2")%>%
-         subset(mean > cut_off), df_filter%>%
-         subset(donor_name %in% "D3")%>%
-         subset(mean > cut_off)) %>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D4")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D5")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D6")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D7")%>%
-         subset(mean > cut_off) )%>%
-   rbind(., df_filter%>%
-         subset(donor_name %in% "D1")%>%
-         subset(mean > cut_off) )->filtered_abund
-   
-
-filtered_abund%>%
- pivot_wider(names_from = stress_level, values_from = Abundance)%>%
-mutate(diff = median - control)%>%
-select(Genus, donor_name,  time, diff)%>%
-  pivot_wider(names_from = time, values_from = diff)->diff_h2o2
-
-diff_h2o2%>%
-  subset(stress > 0.5 | stress < -0.5)%>%
-  gather(time, diff, "stress":"post_stress_1")->sub
-
-
-setNames(aggregate(sub$diff, by=list(sub$Genus, sub$time), FUN=mean, na.rm =T), c("Genus","time", "med"))->means
-
-
- left_join(means, setNames(means%>% 
-                             subset(time="stress")%>%
-              select(Genus,  med), c("Genus",  "order")))->means.
+###taxa to be mentioned
+diff_o2%>%
+   subset(diff > 1 | diff < -1)%>%
+      group_by(Genus, stress_level) %>%
+  filter(n() >= 3)-> mention
+    
+filter_o2<-unique(mention$Genus)
   
 sub%>% 
-  subset(time %in% "stress")%>%
-   mutate(Genus = factor(Genus))%>%
-  mutate(Genus = reorder(Genus, order))%>%
+  subset(Genus %in% c(filter_o2))%>%
+  mutate(stress_level = factor(stress_level, levels = c("control","low" , "median", "high", "max")))%>%
+  mutate(Genus = factor(Genus))%>%
+ mutate(Genus = reorder(Genus, med))%>%
   ggplot(aes(y=diff, x=Genus))+
-   geom_bar(data=means%>%
-               subset(time %in% "stress")%>%
-   mutate(Genus = factor(Genus))%>%
-  mutate(Genus = reorder(Genus, med)), aes(y=med, x = Genus, fill=time), stat = "identity", colour="black", position=position_dodge(0.9))+
-  geom_point(aes(colour=donor_name, group = time),  size=1, alpha=.80, position=position_dodge(0.9))+
-  facet_grid(rows=vars(Genus), scales = "free", space="free")+
- # scale_fill_gradientn(colors = c( "coral", "white", "cyan4"),  na.value= "grey", 
- #                         values = rescale(c(-7, 0, 7)), limits=c(-7, 7), 
- #                      name="Clr-difference")+
+  geom_bar(aes(fill=donor_name), stat = "identity", position = position_dodge(preserve = "single"))+
+  facet_grid(rows=vars(Genus), cols=vars(stress_level), scales = "free", space="free", label =facet_labeller)+
    theme(text = element_text(size=15),
-         axis.title = element_blank(),
+         axis.title.y = element_blank(),
         axis.text.x = element_text(angle = 90,  vjust=0.5, hjust=1),
         axis.text.y = element_text( face="italic"), 
         panel.border=element_rect(fill=NA), 
@@ -339,23 +265,37 @@ sub%>%
         strip.background = element_blank(),
         panel.spacing = unit(0, "lines"), 
         panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    scale_x_discrete(labels=c( 'stress' = "Stress", 'post_stress_1' = "Post-stress"))+
-  geom_hline(yintercept = 0)+
+  geom_hline(yintercept = 0)+ geom_hline(yintercept = 1, linetype="dashed") + geom_hline(yintercept = -1, linetype="dashed")+
     coord_flip()+
-        scale_fill_manual(values= c( "grey","white"), labels= c("Post-stress", "Stress"), name="")+
-    scale_colour_manual(values=c("lightblue", "steelblue", "yellowgreen", "forestgreen", "lightpink1", "red3", "sienna1", "orange"), name="Donor")+
+  ylim(c(-4.5, 4.5))+
+    scale_fill_manual(values=c("lightblue", "steelblue", "yellowgreen", "forestgreen", "lightpink1", "red3", "sienna1", "orange"), name="Donor")+
    ylab("Clr-difference")
   
   
-    ggsave(filename = paste( "donorspecififc_h2O2_box..jpeg"),
+    ggsave(filename = paste( "donorspecififc_O2_.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 14,
-       height = 14,
+       width = 18,
+       height = 15,
        units = c("cm"))
+    
+    
+###taxa to be mentioned
+    diff_o2%>%
+      subset(stress_level %in% "max")%>%
+      subset(diff < -1 )%>%
+      group_by(Genus, stress_level) %>%
+  filter(n() >= 3)%>%
+      subset(Genus %in% "Monoglobus")
+    
+    
+unique(mention$Genus)
+    
 ```
+
 
 ##combination
 ```{r}
+
 # library(scales)
 tax_level ="Genus"
 

@@ -504,9 +504,9 @@ left_join(setNames(aggregate(sub$value, by=list( sub$time, sub$stress_level), FU
 
 ```{r}
 
-order_unifrac_h2o2$metric <- "Unifrac"
-order_wunifrac_h2o2$metric <- "WUnifrac"
-order$metric <- "Bray"
+order_unifrac_h2o2$metric <- "UniFrac"
+order_wunifrac_h2o2$metric <- "weighted UniFrac"
+order$metric <- "Bray-Curtis"
 
 
 rbind(order, order_unifrac_h2o2, order_wunifrac_h2o2)%>%
@@ -1056,9 +1056,9 @@ left_join(setNames(aggregate(sub$value, by=list( sub$time, sub$stress_level), FU
 
 ```{r}
 
-order_unifrac$metric <- "Unifrac"
-order_wunifrac$metric <- "WUnifrac"
-order$metric <- "Bray"
+order_unifrac$metric <- "UniFrac"
+order_wunifrac$metric <- "weighted UniFrac"
+order$metric <- "Bray-Curtis"
 
 
 rbind(order, order_unifrac, order_wunifrac)%>%
@@ -1091,7 +1091,7 @@ rbind(order, order_unifrac, order_wunifrac)%>%
 
 ggsave(filename = paste( "o2_beta_metrics.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
-       width = 12,
+       width = 15,
        height = 10,
        units = c("cm"))
 ```

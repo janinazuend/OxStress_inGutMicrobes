@@ -91,6 +91,11 @@ out[,c(1,2,3,4,6,8,10, 14,15,16)]%>%
   subset(V15 %in% "stress")->o
 
 filter_o2<-unique(o$Family)
+
+
+out[,c(1,2,3,4,6,8,10, 14,15,16)]%>%
+  subset(V14 %in% "max")%>%
+  subset(Family %in% "Anaerostipes")
 ```
 
 ```{r}

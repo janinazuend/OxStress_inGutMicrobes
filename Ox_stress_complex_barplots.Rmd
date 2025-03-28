@@ -49,71 +49,24 @@ myPal["Sutterella"]<-"cyan3"
 myPal["Enterococcus"]<-"yellow2"
 myPal["Enterobacteriaceae Family"]<-"yellow3"
 tax_palette_plot(myPal)
-
-
-
-
 ```
 
 
 
 #bar plots O2
+
+#max o2 aerobe
 ```{r}
 phyloseq_rare%>%
   subset_samples(time %in% "pre-stress" | 
-           # (stress_level %in% c("control") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1")) |
-              (stress_level %in% "max" & stress %in% "O2" & incubation %in% "anaerobe" & time %in% c("stress", "post_stress_1")) &
-            !time %in% "post_stress_2")->phyloseq_controls
-                   # Sample_id_compete %in% "feces"  #with or without feces
-                 
+              (stress_level %in% "max" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
 
 
-phyloseq_controls%>%
+phyloseq%>%
   sample.data.frame()%>%
   mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
-
-#update the metadata file
-sample_data(phyloseq_controls)<-meta
-
-
- 
- filt<-c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella", "Enterococcus", "Enterobacteriaceae Family")
- 
-p_hist$data%>%
-    mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella", "Enterococcus", "Enterobacteriaceae Family", "other")))%>%
-  dplyr::select(Abundance, time, Genus, donor_name)%>% 
-  group_by( time, donor_name, Genus) %>%
-   dplyr::summarize(Abundance = sum(Abundance))%>%
-  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
-  facet_grid(cols=vars(donor_name), scales = "free") +
-  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
-  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
-  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
-  theme_bw() + 
-  theme(legend.position="bottom", 
-        text = element_text(size = 15), 
-        axis.text.x = element_text(angle=90, vjust=0.5, hjust=0.5), 
-        strip.background = element_rect(fill = "white", color = "black"),
-        legend.text = element_text(face="italic")) + 
-  ylab("Proportion") +
-  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
-  scale_x_discrete(labels=c("Pre-culture", "Stress", "Post-stress"))+
-  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_control
-
-```
-
-```{r}
-phyloseq_rare%>%
-  subset_samples(time %in% "pre-stress" | 
-           # (stress_level %in% c("control") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1")) |
-              (stress_level %in% "max" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")) &
-            !time %in% "post_stress_2")->phyloseq_controls
-                   # Sample_id_compete %in% "feces"  #with or without feces
-                 
-
-
-phyloseq_controls%>%
-  sample.data.frame()->meta
 
 
 
@@ -121,22 +74,10 @@ meta%>%
   mutate(merging_varibale = paste0(time, "/",donor_name))->meta
 
 #update the metadata file
-sample_data(phyloseq_controls)<-meta
+sample_data(phyloseq)<-meta
 
-
-phyloseq_controls%>%
-  merge_samples(., c("merging_varibale"))-> merged
-
-merged%>%
-  sample.data.frame()%>%
-  mutate(merging_varibale = rownames(.))%>%
- separate(col=merging_varibale, into = c("time", "donor_name"), sep="/")%>%
-  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta_merged
-
-
- sample_data(merged)<-meta_merged 
  
- merged%>% 
+ phyloseq%>% 
      ps_arrange(time)%>%
       microViz::comp_barplot(
     tax_level = "Genus",
@@ -186,18 +127,18 @@ p_hist$data%>%
 
 ```
 
+#max o2 anaerobe
 ```{r}
 phyloseq_rare%>%
   subset_samples(time %in% "pre-stress" | 
-           # (stress_level %in% c("control") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1")) |
-              (stress_level %in% "median" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")) &
-            !time %in% "post_stress_2")->phyloseq_controls
-                   # Sample_id_compete %in% "feces"  #with or without feces
-                 
+              (stress_level %in% "max" & stress %in% "O2" & incubation %in% "anaerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
 
 
-phyloseq_controls%>%
-  sample.data.frame()->meta
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
 
 
 
@@ -205,22 +146,82 @@ meta%>%
   mutate(merging_varibale = paste0(time, "/",donor_name))->meta
 
 #update the metadata file
-sample_data(phyloseq_controls)<-meta
+sample_data(phyloseq)<-meta
 
-
-phyloseq_controls%>%
-  merge_samples(., c("merging_varibale"))-> merged
-
-merged%>%
-  sample.data.frame()%>%
-  mutate(merging_varibale = rownames(.))%>%
- separate(col=merging_varibale, into = c("time", "donor_name"), sep="/")%>%
-  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta_merged
-
-
- sample_data(merged)<-meta_merged 
  
- merged%>% 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_max_anaerobe
+
+
+```
+
+#median o2 aerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "median" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
      ps_arrange(time)%>%
       microViz::comp_barplot(
     tax_level = "Genus",
@@ -269,6 +270,514 @@ p_hist$data%>%
 
 
 ```
+
+#median o2 anaerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "max" & stress %in% "O2" & incubation %in% "anaerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_median_anaerobe
+
+
+```
+
+#control o2 aerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "control" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_control
+
+
+```
+
+#control o2 anaerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "control" & stress %in% "O2" & incubation %in% "anaerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_control_anaerobe
+
+
+```
+
+
+#low o2 aerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "low" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_low
+
+
+```
+
+#low o2 anaerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "low" & stress %in% "O2" & incubation %in% "anaerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_low_anaerobe
+
+
+```
+
+#high o2 aerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "high" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_high
+
+
+```
+
+#high o2 anaerobe
+```{r}
+phyloseq_rare%>%
+  subset_samples(time %in% "pre-stress" | 
+              (stress_level %in% "high" & stress %in% "O2" & incubation %in% "anaerobe" & time %in% c("stress", "post_stress_1")))->phyloseq
+  
+         
+
+
+phyloseq%>%
+  sample.data.frame()%>%
+  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1")))->meta
+
+
+
+meta%>%
+  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
+
+#update the metadata file
+sample_data(phyloseq)<-meta
+
+ 
+ phyloseq%>% 
+     ps_arrange(time)%>%
+      microViz::comp_barplot(
+    tax_level = "Genus",
+    label = "time",
+    tax_order = filt,
+    sample_order = "default",
+    other_name = "other", 
+    n_taxa = 19,
+    bar_width = 0.9,
+    tax_transform_for_plot = "compositional", 
+    merge_other = FALSE,
+     # palette = myPal
+      ) +
+    ylab("Proportion") +
+    xlab( "")-> p_hist
+
+
+p_hist +
+  facet_grid(cols=vars(donor_name), drop = TRUE, scales = "free_x", space="free")+
+  theme(text= element_text(size=15),
+        axis.ticks.x = element_blank(),
+        axis.text.x=element_text(angle=90),
+        legend.text = element_text(vjust=1, hjust=0),
+        panel.spacing = unit(0.2, "cm"))  -> p_hist
+
+p_hist$data%>%
+  mutate(Genus = factor(Genus, levels=c("Bacteroides","Blautia","Escherichia-Shigella","Fusicatenibacter","Faecalibacterium","Anaerostipes","Agathobacter","Streptococcus","Dorea","Bifidobacterium","Clostridium sensu stricto 1","Lachnospiraceae ND3007 group","Lachnospiraceae Family","Lachnospira","[Ruminococcus] torques group","[Ruminococcus] gnavus group","Sutterella",  "Enterococcus", "Enterobacteriaceae Family","other")))%>%
+  dplyr::select(Abundance, time, Genus, donor_name) %>%
+  group_by( time, donor_name, Genus) %>%
+  dplyr::summarize(Abundance = sum(Abundance)) %>%
+  # subset(donor_name %in% "D1")
+  ggplot(aes(x = time, y = Abundance, fill = Genus, stratum = Genus, alluvium = Genus, label = Genus)) +
+  facet_grid(cols=vars(donor_name), scales = "free") +
+  geom_flow(stat = "alluvium", lode.guidance = "frontback", reverse = FALSE) +
+  geom_stratum(reverse = FALSE, width = 0.7, color = "transparent") +
+  guides(colour = "none") + scale_fill_manual(values = (myPal)) + 
+  theme_bw() + 
+  theme(legend.position="bottom", 
+        text = element_text(size = 15), 
+        axis.text.x = element_text(angle=90, vjust=0.5, hjust=1), 
+        strip.background = element_rect(fill = "white", color = "black")) + 
+  ylab("Proportion") +
+  scale_y_continuous(breaks=c(0.25, 0.5, 0.75))+
+  scale_x_discrete(labels=c( "Pre-culture", "Stress", "Post-stress"))+
+  force_panelsizes(rows =unit(4, "cm"), cols=unit(4, "cm"))->O2_high_anaerobe
+
+
+```
+
+
+
 #grid O2
 ```{r}
  # library(gridExtra)
@@ -281,65 +790,102 @@ grid.arrange(O2_control+theme(legend.position = "none",
                            axis.text.x = element_blank(),
                            axis.title.x = element_blank(),
                            axis.ticks.x = element_blank(),
-                           plot.margin = unit(c(5.5, 5.5, 0, 5.5), "pt")),
-             O2_median+theme(legend.position = "median", 
+                           plot.margin = unit(c(4, 4, 0, 4), "pt")),
+             O2_low+theme(legend.position = "none", 
                                strip.text = element_blank(),
                            axis.text.x = element_blank(),
                            axis.title.x = element_blank(),
                            axis.ticks.x = element_blank(),
-                           plot.margin = unit(c(0, 5.5, 0, 5.5), "pt")),
+                           plot.margin = unit(c(0, 4, 0, 4), "pt")),
+             O2_median+theme(legend.position = "none", 
+                               strip.text = element_blank(),
+                           axis.text.x = element_blank(),
+                           axis.title.x = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           plot.margin = unit(c(0, 4, 0, 4), "pt")),
+             O2_high+theme(legend.position = "none", 
+                               strip.text = element_blank(),
+                           axis.text.x = element_blank(),
+                           axis.title.x = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           plot.margin = unit(c(0, 4, 0, 4), "pt")),
           O2_max + theme ( legend.position = "none", 
                           strip.text = element_blank(),
                           axis.title.x = element_blank(),
                           # axis.text.x = element_blank(),
                            axis.ticks.x = element_blank(),
-                          plot.margin = unit(c(0, 5.5, 5.5, 5.5), "pt") ),
+                          plot.margin = unit(c(0, 4, 4, 4), "pt") ),
           legend,
-          nrow=4)->grid
+          nrow=6)->grid
 
 ggsave(grid, filename = paste( "O2_legend.jpeg"),
        path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
        width = 35,
-       height =22,
+       height =35,
        units = c("cm"))
 ```
 
+#grid O2 - anaerobe
+```{r}
+ # library(gridExtra)
 
+O2_control%>%
+  ggpubr::get_legend() %>%
+  ggpubr::as_ggplot()  -> legend 
+
+grid.arrange(O2_control_anaerobe+theme(legend.position = "none", 
+                           axis.text.x = element_blank(),
+                           axis.title.x = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           plot.margin = unit(c(4, 4, 0, 4), "pt")),
+             O2_low_anaerobe+theme(legend.position = "none", 
+                               strip.text = element_blank(),
+                           axis.text.x = element_blank(),
+                           axis.title.x = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           plot.margin = unit(c(0, 4, 0, 4), "pt")),
+             O2_median_anaerobe+theme(legend.position = "none", 
+                               strip.text = element_blank(),
+                           axis.text.x = element_blank(),
+                           axis.title.x = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           plot.margin = unit(c(0, 4, 0, 4), "pt")),
+             O2_high_anaerobe+theme(legend.position = "none", 
+                               strip.text = element_blank(),
+                           axis.text.x = element_blank(),
+                           axis.title.x = element_blank(),
+                           axis.ticks.x = element_blank(),
+                           plot.margin = unit(c(0, 4, 0, 4), "pt")),
+          O2_max_anaerobe + theme ( legend.position = "none", 
+                          strip.text = element_blank(),
+                          axis.title.x = element_blank(),
+                          # axis.text.x = element_blank(),
+                           axis.ticks.x = element_blank(),
+                          plot.margin = unit(c(0, 4, 4, 4), "pt") ),
+          legend,
+          nrow=6)->grid
+
+ggsave(grid, filename = paste( "O2_legend_anaerobe.jpeg"),
+       path = "C:/Users/zuendj/Desktop/03_data R/wp2_complex/output/final",
+       width = 35,
+       height =35,
+       units = c("cm"))
+```
 ###bar plots H2O2
+#H2O2 bar - control stress
 ```{r}
 phyloseq_rare%>%
   subset_samples(time %in% "pre-stress" | 
-            (stress_level %in% c("control") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1", "post_stress_2")))->phyloseq_controls 
-            # &
-            #   # (stress_level %in% "max" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")) &
-            # !time %in% "post_stress_2")
-                   # Sample_id_compete %in% "feces"  #with or without feces
-                 
+            (stress_level %in% c("control") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1")))->phyloseq_controls 
 
 phyloseq_controls%>%
-  sample.data.frame()->meta
-
-
-meta%>%
-  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
-
-#update the metadata file
-sample_data(phyloseq_controls)<-meta
-
-
-phyloseq_controls%>%
-  merge_samples(., c("merging_varibale"))-> merged
-
-merged%>%
   sample.data.frame()%>%
-  mutate(merging_varibale = rownames(.))%>%
- separate(col=merging_varibale, into = c("time", "donor_name"), sep="/")%>%
-  mutate(time= factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta_merged
+  mutate(time= factor(time, levels=c("pre-stress", "stress", "post_stress_1")))->meta
 
-
- sample_data(merged)<-meta_merged 
+  
+ sample_data(phyloseq_controls)<-meta
  
- merged%>% 
+ phyloseq_controls%>% 
      ps_arrange(time)%>%
       microViz::comp_barplot(
     tax_level = "Genus",
@@ -388,41 +934,20 @@ p_hist$data%>%
 
 ```
 
+#H2O2 bar - high stress
 ```{r}
 phyloseq_rare%>%
-  subset_samples(time %in% "pre-stress" | 
-            (stress_level %in% c("high") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1", "post_stress_2")))->phyloseq_controls 
-# &
-              # (stress_level %in% "max" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")) &
-            # !time %in% "post_stress_2"
-                   # Sample_id_compete %in% "feces"  #with or without feces
-                 
+  subset_samples(time %in% "pre-stress" |     (stress_level %in% c("high") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1")))->phyloseq_high 
 
-phyloseq_controls%>%
-  sample.data.frame()->meta
-
-
-meta%>%
-  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
-
-#update the metadata file
-sample_data(phyloseq_controls)<-meta
-
-
-phyloseq_controls%>%
-  merge_samples(., c("merging_varibale"))-> merged
-
-merged%>%
+phyloseq_high%>%
   sample.data.frame()%>%
-  mutate(merging_varibale = rownames(.))%>%
- separate(col=merging_varibale, into = c("time", "donor_name"), sep="/")%>%
-  mutate(time= factor(time, levels=c("pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta_merged
+  mutate(time= factor(time, levels=c("pre-stress", "stress", "post_stress_1")))->meta
 
-
- sample_data(merged)<-meta_merged 
+  
+ sample_data(phyloseq_high)<-meta
  
- merged%>% 
-   subset_samples(donor_name %in% "D7" & time %in% "post_stress_2")%>%
+ phyloseq_high%>% 
+   # subset_samples(donor_name %in% "D7" & time %in% "post_stress_2")%>%
      ps_arrange(time)%>%
       microViz::comp_barplot(
     tax_level = "Genus",
@@ -472,39 +997,21 @@ p_hist$data%>%
 
 ```
 
+#H2O2 bar - median stress
 ```{r}
 phyloseq_rare%>%
   subset_samples(time %in% "pre-stress" | 
-            (stress_level %in% c("median") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1", "post_stress_2")))->phyloseq_controls
-              # (stress_level %in% "max" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")) &
-            # !time %in% "post_stress_2")->phyloseq_controls
-                   # Sample_id_compete %in% "feces"  #with or without feces
-                 
-
-phyloseq_controls%>%
-  sample.data.frame()->meta
+            (stress_level %in% c("median") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1")))->phyloseq_median
 
 
-meta%>%
-  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
-
-#update the metadata file
-sample_data(phyloseq_controls)<-meta
-
-
-phyloseq_controls%>%
-  merge_samples(., c("merging_varibale"))-> merged
-
-merged%>%
+phyloseq_median%>%
   sample.data.frame()%>%
-  mutate(merging_varibale = rownames(.))%>%
- separate(col=merging_varibale, into = c("time", "donor_name"), sep="/")%>%
-  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1" , "post_stress_2")))->meta_merged
+  mutate(time= factor(time, levels=c("pre-stress", "stress", "post_stress_1")))->meta
 
-
- sample_data(merged)<-meta_merged 
+  
+ sample_data(phyloseq_median)<-meta
  
- merged%>% 
+ phyloseq_median%>% 
      ps_arrange(time)%>%
       microViz::comp_barplot(
     tax_level = "Genus",
@@ -553,39 +1060,23 @@ p_hist$data%>%
 
 
 ```
+
+#H2O2 bar - low stress
 ```{r}
 phyloseq_rare%>%
   subset_samples(time %in% "pre-stress" | 
-            (stress_level %in% c("low") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1", "post_stress_2")))->phyloseq_controls 
-              # (stress_level %in% "max" & stress %in% "O2" & incubation %in% "aerobe" & time %in% c("stress", "post_stress_1")) &
-            # !time %in% "post_stress_2"
-                   # Sample_id_compete %in% "feces"  #with or without feces
-                 
-
-phyloseq_controls%>%
-  sample.data.frame()->meta
+            (stress_level %in% c("low") & stress %in% c("H2O2") & time %in% c("stress", "post_stress_1")))->phyloseq_low 
 
 
-meta%>%
-  mutate(merging_varibale = paste0(time, "/",donor_name))->meta
 
-#update the metadata file
-sample_data(phyloseq_controls)<-meta
-
-
-phyloseq_controls%>%
-  merge_samples(., c("merging_varibale"))-> merged
-
-merged%>%
+phyloseq_low%>%
   sample.data.frame()%>%
-  mutate(merging_varibale = rownames(.))%>%
- separate(col=merging_varibale, into = c("time", "donor_name"), sep="/")%>%
-  mutate(time= factor(time, levels=c( "pre-stress", "stress", "post_stress_1", "post_stress_2")))->meta_merged
+  mutate(time= factor(time, levels=c("pre-stress", "stress", "post_stress_1")))->meta
 
-
- sample_data(merged)<-meta_merged 
+  
+ sample_data(phyloseq_low)<-meta
  
- merged%>% 
+ phyloseq_low%>% 
      ps_arrange(time)%>%
       microViz::comp_barplot(
     tax_level = "Genus",
@@ -641,6 +1132,7 @@ ggsave(H2O2_low,
        units = c("cm"))
 
 ```
+
 #grid H2O2
 ```{r}
 H2O2_control +  guides(fill = guide_legend(nrow = 7))+theme( legend.key.height  = unit(0.2, 'cm'), 

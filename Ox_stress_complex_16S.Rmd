@@ -17,6 +17,7 @@ library(tidyverse)
 library(openxlsx)
 library(rstatix)
 library(microViz)
+
 library(ggpubr)
 library(plyr)
 library(metagMisc)
@@ -44,26 +45,6 @@ sample.data.frame <- function(ps) {
 
 facet_labeller <- function(variable,value){
   return(names[value])}
-```
-
-##create manifest
-```{r}
-# meta<-left_join(read.xlsx("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/meta.xlsx"), hplc[,c(2:12)])
-# 
-# names<-setNames(as.data.frame(list.files("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/raw/230630_M06272_0140_000000000-L3NKW_v2")), c("filename"))
-# 
-# setNames(as.data.frame(str_split_fixed(names$filename, pattern="_", 4)), c("sample_name", "x", "y", "z"))%>%
-#   cbind(., names)%>%
-#   pivot_wider(values_from = "filename", names_from = "z")->sample_names
-# 
-# write.xlsx(left_join(meta, setNames(sample_names[,c("sample_name", "R1_001.fastq.gz", "R2_001.fastq.gz")],c("sample_name", "forward-absolute-filepath", "reverse-absolute-filepath" ))),
-# "P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/manifest.xlsx")
-```
-
-```{r}
-# tax<-read_tsv("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/taxonomy.tsv")
-# 
-# biom<-import_biom("P:/Shared_documents/Janina_Zuend/08_phd/01_sequencing_data/Ox_stress/feature-table.biom")
 ```
 
 
@@ -158,14 +139,8 @@ ps_strain_filt %>%
 
 #Export phyloseq for subsequent analysis 
 ```{r}
-saveRDS(ps_strain_filt, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_nonrare.RDS")
-saveRDS(phyloseq_rare, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
-```
-
-#Export ref seq table
-```{r}
-library(seqinr)
-write.fasta(names= rownames(as.data.frame(refseq(phyloseq_rare))), sequences=as.list(as.data.frame(refseq(phyloseq_rare))$x), file.out = "P:/Shared_documents/Janina_Zuend/08_phd/12_working_package_2/08_blast/ox_stress.fasta")
+# saveRDS(ps_strain_filt, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_nonrare.RDS")
+# saveRDS(phyloseq_rare, file= "C:/Users/zuendj/Desktop/03_data R/wp2_complex/input/phyloseq_rare.RDS")
 ```
 
 
